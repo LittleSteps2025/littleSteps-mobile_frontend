@@ -47,7 +47,6 @@ export default function CreateAccountWithValidation() {
   
   // UI state
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState<TouchedFields>({});
 
@@ -69,11 +68,6 @@ export default function CreateAccountWithValidation() {
     return null;
   };
 
-  const validateConfirmPassword = (confirmPassword: string, password: string) => {
-    if (!confirmPassword) return 'Please confirm your password';
-    if (confirmPassword !== password) return 'Passwords do not match';
-    return null;
-  };
 
   // Real-time validation
   const validateField = (field: FormField, value: string) => {
@@ -86,9 +80,7 @@ export default function CreateAccountWithValidation() {
       case 'password':
         error = validatePassword(value);
         break;
-      case 'confirmPassword':
-        error = validateConfirmPassword(value, formData.password);
-        break;
+      
     }
     
     setErrors(prev => ({
@@ -130,12 +122,10 @@ export default function CreateAccountWithValidation() {
   const validateForm = () => {
     const emailError = validateEmail(formData.email);
     const passwordError = validatePassword(formData.password);
-    const confirmPasswordError = validateConfirmPassword(formData.confirmPassword, formData.password);
     
     const newErrors: FormErrors = {
       email: emailError,
       password: passwordError,
-      confirmPassword: confirmPasswordError
     };
     
     setErrors(newErrors);
@@ -145,7 +135,7 @@ export default function CreateAccountWithValidation() {
       confirmPassword: true
     });
     
-    return !emailError && !passwordError && !confirmPasswordError;
+    return !emailError && !passwordError ;
   };
 
   // Handle form submission
@@ -168,7 +158,7 @@ export default function CreateAccountWithValidation() {
         [
           {
             text: 'Continue',
-            onPress: () => router.push('/account_verification')
+            onPress: () => router.push('/dashboard')
           }
         ]
       );
@@ -222,7 +212,7 @@ export default function CreateAccountWithValidation() {
             {/* Content */}
             <View className="px-5 pt-5">
               <Text className="text-3xl font-bold text-gray-700 mb-2">
-                Create an account
+                Log In
               </Text>
               <Text className="text-base text-gray-500 mb-8">
                 Excited to have you on board!
@@ -308,6 +298,15 @@ export default function CreateAccountWithValidation() {
                   />
                 </TouchableOpacity>
               </View>
+              <View className="px-5 pb-8 items-end">
+            <View className="flex-row items-center">
+              <TouchableOpacity onPress={() => router.push('/forgot_password')}>
+                <Text className="text-base text-purple-600 font-semibold">
+                  Forgot password ?
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
               
               {/* Password Strength Indicator */}
               {formData.password.length > 0 && (
@@ -343,58 +342,6 @@ export default function CreateAccountWithValidation() {
                 </Text>
               )}
 
-              {/* Confirm Password Input */}
-              <Text className="text-base text-gray-700 mb-2 font-medium">
-                Confirm Password
-              </Text>
-              <View className="relative mb-1">
-                <TextInput
-                  value={formData.confirmPassword}
-                  onChangeText={(value) => handleInputChange('confirmPassword', value)}
-                  onBlur={() => handleBlur('confirmPassword')}
-                  placeholder="Confirm your password"
-                  placeholderTextColor="#9ca3af"
-                  secureTextEntry={!showConfirmPassword}
-                  style={{
-                    backgroundColor: 'white',
-                    borderRadius: 12,
-                    paddingHorizontal: 16,
-                    paddingVertical: 16,
-                    paddingRight: 50,
-                    fontSize: 16,
-                    borderWidth: errors.confirmPassword && touched.confirmPassword ? 2 : 0,
-                    borderColor: errors.confirmPassword && touched.confirmPassword ? '#ef4444' : 'transparent',
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 2,
-                    elevation: 2
-                  }}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-4 top-4"
-                >
-                  <Ionicons 
-                    name={showConfirmPassword ? "eye-off" : "eye"} 
-                    size={20} 
-                    color="#9ca3af" 
-                  />
-                </TouchableOpacity>
-              </View>
-              
-              {errors.confirmPassword && touched.confirmPassword && (
-                <Text className="text-red-500 text-sm mb-6 ml-1">
-                  {errors.confirmPassword}
-                </Text>
-              )}
-              
-              {!errors.confirmPassword && touched.confirmPassword && formData.confirmPassword && (
-                <View className="flex-row items-center mb-6 ml-1">
-                  <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
-                  <Text className="text-green-500 text-sm ml-1">Passwords match</Text>
-                </View>
-              )}
 
               {/* Password Requirements */}
               <View className="mb-8 p-4 bg-white/50 rounded-xl">
@@ -439,7 +386,7 @@ export default function CreateAccountWithValidation() {
                 }}
               >
                 <Text className="text-white text-lg font-semibold">
-                  {isLoading ? 'Creating Account...' : 'Create an account'}
+                  {isLoading ? 'Logging Account...' : 'Log an account'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -449,11 +396,11 @@ export default function CreateAccountWithValidation() {
           <View className="px-5 pb-8 items-center">
             <View className="flex-row items-center">
               <Text className="text-base text-gray-500">
-                Already have an account?{' '}
+                Are you new here?{' '}
               </Text>
-              <TouchableOpacity onPress={() => router.push('/signin')}>
+              <TouchableOpacity onPress={() => router.push('/signup')}>
                 <Text className="text-base text-purple-600 font-semibold">
-                  Log in
+                  Create Account
                 </Text>
               </TouchableOpacity>
             </View>
