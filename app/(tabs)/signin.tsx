@@ -158,7 +158,7 @@ export default function CreateAccountWithValidation() {
         [
           {
             text: 'Continue',
-            onPress: () => router.push('/dashboard')
+            onPress: () => router.push('/ParentDashboard')
           }
         ]
       );
