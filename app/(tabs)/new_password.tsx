@@ -1,23 +1,10 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StatusBar,
-  SafeAreaView,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-  ScrollView
-} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from 'react'
+import { Alert, KeyboardAvoidingView, SafeAreaView, ScrollView, TouchableOpacity, View, Text, StatusBar, Platform, TextInput } from 'react-native';
 
-// Define types for better type safety
 type FormData = {
-  email: string;
   password: string;
   confirmPassword: string;
 };
@@ -32,34 +19,25 @@ type TouchedFields = {
   [K in FormField]?: boolean;
 };
 
-export default function CreateAccountWithValidation() {
-  const router = useRouter();
-  
-  // Form state
-  const [formData, setFormData] = useState<FormData>({
-    email: '',
-    password: '',
-    confirmPassword: ''
-  });
-  
-  // Validation errors
-  const [errors, setErrors] = useState<FormErrors>({});
-  
-  // UI state
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [touched, setTouched] = useState<TouchedFields>({});
+function new_password() {
+      const router = useRouter();
+      
+      // Form state
+      const [formData, setFormData] = useState<FormData>({
+        password: '',
+        confirmPassword: ''
+      });
+      
+      // Validation errors
+      const [errors, setErrors] = useState<FormErrors>({});
+      
+      // UI state
+      const [showPassword, setShowPassword] = useState(false);
+      const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+      const [isLoading, setIsLoading] = useState(false);
+      const [touched, setTouched] = useState<TouchedFields>({});
 
-  // Validation rules
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email) return 'Email is required';
-    if (!emailRegex.test(email)) return 'Please enter a valid email address';
-    return null;
-  };
-
-  const validatePassword = (password: string) => {
+        const validatePassword = (password: string) => {
     if (!password) return 'Password is required';
     if (password.length < 8) return 'Password must be at least 8 characters';
     if (!/(?=.*[a-z])/.test(password)) return 'Password must contain at least one lowercase letter';
@@ -80,9 +58,7 @@ export default function CreateAccountWithValidation() {
     let error = null;
     
     switch (field) {
-      case 'email':
-        error = validateEmail(value);
-        break;
+
       case 'password':
         error = validatePassword(value);
         break;
@@ -99,102 +75,100 @@ export default function CreateAccountWithValidation() {
     return error === null;
   };
 
-  // Handle input change
-  const handleInputChange = (field: FormField, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    
-    // Validate if field has been touched
-    if (touched[field]) {
-      validateField(field, value);
-    }
-    
-    // Re-validate confirm password if password changes
-    if (field === 'password' && touched.confirmPassword && formData.confirmPassword) {
-      validateField('confirmPassword', formData.confirmPassword);
-    }
-  };
 
-  // Handle input blur (when user leaves the field)
-  const handleBlur = (field: FormField) => {
-    setTouched(prev => ({
-      ...prev,
-      [field]: true
-    }));
-    validateField(field, formData[field]);
-  };
-
-  // Validate entire form
-  const validateForm = () => {
-    const emailError = validateEmail(formData.email);
-    const passwordError = validatePassword(formData.password);
-    const confirmPasswordError = validateConfirmPassword(formData.confirmPassword, formData.password);
-    
-    const newErrors: FormErrors = {
-      email: emailError,
-      password: passwordError,
-      confirmPassword: confirmPasswordError
-    };
-    
-    setErrors(newErrors);
-    setTouched({
-      email: true,
-      password: true,
-      confirmPassword: true
-    });
-    
-    return !emailError && !passwordError && !confirmPasswordError;
-  };
-
-  // Handle form submission
-  const handleCreateAccount = async () => {
-    if (!validateForm()) {
-      Alert.alert('Validation Error', 'Please fix the errors below');
-      return;
-    }
-
-    setIsLoading(true);
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+    // Handle input change
+    const handleInputChange = (field: FormField, value: string) => {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value
+      }));
       
-      // Success
-      Alert.alert(
-        'Success', 
-        'Account created successfully!',
-        [
-          {
-            text: 'Continue',
-            onPress: () => router.push('/account_verification')
-          }
-        ]
-      );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to create account. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Get password strength
-  const getPasswordStrength = (password: string) => {
-    let strength = 0;
-    if (password.length >= 8) strength++;
-    if (/(?=.*[a-z])/.test(password)) strength++;
-    if (/(?=.*[A-Z])/.test(password)) strength++;
-    if (/(?=.*\d)/.test(password)) strength++;
-    if (/(?=.*[@$!%*?&])/.test(password)) strength++;
-    
-    return strength;
-  };
-
-  const passwordStrength = getPasswordStrength(formData.password);
-  const strengthColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#16a34a'];
-  const strengthLabels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
-
+      // Validate if field has been touched
+      if (touched[field]) {
+        validateField(field, value);
+      }
+      
+      // Re-validate confirm password if password changes
+      if (field === 'password' && touched.confirmPassword && formData.confirmPassword) {
+        validateField('confirmPassword', formData.confirmPassword);
+      }
+    };
+  
+    // Handle input blur (when user leaves the field)
+    const handleBlur = (field: FormField) => {
+      setTouched(prev => ({
+        ...prev,
+        [field]: true
+      }));
+      validateField(field, formData[field]);
+    };
+  
+    // Validate entire form
+    const validateForm = () => {
+      const passwordError = validatePassword(formData.password);
+      const confirmPasswordError = validateConfirmPassword(formData.confirmPassword, formData.password);
+      
+      const newErrors: FormErrors = {
+        password: passwordError,
+        confirmPassword: confirmPasswordError
+      };
+      
+      setErrors(newErrors);
+      setTouched({
+        password: true,
+        confirmPassword: true
+      });
+      
+      return !passwordError && !confirmPasswordError;
+    };
+  
+    // Handle form submission
+    const handleCreateAccount = async () => {
+      if (!validateForm()) {
+        Alert.alert('Validation Error', 'Please fix the errors below');
+        return;
+      }
+  
+      setIsLoading(true);
+      
+      try {
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Success
+        Alert.alert(
+          'Success', 
+          'Account created successfully!',
+          [
+            {
+              text: 'Continue',
+              onPress: () => router.push('/dashboard')
+            }
+          ]
+        );
+      } catch (error) {
+        Alert.alert('Error', 'Failed to create account. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+  
+    // Get password strength
+    const getPasswordStrength = (password: string) => {
+      let strength = 0;
+      if (password.length >= 8) strength++;
+      if (/(?=.*[a-z])/.test(password)) strength++;
+      if (/(?=.*[A-Z])/.test(password)) strength++;
+      if (/(?=.*\d)/.test(password)) strength++;
+      if (/(?=.*[@$!%*?&])/.test(password)) strength++;
+      
+      return strength;
+    };
+  
+    const passwordStrength = getPasswordStrength(formData.password);
+    const strengthColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#16a34a'];
+    const strengthLabels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
+  
   return (
     <LinearGradient
       colors={['#DFC1FD','#f3e8ff', '#F5ECFE','#F5ECFE','#e9d5ff', '#DFC1FD']}
@@ -227,47 +201,6 @@ export default function CreateAccountWithValidation() {
               <Text className="text-base text-gray-500 mb-8">
                 Excited to have you on board!
               </Text>
-
-              {/* Email Input */}
-              <Text className="text-base text-gray-700 mb-2 font-medium">
-                Email
-              </Text>
-              <View className="mb-1">
-                <TextInput
-                  value={formData.email}
-                  onChangeText={(value) => handleInputChange('email', value)}
-                  onBlur={() => handleBlur('email')}
-                  placeholder="Enter your email"
-                  placeholderTextColor="#9ca3af"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  style={{
-                    backgroundColor: 'white',
-                    borderRadius: 12,
-                    paddingHorizontal: 16,
-                    paddingVertical: 16,
-                    fontSize: 16,
-                    borderWidth: errors.email && touched.email ? 2 : 0,
-                    borderColor: errors.email && touched.email ? '#ef4444' : 'transparent',
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 2,
-                    elevation: 2
-                  }}
-                />
-              </View>
-              {errors.email && touched.email && (
-                <Text className="text-red-500 text-sm mb-4 ml-1">
-                  {errors.email}
-                </Text>
-              )}
-              {!errors.email && touched.email && (
-                <View className="flex-row items-center mb-4 ml-1">
-                  <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
-                  <Text className="text-green-500 text-sm ml-1">Valid email</Text>
-                </View>
-              )}
 
               {/* Password Input */}
               <Text className="text-base text-gray-700 mb-2 font-medium">
@@ -439,27 +372,17 @@ export default function CreateAccountWithValidation() {
                 }}
               >
                 <Text className="text-white text-lg font-semibold">
-                  {isLoading ? 'Creating Account...' : 'Create an account'}
+                  {isLoading ? 'Resetting...' : 'Reset Password'}
                 </Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
 
-          {/* Bottom Login Link */}
-          <View className="px-5 pb-8 items-center">
-            <View className="flex-row items-center">
-              <Text className="text-base text-gray-500">
-                Already have an account?{' '}
-              </Text>
-              <TouchableOpacity onPress={() => router.push('/signin')}>
-                <Text className="text-base text-purple-600 font-semibold">
-                  Log in
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          
         </KeyboardAvoidingView>
       </SafeAreaView>
     </LinearGradient>
-  );
+  )
 }
+
+export default new_password
