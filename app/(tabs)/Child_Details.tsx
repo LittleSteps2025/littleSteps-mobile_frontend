@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ColorValue } from 'react-native';
+import { images } from '@/assets/images/images';
 
 export default function ChildDetailsForm() {
   const router = useRouter();
@@ -31,23 +32,30 @@ export default function ChildDetailsForm() {
     {
       title: 'Health Records',
       description: 'Medical history & checkups',
-      icon: 'medkit',
+      icon: images.doctor,
       color: ['#6366f1', '#8b5cf6'],
-      route: '/health' as const,
+      route: '/' as const,
     },
     {
       title: 'Pick-Up Details',
       description: 'Who is allowed to pick up',
-      icon: 'car-sport',
+      icon: images.pickUp,
       color: ['#ec4899', '#f97316'],
-      route: '/pickup' as const,
+      route: '/' as const,
     },
     {
       title: 'Daily Reports',
       description: 'Daily activity summaries',
-      icon: 'document-text',
+      icon: images.report,
       color: ['#10b981', '#06b6d4'],
-      route: '/reports' as const,
+      route: '/' as const,
+    },
+    {
+      title: 'Payment Details',
+      description: 'Manage fees & payments',
+      icon: images.payment_details,
+      color: ['#4E71FF', '#8DD8FF'],
+      route: '/payment_interface' as const,
     },
   ] as const;
 
@@ -291,6 +299,99 @@ export default function ChildDetailsForm() {
                 ))}
               </View>
 
+              {/* Navigation Section */}
+              <View className="mb-8">
+                <Text className="text-xl font-bold text-gray-700 mb-6">
+                  Explore More
+                </Text>
+                
+                {/* Quick Stats Cards */}
+                {/* <View className="flex-row justify-between mb-6">
+                  <View
+                    className="flex-1 mr-2 p-4 rounded-2xl items-center"
+                    style={{ 
+                      backgroundColor: 'rgba(255,255,255,0.9)',
+                      shadowColor: '#7c3aed',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 6,
+                      elevation: 3
+                    }}
+                  >
+                    <View className="w-12 h-12 rounded-full bg-purple-100 items-center justify-center mb-2">
+                      <Ionicons name="trophy" size={24} color="#7c3aed" />
+                    </View>
+                    <Text className="text-2xl font-bold text-purple-600">12</Text>
+                    <Text className="text-sm text-gray-600 text-center">Milestones Achieved</Text>
+                  </View>
+                  
+                  <View
+                    className="flex-1 ml-2 p-4 rounded-2xl items-center"
+                    style={{ 
+                      backgroundColor: 'rgba(255,255,255,0.9)',
+                      shadowColor: '#7c3aed',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 6,
+                      elevation: 3
+                    }}
+                  > */}
+                    {/* <View className="w-12 h-12 rounded-full bg-pink-100 items-center justify-center mb-2">
+                      <Ionicons name="heart" size={24} color="#ec4899" />
+                    </View>
+                    <Text className="text-2xl font-bold text-pink-600">95%</Text>
+                    <Text className="text-sm text-gray-600 text-center">Overall Progress</Text>
+                  </View>
+                </View> */}
+
+                {/* Navigation Cards */}
+                <View className="space-y-4">
+                  {navigationItems.map((item, index) => (
+                    <TouchableOpacity
+                      key={index}
+                     onPress={() => router.push(item.route)}
+
+                      activeOpacity={0.8}
+                    >
+                      <LinearGradient
+                        colors={[...item.color] as [ColorValue, ColorValue]}
+                        start={[0, 0]}
+                        end={[1, 1]}
+                        className="rounded-2xl p-5 mb-4"
+                        style={{
+                          shadowColor: item.color[0],
+                          shadowOffset: { width: 0, height: 4 },
+                          shadowOpacity: 0.25,
+                          shadowRadius: 8,
+                          elevation: 6
+                        }}
+                      >
+                        <View className="flex-row items-center">
+                          <View className="w-14 h-14 rounded-full bg-white bg-opacity-20 items-center justify-center mr-4">
+                            {/* <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={28}  /> */}
+                            <Image source={item.icon} className='w-20 h-20'/>
+
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-white text-lg font-bold mb-1">
+                              {item.title}
+                            </Text>
+                            <Text className="text-white text-sm opacity-90">
+                              {item.description}
+                            </Text>
+                          </View>
+                          <Ionicons name="chevron-forward" size={24} color="white" />
+                        </View>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Additional Quick Action Button */}
+                <TouchableOpacity
+                  onPress={() => router.push('/dashboard')}
+                  className="mt-4"
+
               {/* Additional Quick Action Button */}
               <TouchableOpacity
                 onPress={() => router.push('/dashboard')}
@@ -309,6 +410,7 @@ export default function ChildDetailsForm() {
                     shadowRadius: 4,
                     elevation: 2
                   }}
+
                 >
                   <View className="flex-row items-center">
                     <Ionicons name="apps" size={24} color="#7c3aed" className="mr-2" />

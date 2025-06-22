@@ -6,6 +6,11 @@ import verify_success from "@/assets/images/verify-success.png";
 import forgot from "@/assets/images/forgot.png";
 import otp from "@/assets/images/otp.png";
 import reset_pwd from "@/assets/images/reset-pwd.png";
+import payment_details from "@/assets/images/paymentIcon.png";
+import doctor from "@/assets/images/doctor.png";
+import pickUp from "@/assets/images/pickUp.png";
+import report from "@/assets/images/report.png";
+import payment_child from "@/assets/images/payment_child.png";
 
 export const images={
     logo,
@@ -15,5 +20,10 @@ export const images={
     verify_success,
     forgot,
     otp,
-    reset_pwd
+    reset_pwd,
+    payment_details,
+    doctor,
+    pickUp,
+    report,
+    payment_child
 }

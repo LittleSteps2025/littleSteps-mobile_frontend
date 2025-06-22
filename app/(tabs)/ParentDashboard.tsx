@@ -1,8 +1,11 @@
 // app/(tabs)/dashboard.tsx
-import { View, Text, FlatList, Image, Pressable, StatusBar, Dimensions } from 'react-native';
+import { View, Text, FlatList, Image, Pressable, StatusBar, Dimensions, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { Bell } from 'lucide-react-native'
+import {mockAlerts } from '@/data/mockData';
 
 const { width } = Dimensions.get('window');
 
@@ -25,7 +28,11 @@ const children = [
   },
 ];
 
+
 export default function ParentDashboard() {
+  const [alerts] = useState(mockAlerts);
+  const unreadAlerts = alerts.filter((alert: { isRead: any; }) => !alert.isRead).length;
+
   const router = useRouter();
 
   const renderChild = ({ item, index }: { item: any; index: number }) => (
@@ -60,13 +67,13 @@ export default function ParentDashboard() {
               end={[1, 1]}
               className="w-20 h-20 rounded-full items-center justify-center"
             >
-              <Image 
-                source={item.image} 
+              <Image
+                source={item.image}
                 className="w-16 h-16 rounded-full"
                 style={{ borderWidth: 2, borderColor: 'white' }}
               />
             </LinearGradient>
-            
+
             {/* Status Indicator */}
             <View className="absolute -top-1 -right-1 w-6 h-6 bg-green-400 rounded-full border-2 border-white items-center justify-center">
               <View className="w-2 h-2 bg-green-600 rounded-full" />
@@ -81,7 +88,7 @@ export default function ParentDashboard() {
             <Text className="text-sm text-gray-600 mb-2">
               {item.age}
             </Text>
-            
+
             {/* Status Row */}
             <View className="flex-row items-center">
               <View className="flex-row items-center bg-green-100 px-3 py-1 rounded-full">
@@ -101,8 +108,8 @@ export default function ParentDashboard() {
             onPress={() =>
               router.push({
                 pathname: '/Child_Details',
-                params: { 
-                  id: item.id, 
+                params: {
+                  id: item.id,
                   name: item.name,
                   age: item.age,
                   status: item.status,
@@ -143,13 +150,13 @@ export default function ParentDashboard() {
 
   return (
     <LinearGradient
-      colors={['#DFC1FD','#f3e8ff', '#F5ECFE','#F5ECFE','#e9d5ff', '#DFC1FD']}
+      colors={['#DFC1FD', '#f3e8ff', '#F5ECFE', '#F5ECFE', '#e9d5ff', '#DFC1FD']}
       start={[0, 0]}
       end={[1, 1]}
       className="flex-1"
     >
       <StatusBar barStyle="dark-content" backgroundColor="#DFC1FD" />
-      
+
       {/* Header */}
       <View className="pt-12 pb-6 px-6">
         <View className="flex-row items-center justify-between mb-4">
@@ -161,10 +168,29 @@ export default function ParentDashboard() {
               Track your children's progress
             </Text>
           </View>
-          
-          <Pressable className="w-12 h-12 bg-white/60 rounded-full items-center justify-center">
-            <Ionicons name="notifications" size={24} color="#374151" />
-          </Pressable>
+
+          <TouchableOpacity className='relative p-8'>
+            <Bell size={24} color="#6B7280" />
+            {unreadAlerts > 0 && (
+              <View style={{
+                position: 'absolute',
+                top: 15,
+                right: 15,
+                backgroundColor: '#DC2626',
+                borderRadius: 10,
+                minWidth: 20,
+                height: 20,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+                <Text style={{
+                  color: '#FFFFFF',
+                  fontSize: 12,
+                  fontWeight: '600'
+                }}>{unreadAlerts}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Stats Cards */}
@@ -178,7 +204,7 @@ export default function ParentDashboard() {
             <Text className="text-gray-600 text-xs">Total Children</Text>
             <Text className="text-gray-800 text-2xl font-bold">{children.length}</Text>
           </LinearGradient>
-          
+
           <LinearGradient
             colors={['rgba(255,255,255,0.8)', 'rgba(255,255,255,0.6)']}
             start={[0, 0]}
@@ -214,7 +240,7 @@ export default function ParentDashboard() {
 
       {/* Bottom Navigation */}
       <View className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md">
-        <View 
+        <View
           className="flex-row justify-around items-center py-4 px-6"
           style={{
             shadowColor: '#000',
