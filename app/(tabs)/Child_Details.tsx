@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ColorValue } from 'react-native';
+import { images } from '@/assets/images/images';
 
 export default function ChildDetailsForm() {
   const router = useRouter();
@@ -59,24 +60,31 @@ export default function ChildDetailsForm() {
     {
       title: 'Health Records',
       description: 'Medical history & checkups',
-      icon: 'medkit',
+      icon: images.doctor,
       color: ['#6366f1', '#8b5cf6'],
-      route: '/health' as const,
+      route: '/' as const,
     },
     {
 
       title: 'Pick-Up Details',
       description: 'Who is allowed to pick up',
-      icon: 'car-sport',
+      icon: images.pickUp,
       color: ['#ec4899', '#f97316'],
-      route: '/pickup' as const,
+      route: '/' as const,
     },
     {
       title: 'Daily Reports',
       description: 'Daily activity summaries',
-      icon: 'document-text',
+      icon: images.report,
       color: ['#10b981', '#06b6d4'],
-      route: '/reports' as const,
+      route: '/' as const,
+    },
+    {
+      title: 'Payment Details',
+      description: 'Manage fees & payments',
+      icon: images.payment_details,
+      color: ['#4E71FF', '#8DD8FF'],
+      route: '/payment_interface' as const,
     },
   ]as const;
 
@@ -391,7 +399,8 @@ export default function ChildDetailsForm() {
                       >
                         <View className="flex-row items-center">
                           <View className="w-14 h-14 rounded-full bg-white bg-opacity-20 items-center justify-center mr-4">
-                            <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={28} color="white" />
+                            {/* <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={28}  /> */}
+                            <Image source={item.icon} className='w-20 h-20'/>
 
                           </View>
                           <View className="flex-1">
