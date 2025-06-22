@@ -16,6 +16,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { ColorValue } from 'react-native';
 
 export default function ChildDetailsForm() {
   const router = useRouter();
@@ -24,13 +25,12 @@ export default function ChildDetailsForm() {
   // Form state
   const [formData, setFormData] = useState({
     firstName: params.Name || 'Pramodi Peshila',
-    // lastName: params.lastName || '',
     birthDate: '05/07/2001',
-    phoneNumber: '0711234567'
+    phoneNumber: '0711234567',
+    emergencyNumber: '0777654321'
   });
 
-    const [isEditing, setIsEditing] = useState(false);
-    
+  const [isEditing, setIsEditing] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -47,6 +47,38 @@ export default function ChildDetailsForm() {
   const handleEdit = () => {
     setIsEditing(true);
   };
+
+  const navigationItems = [
+    // {
+    //   title: 'Development Progress',
+    //   description: 'Track milestones & growth',
+    //   icon: 'trending-up',
+    //   color: ['#6366f1', '#8b5cf6'],
+    //   route: '/progress'
+    // },
+    {
+      title: 'Health Records',
+      description: 'Medical history & checkups',
+      icon: 'medkit',
+      color: ['#6366f1', '#8b5cf6'],
+      route: '/health' as const,
+    },
+    {
+
+      title: 'Pick-Up Details',
+      description: 'Who is allowed to pick up',
+      icon: 'car-sport',
+      color: ['#ec4899', '#f97316'],
+      route: '/pickup' as const,
+    },
+    {
+      title: 'Daily Reports',
+      description: 'Daily activity summaries',
+      icon: 'document-text',
+      color: ['#10b981', '#06b6d4'],
+      route: '/reports' as const,
+    },
+  ]as const;
 
   return (
     <LinearGradient
@@ -88,23 +120,9 @@ export default function ChildDetailsForm() {
                   <Image 
                     source={require('../../assets/images/kid1.jpg')} 
                     className="w-full h-full"
-                    style={{ borderRadius: 64 }}
+                    style={{ borderRadius: 64 , borderWidth: 4, borderColor: '#7c3aed' }}
                   />
                 </View>
-                
-                {/* Edit Photo Button */}
-                {/* <TouchableOpacity
-                  className="absolute bottom-0 right-0 w-10 h-10 bg-white rounded-full items-center justify-center"
-                  style={{
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.2,
-                    shadowRadius: 4,
-                    elevation: 4,
-                  }}
-                >
-                  <Ionicons name="camera" size={20} color="#7c3aed" />
-                </TouchableOpacity> */}
               </View>
             </View>
 
@@ -118,8 +136,6 @@ export default function ChildDetailsForm() {
                 <TextInput
                   value={"Pramodi Peshila"}
                   onChangeText={(value) => handleInputChange('Name', value)}
-                //   placeholder="Alexander"
-                //   placeholderTextColor="#9ca3af"
                   editable={isEditing}
                   style={{
                     backgroundColor: 'rgba(255, 255, 255, 0.86)',
@@ -137,8 +153,6 @@ export default function ChildDetailsForm() {
                   }}
                 />
               </View>
-
-              
 
               {/* Birth Date Field */}
               <View className="mb-4">
@@ -168,37 +182,7 @@ export default function ChildDetailsForm() {
                       elevation: 2
                     }}
                   />
-                  {/* <TouchableOpacity className="ml-4 p-2">
-                    <Ionicons name="calendar-outline" size={24} color="#7c3aed" />
-                  </TouchableOpacity> */}
                 </View>
-              </View>
-              
-                <View className="mb-4">
-                <Text className="text-sm font-medium text-gray-600 mb-2 ml-1">
-                  Age
-                </Text>
-                <TextInput
-                  value={"12"}
-                  onChangeText={(value) => handleInputChange('lastName', value)}
-                //   placeholder="25"
-                  placeholderTextColor="#9ca3af"
-                  editable={isEditing}
-                  style={{
-                    backgroundColor: 'rgba(255,255,255,0.8)',
-                    borderRadius: 16,
-                    paddingHorizontal: 20,
-                    paddingVertical: 18,
-                    fontSize: 16,
-                    fontWeight: '500',
-                    color: '#374151',
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 4,
-                    elevation: 2
-                  }}
-                />
               </View>
 
               {/* Phone Number Field */}
@@ -207,11 +191,6 @@ export default function ChildDetailsForm() {
                   Guardian's Phone number
                 </Text>
                 <View className="flex-row items-center">
-                  <View className="flex-row items-center mr-3">
-                    {/* <Text className="text-lg mr-2">🇺🇸</Text> */}
-                    {/* <Text className="text-gray-600 font-medium">+1</Text> */}
-                    {/* <Ionicons name="chevron-down" size={16} color="#6b7280" className="ml-1" /> */}
-                  </View>
                   <TextInput
                     value={formData.phoneNumber}
                     onChangeText={(value) => handleInputChange('phoneNumber', value)}
@@ -236,18 +215,13 @@ export default function ChildDetailsForm() {
                     }}
                   />
                 </View>
-            </View>
+              </View>
                           
-            <View className="mb-8">
+              <View className="mb-8">
                 <Text className="text-sm font-medium text-gray-600 mb-2 ml-1">
                   Emergency Contact number
                 </Text>
                 <View className="flex-row items-center">
-                  <View className="flex-row items-center mr-3">
-                    {/* <Text className="text-lg mr-2">🇺🇸</Text> */}
-                    {/* <Text className="text-gray-600 font-medium">+1</Text> */}
-                    {/* <Ionicons name="chevron-down" size={16} color="#6b7280" className="ml-1" /> */}
-                  </View>
                   <TextInput
                     value={formData.phoneNumber}
                     onChangeText={(value) => handleInputChange('phoneNumber', value)}
@@ -291,7 +265,8 @@ export default function ChildDetailsForm() {
                         shadowOffset: { width: 0, height: 4 },
                         shadowOpacity: 0.3,
                         shadowRadius: 8,
-                        elevation: 4
+                        elevation: 4,
+                        borderRadius: 16
                       }}
                     >
                       <Text className="text-white text-lg font-semibold">
@@ -347,38 +322,121 @@ export default function ChildDetailsForm() {
                 )}
               </View>
 
-              {/* Additional Info Cards */}
-              {/* <View className="mb-8">
-                <Text className="text-xl font-bold text-gray-700 mb-4">
-                  Quick Stats
+              {/* Navigation Section */}
+              <View className="mb-8">
+                <Text className="text-xl font-bold text-gray-700 mb-6">
+                  Explore More
                 </Text>
                 
-                <View className="flex-row justify-between mb-4">
+                {/* Quick Stats Cards */}
+                {/* <View className="flex-row justify-between mb-6">
                   <View
                     className="flex-1 mr-2 p-4 rounded-2xl items-center"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.8)' }}
+                    style={{ 
+                      backgroundColor: 'rgba(255,255,255,0.9)',
+                      shadowColor: '#7c3aed',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 6,
+                      elevation: 3
+                    }}
                   >
+                    <View className="w-12 h-12 rounded-full bg-purple-100 items-center justify-center mb-2">
+                      <Ionicons name="trophy" size={24} color="#7c3aed" />
+                    </View>
                     <Text className="text-2xl font-bold text-purple-600">12</Text>
-                    <Text className="text-sm text-gray-600">Milestones</Text>
+                    <Text className="text-sm text-gray-600 text-center">Milestones Achieved</Text>
                   </View>
                   
                   <View
                     className="flex-1 ml-2 p-4 rounded-2xl items-center"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.8)' }}
-                  >
-                    <Text className="text-2xl font-bold text-purple-600">8</Text>
-                    <Text className="text-sm text-gray-600">Activities</Text>
+                    style={{ 
+                      backgroundColor: 'rgba(255,255,255,0.9)',
+                      shadowColor: '#7c3aed',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 6,
+                      elevation: 3
+                    }}
+                  > */}
+                    {/* <View className="w-12 h-12 rounded-full bg-pink-100 items-center justify-center mb-2">
+                      <Ionicons name="heart" size={24} color="#ec4899" />
+                    </View>
+                    <Text className="text-2xl font-bold text-pink-600">95%</Text>
+                    <Text className="text-sm text-gray-600 text-center">Overall Progress</Text>
                   </View>
+                </View> */}
+
+                {/* Navigation Cards */}
+                <View className="space-y-4">
+                  {navigationItems.map((item, index) => (
+                    <TouchableOpacity
+                      key={index}
+                     onPress={() => router.push(item.route)}
+
+                      activeOpacity={0.8}
+                    >
+                      <LinearGradient
+                        colors={[...item.color] as [ColorValue, ColorValue]}
+                        start={[0, 0]}
+                        end={[1, 1]}
+                        className="rounded-2xl p-5 mb-4"
+                        style={{
+                          shadowColor: item.color[0],
+                          shadowOffset: { width: 0, height: 4 },
+                          shadowOpacity: 0.25,
+                          shadowRadius: 8,
+                          elevation: 6
+                        }}
+                      >
+                        <View className="flex-row items-center">
+                          <View className="w-14 h-14 rounded-full bg-white bg-opacity-20 items-center justify-center mr-4">
+                            <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={28} color="white" />
+
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-white text-lg font-bold mb-1">
+                              {item.title}
+                            </Text>
+                            <Text className="text-white text-sm opacity-90">
+                              {item.description}
+                            </Text>
+                          </View>
+                          <Ionicons name="chevron-forward" size={24} color="white" />
+                        </View>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  ))}
                 </View>
-                
-                <View
-                  className="p-4 rounded-2xl items-center"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.8)' }}
+
+                {/* Additional Quick Action Button */}
+                <TouchableOpacity
+                  onPress={() => router.push('/dashboard')}
+                  className="mt-4"
                 >
-                  <Text className="text-2xl font-bold text-purple-600">95%</Text>
-                  <Text className="text-sm text-gray-600">Overall Progress</Text>
-                </View>
-              </View> */}
+                  <View
+                    className="rounded-2xl py-4 items-center"
+                    style={{
+                      backgroundColor: 'rgba(255,255,255,0.9)',
+                      borderWidth: 2,
+                      borderColor: '#7c3aed',
+                      borderStyle: 'dashed',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 4,
+                      elevation: 2
+                    }}
+                  >
+                    <View className="flex-row items-center">
+                      <Ionicons name="apps" size={24} color="#7c3aed" className="mr-2" />
+                      <Text className="text-purple-600 text-lg font-semibold ml-2">
+                        Update Daily Activities
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              </View>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
