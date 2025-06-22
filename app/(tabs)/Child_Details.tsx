@@ -70,7 +70,7 @@ export default function ChildDetailsForm() {
       <SafeAreaView className="flex-1">
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
           {/* Header */}
-          <View className="px-6 pt-4 pb-6">
+          <View className="px-6 pt-4 pb-6 mt-10" >
             <TouchableOpacity 
               onPress={() => router.back()}
               className="w-10 h-10 justify-center items-center mb-4"
@@ -254,13 +254,13 @@ export default function ChildDetailsForm() {
             </TouchableOpacity>
 
             {/* Navigation Section */}
-            <View className="mb-8">
+            {/* <View className="mb-8">
               <Text className="text-xl font-bold text-gray-700 mb-6">
                 Explore More
-              </Text>
+              </Text> */}
 
               {/* Navigation Cards */}
-              <View className="space-y-4">
+              {/* <View className="space-y-4">
                 {navigationItems.map((item, index) => (
                   <TouchableOpacity
                     key={index}
@@ -297,7 +297,7 @@ export default function ChildDetailsForm() {
                     </LinearGradient>
                   </TouchableOpacity>
                 ))}
-              </View>
+              </View> */}
 
               {/* Navigation Section */}
               <View className="mb-8">
@@ -388,9 +388,9 @@ export default function ChildDetailsForm() {
                 </View>
 
                 {/* Additional Quick Action Button */}
-                <TouchableOpacity
+                {/* <TouchableOpacity
                   onPress={() => router.push('/dashboard')}
-                  className="mt-4"
+                  className="mt-4" */}
 
               {/* Additional Quick Action Button */}
               <TouchableOpacity
@@ -422,6 +422,7 @@ export default function ChildDetailsForm() {
               </TouchableOpacity>
             </View>
           </View>
+          
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>
