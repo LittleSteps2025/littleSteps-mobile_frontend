@@ -121,7 +121,7 @@ export default function HealthRecords() {
     }
   };
 
-  const getRecordColor = (type: string) => {
+  const getRecordColor = (type: string):[string,string]=> {
     switch (type) {
       case 'checkup': return ['#10b981', '#059669'];
       case 'vaccination': return ['#3b82f6', '#2563eb'];
