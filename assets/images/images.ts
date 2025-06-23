@@ -11,6 +11,7 @@ import doctor from "@/assets/images/doctor.png";
 import pickUp from "@/assets/images/pickUp.png";
 import report from "@/assets/images/report.png";
 import payment_child from "@/assets/images/payment_child.png";
+import baby_credit from "@/assets/images/baby_credit.png";
 
 export const images={
     logo,
@@ -25,5 +26,6 @@ export const images={
     doctor,
     pickUp,
     report,
-    payment_child
+    payment_child,
+    baby_credit
 }
