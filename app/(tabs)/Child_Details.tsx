@@ -34,7 +34,7 @@ export default function ChildDetailsForm() {
       description: 'Medical history & checkups',
       icon: images.doctor,
       color: ['#6366f1', '#8b5cf6'],
-      route: '/' as const,
+      route: '/health' as const,
     },
     {
       title: 'Pick-Up Details',
