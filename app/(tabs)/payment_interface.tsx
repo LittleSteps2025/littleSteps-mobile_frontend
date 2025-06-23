@@ -1,45 +1,3 @@
-// import { images } from '@/assets/images/images'
-// import { Ionicons } from '@expo/vector-icons'
-// import { LinearGradient } from 'expo-linear-gradient'
-// import { router } from 'expo-router'
-// import React from 'react'
-// import { SafeAreaView, ScrollView, TouchableOpacity, View, Image, Text } from 'react-native'
-
-// function payment_interface() {
-//     return (
-//         <LinearGradient
-//             colors={['#DFC1FD', '#f3e8ff', '#F5ECFE', '#F5ECFE', '#e9d5ff', '#DFC1FD']}
-//             start={[0, 0]}
-//             end={[1, 1]}
-//             className="flex-1"
-//         >
-//             <SafeAreaView>
-//                 <ScrollView showsVerticalScrollIndicator={false}>
-//                     <View className="px-5 pt-2 mt-10">
-//                         <TouchableOpacity
-//                             onPress={() => router.back()}
-//                             className="w-10 h-10 justify-center items-center"
-//                         >
-//                             <Ionicons name="chevron-back" size={24} color="#374151" />
-//                         </TouchableOpacity>
-//                     </View>
-//                     <View className="flex flex-row items-center justify-center mt-10 bg-purple-500 rounded-lg p-5 mx-5">
-//                         <View className="flex-1 w-25% h-fill">
-//                             <Image source={images.payment_child} className='w-20 h-40'/>
-//                         </View>
-//                         <View className="flex-1">
-//                             <Text className='text-white font-bold text-2xl'>Child's Monthly Package Price</Text>
-//                             <Text className='text-green font-bold text-2xl mt-2'>LKR 5000.00</Text>
-//                         </View>
-//                     </View>
-//                 </ScrollView>
-//             </SafeAreaView>
-
-//         </LinearGradient>
-//     )
-// }
-
-// export default payment_interface
 import { images } from '@/assets/images/images';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -58,6 +16,14 @@ import {
 
 type PaymentMethod = 'card' | 'mobile' | 'bank';
 
+interface PaymentHistory {
+  id: string;
+  amount: string;
+  method: string;
+  date: string;
+  status: 'completed' | 'pending' | 'failed';
+}
+
 function PaymentInterface() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('card');
   const [cardNumber, setCardNumber] = useState('');
@@ -66,6 +32,7 @@ function PaymentInterface() {
   const [cardHolderName, setCardHolderName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
 
   const packageDetails = {
     name: "Child's Monthly Package",
@@ -73,12 +40,37 @@ function PaymentInterface() {
     duration: 'Monthly',
     features: [
       'Full Day Care (8 hours)',
-      'Nutritious Meals & Snacks',
       'Educational Activities',
       'Medical Care Support',
       'Parent Progress Reports',
+      'Only Weekdays',
     ],
   };
+
+  // Sample payment history data
+  const paymentHistory: PaymentHistory[] = [
+    {
+      id: '1',
+      amount: 'LKR 5,000.00',
+      method: 'Credit/Debit Card',
+      date: '2024-06-01',
+      status: 'completed'
+    },
+    {
+      id: '2',
+      amount: 'LKR 5,000.00',
+      method: 'Credit/Debit Card',
+      date: '2024-05-01',
+      status: 'completed'
+    },
+    {
+      id: '3',
+      amount: 'LKR 5,000.00',
+      method: 'Credit/Debit Card',
+      date: '2024-04-01',
+      status: 'completed'
+    },
+  ];
 
   const paymentMethods = [
     {
@@ -115,6 +107,41 @@ function PaymentInterface() {
     return cleaned;
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit'
+    });
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return '#10b981';
+      case 'pending':
+        return '#f59e0b';
+      case 'failed':
+        return '#ef4444';
+      default:
+        return '#6b7280';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'checkmark-circle';
+      case 'pending':
+        return 'time-outline';
+      case 'failed':
+        return 'close-circle';
+      default:
+        return 'help-circle';
+    }
+  };
+
   const handlePayment = async () => {
     if (selectedPaymentMethod === 'card') {
       if (!cardNumber || !expiryDate || !cvv || !cardHolderName) {
@@ -140,7 +167,15 @@ function PaymentInterface() {
         [
           {
             text: 'Continue',
-            onPress: () => router.push('/dashboard'),
+            onPress: () => {
+              setShowPaymentForm(false);
+              // Clear form
+              setCardNumber('');
+              setExpiryDate('');
+              setCvv('');
+              setCardHolderName('');
+              setMobileNumber('');
+            },
           },
         ]
       );
@@ -206,54 +241,110 @@ function PaymentInterface() {
     </View>
   );
 
-  const renderMobilePayment = () => (
-    <View className="bg-white rounded-xl p-5 mx-5 mb-5">
-      <Text className="text-lg font-bold text-gray-800 mb-4">Mobile Payment</Text>
+  // const renderMobilePayment = () => (
+  //   <View className="bg-white rounded-xl p-5 mx-5 mb-5">
+  //     <Text className="text-lg font-bold text-gray-800 mb-4">Mobile Payment</Text>
       
-      <View className="mb-4">
-        <Text className="text-sm font-medium text-gray-700 mb-2">Mobile Number</Text>
-        <TextInput
-          value={mobileNumber}
-          onChangeText={setMobileNumber}
-          placeholder="+94 77 123 4567"
-          keyboardType="phone-pad"
-          className="bg-gray-50 rounded-lg p-4 text-base"
-        />
-      </View>
+  //     <View className="mb-4">
+  //       <Text className="text-sm font-medium text-gray-700 mb-2">Mobile Number</Text>
+  //       <TextInput
+  //         value={mobileNumber}
+  //         onChangeText={setMobileNumber}
+  //         placeholder="+94 77 123 4567"
+  //         keyboardType="phone-pad"
+  //         className="bg-gray-50 rounded-lg p-4 text-base"
+  //       />
+  //     </View>
 
-      <View className="bg-blue-50 rounded-lg p-4">
-        <Text className="text-sm text-blue-800">
-          You will receive an SMS with payment instructions after clicking "Pay Now"
-        </Text>
-      </View>
-    </View>
-  );
+  //     <View className="bg-blue-50 rounded-lg p-4">
+  //       <Text className="text-sm text-blue-800">
+  //         You will receive an SMS with payment instructions after clicking "Pay Now"
+  //       </Text>
+  //     </View>
+  //   </View>
+  // );
 
-  const renderBankTransfer = () => (
-    <View className="bg-white rounded-xl p-5 mx-5 mb-5">
-      <Text className="text-lg font-bold text-gray-800 mb-4">Bank Transfer Details</Text>
+  // const renderBankTransfer = () => (
+  //   <View className="bg-white rounded-xl p-5 mx-5 mb-5">
+  //     <Text className="text-lg font-bold text-gray-800 mb-4">Bank Transfer Details</Text>
       
-      <View className="bg-gray-50 rounded-lg p-4 space-y-2">
-        <View className="flex-row justify-between">
-          <Text className="text-sm font-medium text-gray-700">Bank Name:</Text>
-          <Text className="text-sm text-gray-800">Little Stars Daycare Bank</Text>
-        </View>
-        <View className="flex-row justify-between">
-          <Text className="text-sm font-medium text-gray-700">Account Number:</Text>
-          <Text className="text-sm text-gray-800">1234567890</Text>
-        </View>
-        <View className="flex-row justify-between">
-          <Text className="text-sm font-medium text-gray-700">Branch Code:</Text>
-          <Text className="text-sm text-gray-800">001</Text>
-        </View>
-      </View>
+  //     <View className="bg-gray-50 rounded-lg p-4 space-y-2">
+  //       <View className="flex-row justify-between mb-2">
+  //         <Text className="text-sm font-medium text-gray-700">Bank Name:</Text>
+  //         <Text className="text-sm text-gray-800">Little Stars Daycare Bank</Text>
+  //       </View>
+  //       <View className="flex-row justify-between mb-2">
+  //         <Text className="text-sm font-medium text-gray-700">Account Number:</Text>
+  //         <Text className="text-sm text-gray-800">1234567890</Text>
+  //       </View>
+  //       <View className="flex-row justify-between">
+  //         <Text className="text-sm font-medium text-gray-700">Branch Code:</Text>
+  //         <Text className="text-sm text-gray-800">001</Text>
+  //       </View>
+  //     </View>
 
-      <View className="bg-amber-50 rounded-lg p-4 mt-4">
-        <Text className="text-sm text-amber-800">
-          Please use your child's name as the reference when making the transfer.
-          Upload the receipt in the parent portal after payment.
-        </Text>
+  //     <View className="bg-amber-50 rounded-lg p-4 mt-4">
+  //       <Text className="text-sm text-amber-800">
+  //         Please use your child's name as the reference when making the transfer.
+  //         Upload the receipt in the parent portal after payment.
+  //       </Text>
+  //     </View>
+  //   </View>
+  // );
+
+  const renderPaymentHistory = () => (
+    <View className="mx-5 mt-5">
+      <View className="flex-row justify-between items-center mb-4">
+        <Text className="text-lg font-bold text-gray-800">Payment History</Text>
+        <TouchableOpacity onPress={() => setShowPaymentForm(true)}>
+          <Text className="text-purple-600 font-medium">Make Payment</Text>
+        </TouchableOpacity>
       </View>
+      
+      {paymentHistory.map((payment, index) => (
+        <View key={payment.id} className="bg-white rounded-xl p-5 mb-3">
+          <View className="flex-row items-center justify-between mb-3">
+            <View className="flex-row items-center">
+              <Ionicons 
+                name={getStatusIcon(payment.status)} 
+                size={20} 
+                color={getStatusColor(payment.status)} 
+              />
+              <Text className="text-lg font-semibold text-gray-800 ml-2">
+                {payment.amount}
+              </Text>
+            </View>
+            <Text className="text-sm text-gray-600 capitalize">
+              {payment.status}
+            </Text>
+          </View>
+          
+          <View className="flex-row justify-between mb-2">
+            <Text className="text-sm font-medium text-gray-700">Payment Method</Text>
+            <Text className="text-sm text-gray-800">{payment.method}</Text>
+          </View>
+          
+          <View className="flex-row justify-between">
+            <Text className="text-sm font-medium text-gray-700">Date</Text>
+            <Text className="text-sm text-gray-800">{formatDate(payment.date)}</Text>
+          </View>
+        </View>
+      ))}
+      
+      {paymentHistory.length === 0 && (
+        <View className="bg-white rounded-xl p-8 items-center">
+          <Ionicons name="receipt-outline" size={48} color="#9ca3af" />
+          <Text className="text-gray-500 text-center mt-4">
+            No payment history found
+          </Text>
+          <TouchableOpacity 
+            onPress={() => setShowPaymentForm(true)}
+            className="bg-purple-600 rounded-lg px-6 py-3 mt-4"
+          >
+            <Text className="text-white font-medium">Make Your First Payment</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 
@@ -267,13 +358,17 @@ function PaymentInterface() {
       <SafeAreaView className="flex-1">
         <ScrollView showsVerticalScrollIndicator={false}>
           {/* Header */}
-          <View className="px-5 pt-2 mt-10">
+          <View className="px-5 pt-2 mt-10 flex-row items-center justify-between">
             <TouchableOpacity
               onPress={() => router.back()}
               className="w-10 h-10 justify-center items-center"
             >
               <Ionicons name="chevron-back" size={24} color="#374151" />
             </TouchableOpacity>
+            <Text className="text-xl font-bold text-gray-800">
+              {showPaymentForm ? 'Make Payment' : 'Payments'}
+            </Text>
+            <View className="w-10" />
           </View>
 
           {/* Package Details */}
@@ -299,55 +394,55 @@ function PaymentInterface() {
             ))}
           </View>
 
-          {/* Payment Methods */}
-          <View className="mx-5 mt-5">
-            <Text className="text-lg font-bold text-gray-800 mb-3">Select Payment Method</Text>
-            <View className="flex-row justify-between">
-              {paymentMethods.map((method) => (
+          {showPaymentForm ? (
+            <>
+              {/* Payment Methods */}
+              <View className="mx-5 mt-5">
+                <Text className="text-lg font-bold text-gray-800 mb-3">Make Payment</Text>
+                <View className="flex-row justify-center items-center ">
+                  <Image source={images.baby_credit} className="w-60 h-60" />
+                </View>
+              </View>
+
+              {/* Payment Form */}
+              <View className="mt-5">
+                {selectedPaymentMethod === 'card' && renderCardPayment()}
+                {/* {selectedPaymentMethod === 'mobile' && renderMobilePayment()}
+                {selectedPaymentMethod === 'bank' && renderBankTransfer()} */}
+              </View>
+
+              {/* Pay Button */}
+              <View className="mx-5 mb-10">
                 <TouchableOpacity
-                  key={method.id}
-                  onPress={() => setSelectedPaymentMethod(method.id)}
-                  className={`flex-1 bg-white rounded-xl p-4 mr-2 items-center ${
-                    selectedPaymentMethod === method.id ? 'border-2 border-purple-500' : ''
+                  onPress={handlePayment}
+                  disabled={isProcessing}
+                  className={`rounded-xl p-4 items-center ${
+                    isProcessing ? 'bg-gray-400' : 'bg-purple-600'
                   }`}
                 >
-                  <Ionicons name={method.icon as any} size={24} color={method.color} />
-                  <Text className="text-xs text-center text-gray-700 mt-2 font-medium">
-                    {method.name}
+                  <Text className="text-white font-bold text-lg">
+                    {isProcessing ? 'Processing...' : `Pay ${packageDetails.price}`}
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Payment Form */}
-          <View className="mt-5">
-            {selectedPaymentMethod === 'card' && renderCardPayment()}
-            {/* {selectedPaymentMethod === 'mobile' && renderMobilePayment()}
-            {selectedPaymentMethod === 'bank' && renderBankTransfer()} */}
-          </View>
-
-          {/* Pay Button */}
-          <View className="mx-5 mb-10">
-            <TouchableOpacity
-              onPress={handlePayment}
-              disabled={isProcessing}
-              className={`rounded-xl p-4 items-center ${
-                isProcessing ? 'bg-gray-400' : 'bg-purple-600'
-              }`}
-            >
-              <Text className="text-white font-bold text-lg">
-                {isProcessing ? 'Processing...' : `Pay ${packageDetails.price}`}
-              </Text>
-            </TouchableOpacity>
-            
-            <View className="flex-row items-center justify-center mt-4">
-              <Ionicons name="shield-checkmark" size={16} color="#10b981" />
-              <Text className="text-xs text-gray-600 ml-1">
-                Secure payment protected by 256-bit SSL encryption
-              </Text>
-            </View>
-          </View>
+                
+                <TouchableOpacity
+                  onPress={() => setShowPaymentForm(false)}
+                  className="mt-3 p-3 items-center"
+                >
+                  <Text className="text-gray-600 font-medium">Cancel</Text>
+                </TouchableOpacity>
+                
+                <View className="flex-row items-center justify-center mt-4">
+                  <Ionicons name="shield-checkmark" size={16} color="#10b981" />
+                  <Text className="text-xs text-gray-600 ml-1">
+                    Secure payment protected by 256-bit SSL encryption
+                  </Text>
+                </View>
+              </View>
+            </>
+          ) : (
+            renderPaymentHistory()
+          )}
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>
