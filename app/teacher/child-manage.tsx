@@ -9,7 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { FileText, Clock, Users } from 'lucide-react-native';
+import { FileText, Clock, Users, Chrome as Home, User, MoveHorizontal as MoreHorizontal } from 'lucide-react-native';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -20,7 +20,7 @@ export default function Dashboard() {
       title: 'View Reports',
       subtitle: 'Access performance reports',
       icon: FileText,
-      route: '/teacher/child-reports',
+      route: '/reports',
       color: '#10b981',
     },
     {
@@ -28,7 +28,7 @@ export default function Dashboard() {
       title: 'Attendance',
       subtitle: 'View children attendance',
       icon: Clock,
-      route: '/teacher/attendance',
+      route: '/attendance',
       color: '#3b82f6',
     },
     {
@@ -36,7 +36,7 @@ export default function Dashboard() {
       title: 'All Children',
       subtitle: 'Browse all profiles',
       icon: Users,
-      route: '/teacher/profiles',
+      route: '/profiles',
       color: '#6366f1',
     },
   ];
@@ -45,10 +45,14 @@ export default function Dashboard() {
     router.push(route as any);
   };
 
+  const handleBottomNavigation = (route: string) => {
+    router.push(route as any);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" />
-      <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
         <View style={styles.header}>
           <Text style={styles.title}>Welcome Back!</Text>
           <Text style={styles.subtitle}>What would you like to explore today?</Text>
@@ -83,6 +87,50 @@ export default function Dashboard() {
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNavContainer}>
+        <View style={styles.bottomNavContent}>
+          {/* Home */}
+          <TouchableOpacity 
+            style={styles.navButton}
+            onPress={() => handleBottomNavigation('/teacher')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.navIconContainer}>
+              <Home size={24} color="#7c3aed" />
+            </View>
+            <Text style={[styles.navText, styles.activeNavText]}>Home</Text>
+          </TouchableOpacity>
+
+          {/* Children */}
+          <TouchableOpacity 
+            style={styles.navButton}
+            onPress={() => handleBottomNavigation('/teacher/profiles')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.navIconContainer}>
+              <Users size={24} color="#9ca3af" />
+            </View>
+            <Text style={styles.navText}>Children</Text>
+          </TouchableOpacity>
+
+          {/* Reports */}
+          <TouchableOpacity 
+            style={styles.navButton}
+            onPress={() => handleBottomNavigation('/teacher/child-reports')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.navIconContainer}>
+              <FileText size={24} color="#9ca3af" />
+            </View>
+            <Text style={styles.navText}>Reports</Text>
+          </TouchableOpacity>
+
+          {/* More */}
+        
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -158,5 +206,47 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 40,
+  },
+  bottomNavContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderTopWidth: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  bottomNavContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  navButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+  },
+  navIconContainer: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  navText: {
+    fontSize: 12,
+    color: '#9ca3af',
+    fontWeight: '500',
+  },
+  activeNavText: {
+    color: '#7c3aed',
+    fontWeight: '600',
   },
 });

@@ -14,6 +14,7 @@ import {
   Trophy,
   Clock,
   FileText,
+  ArrowLeft,
 } from "lucide-react-native";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -123,6 +124,14 @@ export default function Children() {
         end={{ x: 1, y: 1 }}
         style={styles.header}
       >
+
+         <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
+            <ArrowLeft size={24} color="#374151" />
+        </TouchableOpacity>
+        
         <Text style={styles.headerTitle}>Today child reports</Text>
         <Text style={styles.headerSubtitle}></Text>
       </LinearGradient>
@@ -391,5 +400,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6B7280",
     textAlign: "center",
+  },
+
+    backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

@@ -20,7 +20,7 @@ export default function Dashboard() {
       title: 'Child Profiles',
       subtitle: 'Manage your children',
       icon: Users,
-      route: '/teacher/child-manage',
+      route: '/teacher/(tabs)/profiles',
       color: '#8b5cf6'
     },
     {

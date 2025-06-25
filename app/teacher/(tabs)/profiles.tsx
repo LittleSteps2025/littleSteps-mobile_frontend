@@ -364,7 +364,15 @@ export default function ChildProfiles() {
               );
             })
           )}
+
+
+
+
+          
         </ScrollView>
+
+        
+
       </SafeAreaView>
     </LinearGradient>
   );
