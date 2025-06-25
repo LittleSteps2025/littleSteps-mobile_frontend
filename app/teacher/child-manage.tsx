@@ -5,11 +5,11 @@ import {
   TouchableOpacity,
   StatusBar,
   SafeAreaView,
-  StyleSheet
+  StyleSheet,
+  ScrollView,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Users, Bell, Calendar } from 'lucide-react-native';
+import { FileText, Clock, Users } from 'lucide-react-native';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -17,28 +17,28 @@ export default function Dashboard() {
   const navigationCards = [
     {
       id: 1,
-      title: 'Child Profiles',
-      subtitle: 'Manage your children',
-      icon: Users,
-      route: '/teacher/child-manage',
-      color: '#8b5cf6'
+      title: 'View Reports',
+      subtitle: 'Access performance reports',
+      icon: FileText,
+      route: '/teacher/child-reports',
+      color: '#10b981',
     },
     {
       id: 2,
-      title: 'Announcements',
-      subtitle: 'Latest updates',
-      icon: Bell,
-      route: 'teacher/announcements',
-      color: '#a855f7'
+      title: 'Attendance',
+      subtitle: 'View children attendance',
+      icon: Clock,
+      route: '/teacher/attendance',
+      color: '#3b82f6',
     },
     {
       id: 3,
-      title: 'Events',
-      subtitle: 'Upcoming activities',
-      icon: Calendar,
-      route: 'teacher/events',
-      color: '#9333ea'
-    }
+      title: 'All Children',
+      subtitle: 'Browse all profiles',
+      icon: Users,
+      route: '/teacher/profiles',
+      color: '#6366f1',
+    },
   ];
 
   const handleNavigation = (route: string) => {
@@ -46,37 +46,27 @@ export default function Dashboard() {
   };
 
   return (
-    <LinearGradient
-      colors={['#DFC1FD','#f3e8ff', '#F5ECFE','#F5ECFE','#e9d5ff', '#DFC1FD']}
-      start={[0, 0]}
-      end={[1, 1]}
-      style={styles.container}
-    >
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      <SafeAreaView style={styles.safeArea}>
-        {/* Header */}
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" />
+      <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
         <View style={styles.header}>
           <Text style={styles.title}>Welcome Back!</Text>
           <Text style={styles.subtitle}>What would you like to explore today?</Text>
         </View>
 
-        {/* Navigation Cards */}
         <View style={styles.cardsContainer}>
-          {navigationCards.map((card, index) => {
+          {navigationCards.map((card) => {
             const IconComponent = card.icon;
             return (
               <TouchableOpacity
                 key={card.id}
-                style={[
-                  styles.card,
-                  { marginTop: index === 0 ? 0 : 20 }
-                ]}
+                style={[styles.card, { marginBottom: 20 }]}
                 onPress={() => handleNavigation(card.route)}
-                activeOpacity={0.8}
+                activeOpacity={0.85}
               >
                 <View style={styles.cardContent}>
                   <View style={[styles.iconContainer, { backgroundColor: card.color }]}>
-                    <IconComponent size={32} color="white" strokeWidth={2} />
+                    <IconComponent color="#fff" size={28} />
                   </View>
                   <View style={styles.textContainer}>
                     <Text style={styles.cardTitle}>{card.title}</Text>
@@ -91,17 +81,13 @@ export default function Dashboard() {
           })}
         </View>
 
-        {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
-      </SafeAreaView>
-    </LinearGradient>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   safeArea: {
     flex: 1,
     marginTop: 28,
@@ -124,17 +110,13 @@ const styles = StyleSheet.create({
   },
   cardsContainer: {
     paddingHorizontal: 20,
-    flex: 1,
   },
   card: {
     backgroundColor: 'white',
     borderRadius: 20,
     padding: 24,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 5,
