@@ -12,11 +12,11 @@ const { width } = Dimensions.get('window');
 const children = [
   {
     id: '1',
-    name: 'Pramodii Peshila',
+    name: 'Pramodi Peshila',
     age: '5 years old',
     image: require('../../assets/images/kid1.jpg'),
     status: 'Active',
-    gender: 'female', // Added gender field
+    // lastUpdate: '2 hours ago',
   },
   {
     id: '2',
@@ -24,7 +24,7 @@ const children = [
     age: '7 years old',
     image: require('../../assets/images/kid1.jpg'),
     status: 'Active',
-    gender: 'male', // Added gender field
+    // lastUpdate: '1 hour ago',
   },
 ];
 
@@ -52,40 +52,37 @@ export default function ParentDashboard() {
         elevation: 8,
       }}
     >
-      <View
-        className="rounded-3xl border overflow-hidden"
-        style={{
-          borderBottomWidth: 4,
-          borderBottomColor: item.gender === 'female' ? '#ec4899' : '#3b82f6'
-        }}
+      <LinearGradient
+        colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)']}
+        start={[0, 0]}
+        end={[1, 1]}
+        className="rounded-3xl p-6 border border-white/30"
       >
-        <LinearGradient
-          colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)']}
-          start={[0, 0]}
-          end={[1, 1]}
-          className="p-6"
-        >
         <View className="flex-row items-center">
-          {/* Profile Image without Background */}
+          {/* Profile Image with Gradient Border */}
           <View className="relative">
-            <Image
-              source={item.image}
-              className="w-20 h-20 rounded-full"
-              style={{ 
-                borderWidth: 3, 
-                borderColor: item.gender === 'female' ? '#ec4899' : '#3b82f6' // Pink for female, blue for male
-              }}
-            />
+            <LinearGradient
+              colors={['#7c3aed', '#a855f7', '#c084fc']}
+              start={[0, 0]}
+              end={[1, 1]}
+              className="w-20 h-20 rounded-full items-center justify-center"
+            >
+              <Image
+                source={item.image}
+                className="w-16 h-16 rounded-full"
+                style={{ borderWidth: 2, borderColor: 'white' }}
+              />
+            </LinearGradient>
 
             {/* Status Indicator */}
-            <View className="absolute -top-1 -right-1 w-6 h-6 bg-green-400 rounded-full border-2 border-white items-center justify-center ">
+            <View className="absolute -top-1 -right-1 w-6 h-6 bg-green-400 rounded-full border-2 border-white items-center justify-center">
               <View className="w-2 h-2 bg-green-600 rounded-full" />
             </View>
           </View>
 
           {/* Child Info */}
           <View className="flex-1 ml-4">
-            <Text className="text-xl font-bold text-gray-800 mb-2">
+            <Text className="text-xl font-bold text-gray-800 mb-1">
               {item.name}
             </Text>
             <Text className="text-sm text-gray-600 mb-2">
@@ -100,6 +97,9 @@ export default function ParentDashboard() {
                   {item.status}
                 </Text>
               </View>
+              {/* <Text className="text-xs text-gray-500 ml-2">
+                Updated {item.lastUpdate}
+              </Text> */}
             </View>
           </View>
 
@@ -113,25 +113,38 @@ export default function ParentDashboard() {
                   name: item.name,
                   age: item.age,
                   status: item.status,
-                  gender: item.gender
+                  lastUpdate: item.lastUpdate
                 },
               })
             }
-            className="ml-4" 
           >
-            {/* <LinearGradient
+            <LinearGradient
               colors={['#7c3aed', '#a855f7']}
               start={[0, 0]}
               end={[1, 1]}
-                className="w-12 h-12 rounded-full items-center justify-center "
-              > */}
-                <View className="bg-purple-500 rounded-full w-10 h-10  items-center justify-center " >
-              <Ionicons name="chevron-forward" size={20} color="white" /></View>
-            {/* </LinearGradient> */}
+              className="w-12 h-12 rounded-full items-center justify-center"
+            >
+              <Ionicons name="chevron-forward" size={20} color="white" />
+            </LinearGradient>
           </Pressable>
         </View>
-              </LinearGradient>
-      </View>
+
+        {/* Quick Stats */}
+        {/* <View className="flex-row justify-between mt-4 pt-4 border-t border-gray-200">
+          <View className="items-center flex-1">
+            <Text className="text-lg font-bold text-purple-600">12</Text>
+            <Text className="text-xs text-gray-600">Milestones</Text>
+          </View>
+          <View className="items-center flex-1">
+            <Text className="text-lg font-bold text-purple-600">8</Text>
+            <Text className="text-xs text-gray-600">Activities</Text>
+          </View>
+          <View className="items-center flex-1">
+            <Text className="text-lg font-bold text-purple-600">95%</Text>
+            <Text className="text-xs text-gray-600">Progress</Text>
+          </View>
+        </View> */}
+      </LinearGradient>
     </Pressable>
   );
 
@@ -205,11 +218,15 @@ export default function ParentDashboard() {
       </View>
 
       {/* Children List */}
-      <View className="flex-1 bg-gray-50 rounded-t-[30px] pt-6  ">
+      <View className="flex-1 bg-gray-50 rounded-t-[30px] pt-6">
         <View className="flex-row items-center justify-between px-6 mb-4">
           <Text className="text-xl font-bold text-gray-800">
             Your Children
           </Text>
+          {/* <Pressable className="flex-row items-center">
+            <Text className="text-purple-700 font-medium mr-1">View All</Text>
+            <Ionicons name="chevron-forward" size={16} color="#7c3aed" />
+          </Pressable> */}
         </View>
 
         <FlatList
