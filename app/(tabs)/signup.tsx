@@ -1,44 +1,19 @@
-import { API_BASE_URL } from '@/utility/index';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
+  View,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  StatusBar,
+  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+  ScrollView
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-
-
-// Helper function to safely parse JSON
-const safeJsonParse = async (response: Response) => {
-  const text = await response.text();
-  
-  if (!text || text.trim() === '') {
-    throw new Error('Empty response from server');
-  }
-  
-  // Check if response starts with HTML
-  if (text.trim().startsWith('<')) {
-    throw new Error('Server returned HTML instead of JSON. Check if the endpoint exists.');
-  }
-  
-  try {
-    return JSON.parse(text);
-  } catch (error) {
-    console.error('Failed to parse JSON:', text);
-    throw new Error('Invalid JSON response from server');
-  }
-};
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 // Define types for better type safety
 type FormData = {
@@ -59,17 +34,17 @@ type TouchedFields = {
 
 export default function CreateAccountWithValidation() {
   const router = useRouter();
-
+  
   // Form state
   const [formData, setFormData] = useState<FormData>({
     email: '',
     password: '',
     confirmPassword: ''
   });
-
+  
   // Validation errors
   const [errors, setErrors] = useState<FormErrors>({});
-
+  
   // UI state
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -103,7 +78,7 @@ export default function CreateAccountWithValidation() {
   // Real-time validation
   const validateField = (field: FormField, value: string) => {
     let error = null;
-
+    
     switch (field) {
       case 'email':
         error = validateEmail(value);
@@ -115,12 +90,12 @@ export default function CreateAccountWithValidation() {
         error = validateConfirmPassword(value, formData.password);
         break;
     }
-
+    
     setErrors(prev => ({
       ...prev,
       [field]: error
     }));
-
+    
     return error === null;
   };
 
@@ -130,12 +105,12 @@ export default function CreateAccountWithValidation() {
       ...prev,
       [field]: value
     }));
-
+    
     // Validate if field has been touched
     if (touched[field]) {
       validateField(field, value);
     }
-
+    
     // Re-validate confirm password if password changes
     if (field === 'password' && touched.confirmPassword && formData.confirmPassword) {
       validateField('confirmPassword', formData.confirmPassword);
@@ -156,20 +131,20 @@ export default function CreateAccountWithValidation() {
     const emailError = validateEmail(formData.email);
     const passwordError = validatePassword(formData.password);
     const confirmPasswordError = validateConfirmPassword(formData.confirmPassword, formData.password);
-
+    
     const newErrors: FormErrors = {
       email: emailError,
       password: passwordError,
       confirmPassword: confirmPasswordError
     };
-
+    
     setErrors(newErrors);
     setTouched({
       email: true,
       password: true,
       confirmPassword: true
     });
-
+    
     return !emailError && !passwordError && !confirmPasswordError;
   };
 
@@ -181,68 +156,26 @@ export default function CreateAccountWithValidation() {
     }
 
     setIsLoading(true);
-
+    
     try {
-      console.log('Making request to:', `${API_BASE_URL}/users/check-email`);
-      console.log('Checking email:', formData.email);
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // 1. Check if email already exists in database
-      const checkResponse = await fetch(`${API_BASE_URL}/users/check-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-        }),
-      });
-
-      console.log('Response status:', checkResponse.status);
-      
-      // Parse the response
-      const checkData = await safeJsonParse(checkResponse);
-      console.log('Check email response:', checkData);
-
-      // FOR SIGNUP: If email already exists, show error
-      if (checkData.exists) {
-        Alert.alert('Error', 'This email is already registered. Please use a different email or try logging in.');
-        return;
-      }
-
-      // If email doesn't exist in database, temporarily save the data
-      console.log('Email is available, saving data temporarily...');
-      
-      // Temporarily save email and password securely
-      const temporaryUserData = {
-        email: formData.email,
-        password: formData.password,
-        timestamp: new Date().toISOString()
-      };
-
-      // Store temporarily in AsyncStorage
-      await AsyncStorage.setItem('tempUserData', JSON.stringify(temporaryUserData));
-      console.log('Data saved temporarily');
-
-      // Navigate to verification page
-      router.push({
-        pathname: '/account_verification',
-        params: { 
-          email: temporaryUserData.email,
-          password: temporaryUserData.password
-        }
-      });
-
-      Alert.alert('Success', 'Please verify your email to complete registration.');
-
+      // Success
+      Alert.alert(
+        'Success', 
+        'Account created successfully!',
+        [
+          {
+            text: 'Continue',
+            onPress: () => router.push('/account_verification')
+          }
+        ]
+      );
     } catch (error) {
-      console.error('Signup error:', error);
-      if (error instanceof Error) {
-        Alert.alert('Error', error.message);
-      } else {
-        Alert.alert('Error', 'Something went wrong. Please try again.');
-      }
+      Alert.alert('Error', 'Failed to create account. Please try again.');
     } finally {
-      setIsLoading(true);
+      setIsLoading(false);
     }
   };
 
@@ -254,7 +187,7 @@ export default function CreateAccountWithValidation() {
     if (/(?=.*[A-Z])/.test(password)) strength++;
     if (/(?=.*\d)/.test(password)) strength++;
     if (/(?=.*[@$!%*?&])/.test(password)) strength++;
-
+    
     return strength;
   };
 
@@ -264,21 +197,21 @@ export default function CreateAccountWithValidation() {
 
   return (
     <LinearGradient
-      colors={['#DFC1FD', '#f3e8ff', '#F5ECFE', '#F5ECFE', '#e9d5ff', '#DFC1FD']}
+      colors={['#DFC1FD','#f3e8ff', '#F5ECFE','#F5ECFE','#e9d5ff', '#DFC1FD']}
       start={[0, 0]}
       end={[1, 1]}
       className="flex-1"
     >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <SafeAreaView className="flex-1 mt-7">
-        <KeyboardAvoidingView
+        <KeyboardAvoidingView 
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           className="flex-1"
         >
           <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
             {/* Header */}
             <View className="px-5 pt-2">
-              <TouchableOpacity
+              <TouchableOpacity 
                 onPress={() => router.back()}
                 className="w-10 h-10 justify-center items-center"
               >
@@ -368,20 +301,20 @@ export default function CreateAccountWithValidation() {
                   onPress={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-4"
                 >
-                  <Ionicons
-                    name={showPassword ? "eye-off" : "eye"}
-                    size={20}
-                    color="#9ca3af"
+                  <Ionicons 
+                    name={showPassword ? "eye-off" : "eye"} 
+                    size={20} 
+                    color="#9ca3af" 
                   />
                 </TouchableOpacity>
               </View>
-
+              
               {/* Password Strength Indicator */}
               {formData.password.length > 0 && (
                 <View className="mb-2">
                   <View className="flex-row items-center justify-between mb-1">
                     <Text className="text-sm text-gray-600">Password Strength</Text>
-                    <Text
+                    <Text 
                       className="text-sm font-medium"
                       style={{ color: strengthColors[passwordStrength - 1] || '#ef4444' }}
                     >
@@ -394,7 +327,7 @@ export default function CreateAccountWithValidation() {
                         key={level}
                         className="flex-1 h-2 rounded-full"
                         style={{
-                          backgroundColor: level <= passwordStrength
+                          backgroundColor: level <= passwordStrength 
                             ? strengthColors[passwordStrength - 1] || '#ef4444'
                             : '#e5e7eb'
                         }}
@@ -403,7 +336,7 @@ export default function CreateAccountWithValidation() {
                   </View>
                 </View>
               )}
-
+              
               {errors.password && touched.password && (
                 <Text className="text-red-500 text-sm mb-4 ml-1">
                   {errors.password}
@@ -442,20 +375,20 @@ export default function CreateAccountWithValidation() {
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-4 top-4"
                 >
-                  <Ionicons
-                    name={showConfirmPassword ? "eye-off" : "eye"}
-                    size={20}
-                    color="#9ca3af"
+                  <Ionicons 
+                    name={showConfirmPassword ? "eye-off" : "eye"} 
+                    size={20} 
+                    color="#9ca3af" 
                   />
                 </TouchableOpacity>
               </View>
-
+              
               {errors.confirmPassword && touched.confirmPassword && (
                 <Text className="text-red-500 text-sm mb-6 ml-1">
                   {errors.confirmPassword}
                 </Text>
               )}
-
+              
               {!errors.confirmPassword && touched.confirmPassword && formData.confirmPassword && (
                 <View className="flex-row items-center mb-6 ml-1">
                   <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
@@ -476,12 +409,12 @@ export default function CreateAccountWithValidation() {
                   { rule: 'One special character', check: /(?=.*[@$!%*?&])/.test(formData.password) }
                 ].map((req, index) => (
                   <View key={index} className="flex-row items-center mb-1">
-                    <Ionicons
-                      name={req.check ? "checkmark-circle" : "ellipse-outline"}
-                      size={16}
-                      color={req.check ? "#22c55e" : "#9ca3af"}
+                    <Ionicons 
+                      name={req.check ? "checkmark-circle" : "ellipse-outline"} 
+                      size={16} 
+                      color={req.check ? "#22c55e" : "#9ca3af"} 
                     />
-                    <Text
+                    <Text 
                       className={`text-sm ml-2 ${req.check ? 'text-green-600' : 'text-gray-500'}`}
                     >
                       {req.rule}
@@ -494,8 +427,9 @@ export default function CreateAccountWithValidation() {
               <TouchableOpacity
                 onPress={handleCreateAccount}
                 disabled={isLoading}
-                className={`rounded-3xl py-4 items-center mb-8 ${isLoading ? 'bg-purple-400' : 'bg-purple-600'
-                  }`}
+                className={`rounded-3xl py-4 items-center mb-8 ${
+                  isLoading ? 'bg-purple-400' : 'bg-purple-600'
+                }`}
                 style={{
                   shadowColor: '#7c3aed',
                   shadowOffset: { width: 0, height: 4 },
