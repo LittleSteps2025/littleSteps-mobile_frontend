@@ -14,6 +14,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { apiRequest, API_CONFIG } from '../../config/api';
 
 // Define types for better type safety
 type FormData = {
@@ -148,13 +149,21 @@ export default function CreateAccountWithValidation() {
     setIsLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Call parent login API
+      const response = await apiRequest(API_CONFIG.ENDPOINTS.PARENT_LOGIN, {
+        method: 'POST',
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        })
+      });
       
-      // Success
+      // Success - store user data if needed
+      console.log('Login successful:', response);
+      
       Alert.alert(
         'Success', 
-        'Account created successfully!',
+        'Login successful!',
         [
           {
             text: 'Continue',
@@ -162,8 +171,19 @@ export default function CreateAccountWithValidation() {
           }
         ]
       );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to create account. Please try again.');
+    } catch (error: any) {
+      // Handle different error scenarios
+      let errorMessage = 'Failed to login. Please try again.';
+      
+      if (error.message === 'Parent not found') {
+        errorMessage = 'No account found with this email address.';
+      } else if (error.message === 'Invalid password') {
+        errorMessage = 'Incorrect password. Please try again.';
+      } else if (error.message === 'Account not verified') {
+        errorMessage = 'Please verify your email address before logging in.';
+      }
+      
+      Alert.alert('Login Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -386,7 +406,7 @@ export default function CreateAccountWithValidation() {
                 }}
               >
                 <Text className="text-white text-lg font-semibold">
-                  {isLoading ? 'Logging Account...' : 'Log an account'}
+                  {isLoading ? 'Logging in...' : 'Log In'}
                 </Text>
               </TouchableOpacity>
             </View>
