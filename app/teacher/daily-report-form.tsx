@@ -68,7 +68,9 @@ export default function DailyReportForm() {
   useEffect(() => {
     async function fetchGuardians() {
       try {
-      const res = await fetch(`http://localhost:5001/api/guardians/${childId}`);
+        const res = await fetch(
+          `http://localhost:5001/api/guardians/${childId}`
+        );
         const data = await res.json();
         setGuardians(data.map((g: any) => g.name));
       } catch (e) {
@@ -208,78 +210,71 @@ export default function DailyReportForm() {
     }
   };
 
+  const saveProgress = async () => {
+    setLastSaved(new Date());
 
+    const statusUpdates: { [key: string]: number } = {};
+    reportFields.forEach((field) => {
+      statusUpdates[field.id] = field.completed ? 1 : 0;
+    });
 
+    try {
+      const response = await fetch(
+        `http://localhost:5001/api/reports/${childId}/status`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(statusUpdates),
+        }
+      );
 
+      if (response.ok) {
+        Alert.alert("Progress Saved", "Status fields have been saved.");
+        router.back(); // Navigate back immediately after save
+      } else {
+        throw new Error("Failed to update status");
+      }
+    } catch (error) {
+      console.error("Error saving status fields:", error);
+      Alert.alert("Error", "Failed to save progress.");
+    }
+  };
 
+ const handleSubmit = async () => {
+  if (!validateForm()) return;
 
-
-
-const saveProgress = async () => {
-  setLastSaved(new Date());
-
-  const statusUpdates: { [key: string]: number } = {};
+  const statusUpdates = {};
   reportFields.forEach((field) => {
     statusUpdates[field.id] = field.completed ? 1 : 0;
   });
 
-  try {
-    const response = await fetch(
-      `http://localhost:5001/api/reports/${childId}/status`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(statusUpdates),
-      }
-    );
-
-   if (response.ok) {
-  Alert.alert("Progress Saved", "Status fields have been saved.");
-  router.back();  // Navigate back immediately after save
-} else {
-  throw new Error("Failed to update status");
-}
-
-  } catch (error) {
-    console.error("Error saving status fields:", error);
-    Alert.alert("Error", "Failed to save progress.");
-  }
-};
-
-
-
-  const handleSubmit = async () => {
-  // Validate first (you already have validateForm)
-
-  if (!validateForm()) return;
-
-  const statusUpdates = {};
-  reportFields.forEach(field => {
-    statusUpdates[field.id] = field.completed ? 1 : 0; // or true/false depending on your DB
-  });
-
-  // Include checkout info
+  // Include checkout info and daily summary
   const payload = {
     statusUpdates,
     checkoutPerson,
     checkoutTime,
+    progress: progressPercentage,
+    dailySummary,      // Add daily summary here
   };
 
   try {
-    const response = await fetch(`http://localhost:5001/api/reports/${childId}/submit`, {
-      method: 'PUT',  // or POST, depending on your backend design
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+    const response = await fetch(
+      `http://localhost:5001/api/reports/${childId}/submit`,
+      {
+        method: "PUT", // or POST depending on backend
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      }
+    );
 
-   if (response.ok) {
-  Alert.alert("Progress Saved", "Status fields have been saved.");
-  router.back();
+    if (response.ok) {
+      Alert.alert("Progress Saved", "Status fields have been saved.");
       setIsSubmitted(true);
+      router.back();
     } else {
       throw new Error("Failed to submit report");
     }
@@ -288,20 +283,6 @@ const saveProgress = async () => {
     Alert.alert("Error", "Failed to submit report.");
   }
 };
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
 
 
   const validateForm = () => {
@@ -325,7 +306,6 @@ const saveProgress = async () => {
     }
     return true;
   };
-
 
   const getCurrentTime = () =>
     new Date().toLocaleTimeString("en-US", {
@@ -633,7 +613,7 @@ const saveProgress = async () => {
       </View>
 
       {/* Action Buttons */}
-      
+
       <View style={styles.actionButtonsContainer}>
         <TouchableOpacity
           style={[styles.actionButton, styles.saveButton]}
@@ -642,7 +622,6 @@ const saveProgress = async () => {
         >
           <Save color="#fff" size={18} />
           <Text style={styles.actionButtonText}>Save Progress</Text>
-          
         </TouchableOpacity>
 
         <TouchableOpacity
