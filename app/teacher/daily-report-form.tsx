@@ -208,10 +208,6 @@ export default function DailyReportForm() {
     }
   };
 
-  // const saveProgress = () => {
-  //   setLastSaved(new Date());
-  //   console.log("Progress saved");
-  // };
 
 
 
@@ -219,54 +215,54 @@ export default function DailyReportForm() {
 
 
 
-
-
-
-
-
-
-  const saveProgress = async () => {
+const saveProgress = async () => {
   setLastSaved(new Date());
 
   const statusUpdates: { [key: string]: number } = {};
-  reportFields.forEach(field => {
+  reportFields.forEach((field) => {
     statusUpdates[field.id] = field.completed ? 1 : 0;
   });
 
   try {
-    const response = await fetch(`http://localhost:5001/api/reports/${childId}/status`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(statusUpdates),
-    });
+    const response = await fetch(
+      `http://localhost:5001/api/reports/${childId}/status`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(statusUpdates),
+      }
+    );
 
-    if (response.ok) {
-      Alert.alert("Progress Saved", "Status fields have been saved.");
-    } else {
-      throw new Error("Failed to update status");
-    }
+   if (response.ok) {
+  Alert.alert("Progress Saved", "Status fields have been saved.");
+  router.back();  // Navigate back immediately after save
+} else {
+  throw new Error("Failed to update status");
+}
+
   } catch (error) {
     console.error("Error saving status fields:", error);
     Alert.alert("Error", "Failed to save progress.");
   }
 };
 
-  
-
-
-
-
-
-
-
-
-
-
-
 
   
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   const validateForm = () => {
     const incompleteRequired = reportFields.filter(
@@ -612,6 +608,7 @@ export default function DailyReportForm() {
       </View>
 
       {/* Action Buttons */}
+      
       <View style={styles.actionButtonsContainer}>
         <TouchableOpacity
           style={[styles.actionButton, styles.saveButton]}
@@ -620,6 +617,7 @@ export default function DailyReportForm() {
         >
           <Save color="#fff" size={18} />
           <Text style={styles.actionButtonText}>Save Progress</Text>
+          
         </TouchableOpacity>
 
         <TouchableOpacity
