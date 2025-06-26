@@ -249,6 +249,46 @@ const saveProgress = async () => {
 };
 
 
+
+  const handleSubmit = async () => {
+  // Validate first (you already have validateForm)
+
+  if (!validateForm()) return;
+
+  const statusUpdates = {};
+  reportFields.forEach(field => {
+    statusUpdates[field.id] = field.completed ? 1 : 0; // or true/false depending on your DB
+  });
+
+  // Include checkout info
+  const payload = {
+    statusUpdates,
+    checkoutPerson,
+    checkoutTime,
+  };
+
+  try {
+    const response = await fetch(`http://localhost:5001/api/reports/${childId}/submit`, {
+      method: 'PUT',  // or POST, depending on your backend design
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+   if (response.ok) {
+  Alert.alert("Progress Saved", "Status fields have been saved.");
+  router.back();
+      setIsSubmitted(true);
+    } else {
+      throw new Error("Failed to submit report");
+    }
+  } catch (error) {
+    console.error("Submit error:", error);
+    Alert.alert("Error", "Failed to submit report.");
+  }
+};
+
   
 
 
@@ -286,21 +326,6 @@ const saveProgress = async () => {
     return true;
   };
 
-  const handleSubmit = () => {
-    if (!validateForm()) return;
-    Alert.alert("Submit Daily Report", "Are you sure you want to submit?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Submit",
-        onPress: () => {
-          setIsSubmitted(true);
-          Alert.alert("Report Submitted", "Report submitted successfully", [
-            { text: "OK", onPress: () => router.back() },
-          ]);
-        },
-      },
-    ]);
-  };
 
   const getCurrentTime = () =>
     new Date().toLocaleTimeString("en-US", {
