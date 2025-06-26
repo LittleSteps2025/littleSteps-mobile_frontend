@@ -68,7 +68,7 @@ export default function DailyReportForm() {
   useEffect(() => {
     async function fetchGuardians() {
       try {
-        const res = await fetch("http://localhost:5001/api/guardians");
+      const res = await fetch(`http://localhost:5001/api/guardians/${childId}`);
         const data = await res.json();
         setGuardians(data.map((g: any) => g.name));
       } catch (e) {
