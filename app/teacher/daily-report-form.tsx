@@ -8,27 +8,25 @@ import {
   Alert,
   Switch,
   StyleSheet,
+  ActivityIndicator,
+  Picker,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import {
   Clock,
   Coffee,
   Utensils,
   Heart,
-  Droplets,
   Pill,
-  Moon,
-  Baby,
-  Smile,
-  CircleAlert as AlertCircle,
   Save,
   Send,
   ArrowLeft,
-  CheckCheckIcon,
-  CheckIcon,
-  CheckCircle,
   Check,
+  Calendar,
+  User,
+  LogOut,
+  Users,
 } from 'lucide-react-native';
 
 interface ReportField {
@@ -43,33 +41,120 @@ interface ReportField {
 }
 
 export default function DailyReportForm() {
-  const [childName] = useState('Ishadi Thashmika');
-  const [reportDate] = useState(new Date().toLocaleDateString());
+  const { childId } = useLocalSearchParams();
+  const [childName, setChildName] = useState('');
+  const [reportDate, setReportDate] = useState(new Date().toLocaleDateString());
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [reportFields, setReportFields] = useState<ReportField[]>([
-    { id: 'arrival', title: 'Arrival', icon:Check, time: '', description: '', completed: false, required: true, color: '#10B981' },
-    { id: 'breakfast', title: 'Breakfast', icon: Coffee, time: '', description: '', completed: false, required: true, color: '#F59E0B' },
-    { id: 'morning_snack', title: 'Morning Snack', icon: Utensils, time: '', description: '', completed: false, required: false, color: '#8B5CF6' },
-    { id: 'lunch', title: 'Lunch', icon: Utensils, time: '', description: '', completed: false, required: true, color: '#EF4444' },
-    { id: 'afternoon_snack', title: 'Afternoon Snack', icon: Coffee, time: '', description: '', completed: false, required: false, color: '#06B6D4' },
-    { id: 'nap_time', title: 'Nap Time', icon: Moon, time: '', description: '', completed: false, required: true, color: '#6366F1' },
-    { id: 'diaper_change', title: 'Diaper Changes', icon: Baby, time: '', description: '', completed: false, required: true, color: '#EC4899' },
-    { id: 'drinks', title: 'Drinks & Fluids', icon: Droplets, time: '', description: '', completed: false, required: true, color: '#14B8A6' },
-    { id: 'medicines', title: 'Medicines', icon: Pill, time: '', description: '', completed: false, required: false, color: '#F97316' },
-    { id: 'activities', title: 'Activities & Play', icon: Heart, time: '', description: '', completed: false, required: true, color: '#84CC16' },
-  ]);
-
+  const [reportFields, setReportFields] = useState<ReportField[]>([]);
   const [specialNotes, setSpecialNotes] = useState('');
-  const [emergencyNotes, setEmergencyNotes] = useState('');
+  const [dailySummary, setDailySummary] = useState('');
+  const [checkoutPerson, setCheckoutPerson] = useState('');
+  const [checkoutTime, setCheckoutTime] = useState('');
+  const [arrivalTime, setArrivalTime] = useState('');
+  const [arrivalCompleted, setArrivalCompleted] = useState(false);
+
+  // Example guardians for dropdown - replace with fetch from your DB if needed
+  const [guardians, setGuardians] = useState<string[]>([]);
+
+  // Calculate progress
+  const totalTasks = reportFields.length + 1; // +1 for arrival
+  const completedTasks = reportFields.filter(field => field.completed).length + (arrivalCompleted ? 1 : 0);
+  const progressPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
   useEffect(() => {
-    const autoSave = setInterval(() => {
-      saveProgress();
-    }, 30000);
-    return () => clearInterval(autoSave);
-  }, [reportFields, specialNotes, emergencyNotes]);
+    // Fetch guardians list (mock example)
+    async function fetchGuardians() {
+      try {
+        // Replace URL with your guardians API
+        const res = await fetch('http://localhost:5001/api/guardians');
+        const data = await res.json();
+        setGuardians(data.map((g: any) => g.name));
+      } catch (e) {
+        console.error('Failed to fetch guardians', e);
+      }
+    }
+    fetchGuardians();
+  }, []);
+
+  useEffect(() => {
+    const fetchReport = async () => {
+      try {
+        const response = await fetch(`http://localhost:5001/api/reports/${childId}`);
+        const data = await response.json();
+        const report = data[0];
+
+        setChildName(report.child_name || '');
+        setReportFields([
+          {
+            id: 'breakfast',
+            title: 'Breakfast',
+            icon: Coffee,
+            time: report.breakfast_time || '',
+            description: report.breakfast || 'No breakfast details recorded',
+            completed: !!report.breakfast,
+            required: true,
+            color: '#F59E0B',
+          },
+          {
+            id: 'tea_time',
+            title: 'Tea Time',
+            icon: Coffee,
+            time: report.tea_time_time || '',
+            description: report.tea_time || 'No tea time details recorded',
+            completed: !!report.tea_time,
+            required: false,
+            color: '#D97706',
+          },
+          {
+            id: 'lunch',
+            title: 'Lunch',
+            icon: Utensils,
+            time: report.lunch_time || '',
+            description: report.lunch || 'No lunch details recorded',
+            completed: !!report.lunch,
+            required: true,
+            color: '#EF4444',
+          },
+          {
+            id: 'snack_time',
+            title: 'Snack Time',
+            icon: Coffee,
+            time: report.snack_time_time || '',
+            description: report.snack_time || 'No snack time details recorded',
+            completed: !!report.snack_time,
+            required: false,
+            color: '#06B6D4',
+          },
+          {
+            id: 'medicine',
+            title: 'Medicine',
+            icon: Pill,
+            time: report.medicine_time || '',
+            description: report.medicine || 'No medicine details recorded',
+            completed: !!report.medicine,
+            required: false,
+            color: '#F97316',
+          },
+        ]);
+
+        setSpecialNotes(report.special_notes || '');
+        setDailySummary(report.day_summery || '');
+        setCheckoutPerson(report.checkout_person || '');
+        setCheckoutTime(report.checkout_time || '');
+        setArrivalTime(report.arrived_time || '');
+        setArrivalCompleted(!!report.arrived_time);
+      } catch (error) {
+        console.error('Failed to load report:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (childId) fetchReport();
+  }, [childId]);
 
   const updateField = (id: string, field: 'time' | 'description', value: string) => {
     setReportFields(prev =>
@@ -87,17 +172,28 @@ export default function DailyReportForm() {
     );
   };
 
+  const saveArrivalTime = () => {
+    const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    setArrivalTime(now);
+    setArrivalCompleted(true);
+    Alert.alert('Arrival time saved', `Arrival time set to ${now}`);
+  };
+
   const saveProgress = () => {
     setLastSaved(new Date());
-    console.log('Progress saved automatically');
+    console.log('Progress saved');
   };
 
   const validateForm = () => {
     const incompleteRequired = reportFields.filter(field => field.required && !field.completed);
+    if (!arrivalCompleted) {
+      Alert.alert('Arrival Not Set', 'Please press the "Arrived" button to set arrival time.');
+      return false;
+    }
     if (incompleteRequired.length > 0) {
       Alert.alert(
         'Incomplete Required Fields',
-        `Please complete the following required fields:\n${incompleteRequired.map(f => f.title).join('\n')}`,
+        `Please complete:\n${incompleteRequired.map(f => f.title).join('\n')}`,
         [{ text: 'OK' }]
       );
       return false;
@@ -109,427 +205,769 @@ export default function DailyReportForm() {
     if (!validateForm()) return;
     Alert.alert(
       'Submit Daily Report',
-      'Are you sure you want to submit this report? Once submitted, it cannot be edited.',
+      'Are you sure you want to submit?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Submit',
-          style: 'default',
           onPress: () => {
             setIsSubmitted(true);
-            Alert.alert(
-              'Report Submitted',
-              'Daily report has been successfully submitted to parents.',
-              [{ text: 'OK', onPress: () => router.back() }]
-            );
+            Alert.alert('Report Submitted', 'Report submitted successfully', [
+              { text: 'OK', onPress: () => router.back() },
+            ]);
           },
         },
       ]
     );
   };
 
-  const getCompletionPercentage = () => {
-    const completed = reportFields.filter(field => field.completed).length;
-    return Math.round((completed / reportFields.length) * 100);
-  };
+  const getCurrentTime = () => new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-  const getCurrentTime = () => {
-    return new Date().toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
-  };
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#8B5CF6" />
+        <Text style={styles.loadingText}>Loading report...</Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#8B5CF6', '#EC4899']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ArrowLeft size={24} color="#FFFFFF" strokeWidth={2} />
-          </TouchableOpacity>
+    <ScrollView style={styles.container}>
+      {/* Header with Progress Bar */}
+      <LinearGradient colors={['#8B5CF6', '#EC4899']} style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <ArrowLeft color="#fff" size={24} />
+        </TouchableOpacity>
+        
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Daily Report</Text>
           <View style={styles.headerInfo}>
-            <Text style={styles.headerTitle}>Daily Report</Text>
-            <Text style={styles.headerSubtitle}>{childName}</Text>
-            <Text style={styles.headerDate}>{reportDate}</Text>
+            <View style={styles.headerInfoItem}>
+              <User color="#fff" size={16} />
+              <Text style={styles.headerInfoText}>{childName}</Text>
+            </View>
+            <View style={styles.headerInfoItem}>
+              <Calendar color="#fff" size={16} />
+              <Text style={styles.headerInfoText}>{reportDate}</Text>
+            </View>
           </View>
         </View>
+
+        {/* Progress Bar */}
         <View style={styles.progressContainer}>
-          <View style={styles.progressInfo}>
-            <Text style={styles.progressText}>Progress: {getCompletionPercentage()}% Complete</Text>
-            {lastSaved && (
-              <Text style={styles.savedText}>Last saved: {lastSaved.toLocaleTimeString()}</Text>
-            )}
+          <View style={styles.progressHeader}>
+            <Text style={styles.progressText}>
+              Progress: {completedTasks}/{totalTasks} tasks completed
+            </Text>
+            <Text style={styles.progressPercentage}>
+              {Math.round(progressPercentage)}%
+            </Text>
           </View>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${getCompletionPercentage()}%` }]} />
+          <View style={styles.progressBarBackground}>
+            <View 
+              style={[
+                styles.progressBarFill,
+                { width: `${progressPercentage}%` }
+              ]} 
+            />
           </View>
         </View>
       </LinearGradient>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {reportFields.map((field) => (
-          <View key={field.id} style={styles.fieldCard}>
-            <View style={styles.fieldHeader}>
-              <View style={[styles.iconContainer, { backgroundColor: `${field.color}20` }]}>
-                <field.icon size={20} color={field.color} strokeWidth={2} />
+      {/* Arrival Section */}
+      <View style={styles.taskCard}>
+        <View style={styles.taskHeader}>
+          <View style={styles.taskHeaderLeft}>
+            <View style={[styles.iconContainer, { backgroundColor: '#10B981' }]}>
+              <Check size={20} color="#fff" />
+            </View>
+            <View>
+              <Text style={styles.taskTitle}>Arrival</Text>
+              <Text style={styles.taskSubtitle}>Required</Text>
+            </View>
+          </View>
+          <View style={styles.taskHeaderRight}>
+            <Switch
+              value={arrivalCompleted}
+              onValueChange={() => {}} // Disabled - only button controls this
+              disabled={true}
+              trackColor={{ false: '#E5E7EB', true: '#10B981' }}
+              thumbColor={arrivalCompleted ? '#fff' : '#f4f3f4'}
+            />
+          </View>
+        </View>
+
+        <View style={styles.taskContent}>
+          <View style={styles.timeSection}>
+            <Text style={styles.timeLabel}>Arrival Time:</Text>
+            <Text style={styles.timeValue}>
+              {arrivalTime || 'Not set'}
+            </Text>
+          </View>
+          
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              arrivalCompleted ? styles.actionButtonCompleted : styles.actionButtonPrimary
+            ]}
+            onPress={saveArrivalTime}
+            disabled={arrivalCompleted || isSubmitted}
+          >
+            <Clock size={16} color="#fff" />
+            <Text style={styles.actionButtonText}>
+              {arrivalCompleted ? 'Arrived' : 'Mark as Arrived'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Report Fields */}
+      {reportFields.map(field => (
+        <View key={field.id} style={styles.taskCard}>
+          <View style={styles.taskHeader}>
+            <View style={styles.taskHeaderLeft}>
+              <View style={[styles.iconContainer, { backgroundColor: field.color }]}>
+                <field.icon size={20} color="#fff" />
               </View>
-              <View style={styles.fieldTitleContainer}>
-                <Text style={styles.fieldTitle}>{field.title}</Text>
-                {field.required && <Text style={styles.requiredText}>*Required</Text>}
+              <View>
+                <Text style={styles.taskTitle}>{field.title}</Text>
+                <Text style={styles.taskSubtitle}>
+                  {field.required ? 'Required' : 'Optional'}
+                </Text>
               </View>
+            </View>
+            <View style={styles.taskHeaderRight}>
               <Switch
                 value={field.completed}
                 onValueChange={() => toggleComplete(field.id)}
                 disabled={isSubmitted}
                 trackColor={{ false: '#E5E7EB', true: field.color }}
-                thumbColor={field.completed ? field.color : '#f4f3f4'}
+                thumbColor={field.completed ? '#fff' : '#f4f3f4'}
               />
             </View>
+          </View>
 
+          <View style={styles.taskContent}>
+            <View style={styles.dataSection}>
+              <Text style={styles.dataLabel}>Database Notes:</Text>
+              <View style={styles.dataContent}>
+                <Text style={styles.dataText}>{field.description}</Text>
+              </View>
+            </View>
+
+            <View style={styles.timeInputSection}>
+              <Text style={styles.timeLabel}>Time:</Text>
+              <View style={styles.timeInputContainer}>
+                <TextInput
+                  placeholder="Enter time"
+                  value={field.time}
+                  onChangeText={(text) => updateField(field.id, 'time', text)}
+                  editable={!isSubmitted}
+                  style={styles.timeInput}
+                />
+                <TouchableOpacity
+                  style={styles.nowButton}
+                  onPress={() => updateField(field.id, 'time', getCurrentTime())}
+                  disabled={isSubmitted}
+                >
+                  <Clock size={14} color="#8B5CF6" />
+                  <Text style={styles.nowButtonText}>Now</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      ))}
+
+      {/* Special Notes */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Special Notes</Text>
+        <View style={styles.notesContainer}>
+          <Text style={styles.notesText}>
+            {specialNotes || 'No special notes available'}
+          </Text>
+        </View>
+      </View>
+
+      {/* Daily Summary */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Daily Summary</Text>
+        <TextInput
+          placeholder="Enter daily summary..."
+          value={dailySummary}
+          onChangeText={setDailySummary}
+          multiline
+          editable={!isSubmitted}
+          style={styles.summaryInput}
+        />
+      </View>
+
+      {/* Enhanced Checkout Section */}
+      <View style={styles.checkoutCard}>
+        <View style={styles.checkoutHeader}>
+          <View style={styles.checkoutHeaderLeft}>
+            <View style={[styles.iconContainer, { backgroundColor: '#EF4444' }]}>
+              <LogOut size={20} color="#fff" />
+            </View>
+            <View>
+              <Text style={styles.cardTitle}>Checkout Information</Text>
+              <Text style={styles.checkoutSubtitle}>End of day details</Text>
+            </View>
+          </View>
+        </View>
+        
+        <View style={styles.checkoutContent}>
+          <View style={styles.checkoutField}>
+            <Text style={styles.checkoutFieldLabel}>
+              <Users size={16} color="#374151" />
+              <Text style={styles.checkoutFieldLabelText}>  Pickup Person</Text>
+            </Text>
+            <View style={styles.pickerWrapper}>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={checkoutPerson}
+                  onValueChange={(itemValue) => setCheckoutPerson(itemValue)}
+                  enabled={!isSubmitted}
+                  style={styles.picker}
+                >
+                  <Picker.Item 
+                    label="Select guardian or authorized person" 
+                    value="" 
+                    color="#9CA3AF"
+                  />
+                  {guardians.map((guardian) => (
+                    <Picker.Item 
+                      key={guardian} 
+                      label={guardian} 
+                      value={guardian}
+                      color="#1F2937"
+                    />
+                  ))}
+                </Picker>
+              </View>
+              {checkoutPerson ? (
+                <View style={styles.selectedPersonIndicator}>
+                  <Check size={16} color="#10B981" />
+                  <Text style={styles.selectedPersonText}>{checkoutPerson}</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+
+          <View style={styles.checkoutField}>
+            <Text style={styles.checkoutFieldLabel}>
+              <Clock size={16} color="#374151" />
+              <Text style={styles.checkoutFieldLabelText}>  Checkout Time</Text>
+            </Text>
             <View style={styles.timeInputContainer}>
-              <Clock size={16} color="#6B7280" strokeWidth={2} />
               <TextInput
-                style={styles.timeInput}
-                placeholder="Enter time (e.g., 9:30 AM)"
-                value={field.time}
-                onChangeText={(text) => updateField(field.id, 'time', text)}
+                placeholder="Enter checkout time"
+                value={checkoutTime}
+                onChangeText={setCheckoutTime}
                 editable={!isSubmitted}
+                style={styles.checkoutTimeInput}
+                placeholderTextColor="#9CA3AF"
               />
               <TouchableOpacity
-                style={styles.nowButton}
-                onPress={() => updateField(field.id, 'time', getCurrentTime())}
-                disabled={isSubmitted}>
-                <Text style={styles.nowButtonText}>Now</Text>
+                style={styles.checkoutNowButton}
+                onPress={() => setCheckoutTime(getCurrentTime())}
+                disabled={isSubmitted}
+              >
+                <Clock size={16} color="#fff" />
+                <Text style={styles.checkoutNowButtonText}>Set Now</Text>
               </TouchableOpacity>
             </View>
-
-           
+            {checkoutTime ? (
+              <View style={styles.timeConfirmation}>
+                <Check size={14} color="#10B981" />
+                <Text style={styles.timeConfirmationText}>
+                  Checkout scheduled for {checkoutTime}
+                </Text>
+              </View>
+            ) : null}
           </View>
-        ))}
 
-        {/* Special Notes Section */}
-        <View style={styles.notesCard}>
-          <View style={styles.notesHeader}>
-            <Heart size={20} color="#EC4899" strokeWidth={2} />
-            <Text style={styles.notesTitle}>Special Notes</Text>
-          </View>
-          <TextInput
-            style={styles.notesInput}
-            placeholder="Any special observations, achievements, or notes about the child's day..."
-            value={specialNotes}
-            onChangeText={setSpecialNotes}
-            multiline
-            numberOfLines={4}
-            editable={!isSubmitted}
-          />
+          {/* Checkout Summary */}
+          {(checkoutPerson || checkoutTime) && (
+            <View style={styles.checkoutSummary}>
+              <Text style={styles.checkoutSummaryTitle}>Checkout Summary</Text>
+              <View style={styles.checkoutSummaryContent}>
+                {checkoutPerson && (
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Pickup by:</Text>
+                    <Text style={styles.summaryValue}>{checkoutPerson}</Text>
+                  </View>
+                )}
+                {checkoutTime && (
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Time:</Text>
+                    <Text style={styles.summaryValue}>{checkoutTime}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
         </View>
+      </View>
 
-  
+      {/* Action Buttons */}
+      <View style={styles.actionButtonsContainer}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.saveButton]}
+          onPress={saveProgress}
+          disabled={isSubmitted}
+        >
+          <Save color="#fff" size={18} />
+          <Text style={styles.actionButtonText}>Save Progress</Text>
+        </TouchableOpacity>
 
-        {/* Action Buttons */}
-        <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={styles.saveButton}
-            onPress={saveProgress}
-            disabled={isSubmitted}>
-            <Save size={20} color="#FFFFFF" strokeWidth={2} />
-            <Text style={styles.saveButtonText}>Save Progress</Text>
-          </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.actionButton, 
+            isSubmitted ? styles.actionButtonDisabled : styles.submitButton
+          ]}
+          onPress={handleSubmit}
+          disabled={isSubmitted}
+        >
+          <Send color="#fff" size={18} />
+          <Text style={styles.actionButtonText}>
+            {isSubmitted ? 'Submitted' : 'Submit Report'}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-          <TouchableOpacity
-            style={[styles.submitButton, isSubmitted && styles.submittedButton]}
-            onPress={handleSubmit}
-            disabled={isSubmitted}>
-            <Send size={20} color="#FFFFFF" strokeWidth={2} />
-            <Text style={styles.submitButtonText}>
-              {isSubmitted ? 'Submitted' : 'Submit Report'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.bottomSpacer} />
-      </ScrollView>
-    </View>
+      <View style={{ height: 32 }} />
+    </ScrollView>
   );
 }
-
-// (keep your StyleSheet unchanged – already included in your original code)
-
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FAFC',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#64748B',
   },
   header: {
+    borderRadius: 0,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    padding: 24,
     paddingTop: 60,
-    paddingBottom: 24,
-    paddingHorizontal: 24,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
+    alignSelf: 'flex-start',
+    marginBottom: 16,
+    padding: 8,
   },
-  headerInfo: {
-    flex: 1,
+  headerContent: {
+    marginBottom: 20,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 4,
+    color: '#fff',
+    marginBottom: 12,
   },
-  headerSubtitle: {
+  headerInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  headerInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerInfoText: {
+    color: '#fff',
+    marginLeft: 8,
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginBottom: 2,
-  },
-  headerDate: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    opacity: 0.9,
   },
   progressContainer: {
     marginTop: 8,
   },
-  progressInfo: {
+  progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
   },
   progressText: {
+    color: '#fff',
     fontSize: 14,
+    opacity: 0.9,
+  },
+  progressPercentage: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
-  savedText: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
-  progressBar: {
-    height: 4,
+  progressBarBackground: {
+    height: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 2,
+    borderRadius: 4,
+    overflow: 'hidden',
   },
-  progressFill: {
+  progressBarFill: {
     height: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 2,
+    backgroundColor: '#fff',
+    borderRadius: 4,
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    marginTop: -12,
-  },
-  fieldCard: {
-    backgroundColor: '#FFFFFF',
+  taskCard: {
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    marginTop: 16,
     borderRadius: 16,
     padding: 20,
-    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
   },
-  fieldHeader: {
+  taskHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  taskHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  taskHeaderRight: {
+    marginLeft: 16,
   },
   iconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 12,
   },
-  fieldTitleContainer: {
-    flex: 1,
+  taskTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
   },
-  fieldTitle: {
+  taskSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  taskContent: {
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    paddingTop: 16,
+  },
+  dataSection: {
+    marginBottom: 16,
+  },
+  dataLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  dataContent: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    padding: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#3B82F6',
+  },
+  dataText: {
+    fontSize: 14,
+    color: '#4B5563',
+    lineHeight: 20,
+  },
+  timeSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  timeInputSection: {
+    marginTop: 8,
+  },
+  timeLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  timeValue: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1F2937',
-    marginBottom: 2,
-  },
-  requiredText: {
-    fontSize: 12,
-    color: '#EF4444',
-    fontWeight: '500',
-  },
-  completedBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#10B981',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  completedText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
+    marginLeft: 8,
   },
   timeInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 12,
+    gap: 12,
   },
   timeInput: {
     flex: 1,
-    marginLeft: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    padding: 12,
     fontSize: 16,
-    color: '#1F2937',
+    backgroundColor: '#fff',
   },
   nowButton: {
-    backgroundColor: '#8B5CF6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
     borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   nowButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
+    color: '#8B5CF6',
     fontWeight: '600',
+    fontSize: 14,
   },
-  descriptionInput: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#1F2937',
-    textAlignVertical: 'top',
-    minHeight: 80,
-  },
-  notesCard: {
-    backgroundColor: '#FFFFFF',
+  card: {
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    marginTop: 16,
     borderRadius: 16,
     padding: 20,
-    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
   },
-  notesHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  notesTitle: {
-    fontSize: 16,
+  cardTitle: {
+    fontSize: 18,
     fontWeight: '600',
     color: '#1F2937',
-    marginLeft: 8,
+    marginBottom: 12,
   },
-  notesInput: {
+  notesContainer: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#1F2937',
-    textAlignVertical: 'top',
-    minHeight: 100,
   },
-  emergencyCard: {
-    backgroundColor: '#FEF2F2',
+  notesText: {
+    fontSize: 14,
+    color: '#4B5563',
+    lineHeight: 20,
+  },
+  summaryInput: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    minHeight: 100,
+    padding: 12,
+    fontSize: 16,
+    textAlignVertical: 'top',
+    backgroundColor: '#fff',
+  },
+  // Enhanced Checkout Styles
+  checkoutCard: {
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    marginTop: 16,
     borderRadius: 16,
     padding: 20,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#FECACA',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#EF4444',
   },
-  emergencyHeader: {
+  checkoutHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 20,
   },
-  emergencyTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#EF4444',
-    marginLeft: 8,
+  checkoutHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
-  emergencyInput: {
+  checkoutSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  checkoutContent: {
+    gap: 20,
+  },
+  checkoutField: {
+    gap: 12,
+  },
+  checkoutFieldLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  checkoutFieldLabelText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  pickerWrapper: {
+    gap: 8,
+  },
+  pickerContainer: {
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: '#D1D5DB',
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  picker: {
+    height: 50,
+    color: '#1F2937',
+  },
+  selectedPersonIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderRadius: 8,
+    padding: 8,
+    gap: 6,
+  },
+  selectedPersonText: {
+    fontSize: 14,
+    color: '#059669',
+    fontWeight: '500',
+  },
+  checkoutTimeInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#fff',
+    color: '#1F2937',
+  },
+  checkoutNowButton: {
+    backgroundColor: '#EF4444',
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  checkoutNowButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  timeConfirmation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderRadius: 8,
+    padding: 8,
+    gap: 6,
+  },
+  timeConfirmationText: {
+    fontSize: 14,
+    color: '#059669',
+    fontWeight: '500',
+  },
+  checkoutSummary: {
+    backgroundColor: '#FEF2F2',
     borderRadius: 12,
     padding: 16,
-    fontSize: 16,
-    color: '#1F2937',
-    backgroundColor: '#FFFFFF',
-    textAlignVertical: 'top',
-    minHeight: 80,
+    borderWidth: 1,
+    borderColor: '#FECACA',
   },
-  actionButtons: {
+  checkoutSummaryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#DC2626',
+    marginBottom: 12,
+  },
+  checkoutSummaryContent: {
+    gap: 8,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: '#7F1D1D',
+    fontWeight: '500',
+  },
+  summaryValue: {
+    fontSize: 14,
+    color: '#991B1B',
+    fontWeight: '600',
+  },
+  actionButtonsContainer: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 16,
+    marginHorizontal: 20,
+    marginTop: 24,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  actionButtonPrimary: {
+    backgroundColor: '#10B981',
+  },
+  actionButtonCompleted: {
+    backgroundColor: '#6B7280',
   },
   saveButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: '#6B7280',
-    paddingVertical: 16,
-    borderRadius: 12,
-  },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
   },
   submitButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: '#10B981',
-    paddingVertical: 16,
-    borderRadius: 12,
   },
-  submittedButton: {
+  actionButtonDisabled: {
     backgroundColor: '#9CA3AF',
   },
-  submitButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  actionButtonText: {
+    color: '#fff',
     fontWeight: '600',
-    marginLeft: 8,
-  },
-  bottomSpacer: {
-    height: 32,
+    fontSize: 16,
   },
 });
