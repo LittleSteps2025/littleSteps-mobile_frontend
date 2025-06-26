@@ -186,7 +186,7 @@ export default function CreateAccountWithValidation() {
       console.log('Making request to:', `${API_BASE_URL}/users/check-email`);
       console.log('Checking email:', formData.email);
       
-      // 1. Check if email already exists in database
+      // Check if email exists in database (pre-stored by admin)
       const checkResponse = await fetch(`${API_BASE_URL}/users/check-email`, {
         method: 'POST',
         headers: {
@@ -203,36 +203,41 @@ export default function CreateAccountWithValidation() {
       const checkData = await safeJsonParse(checkResponse);
       console.log('Check email response:', checkData);
 
-      // FOR SIGNUP: If email already exists, show error
+      // If email doesn't exist in database, user can't sign up
       if (checkData.exists) {
-        Alert.alert('Error', 'This email is already registered. Please use a different email or try logging in.');
+        Alert.alert('Error', 'Email not found in our system. Please contact the administrator to register your email first.');
         return;
       }
 
-      // If email doesn't exist in database, temporarily save the data
-      console.log('Email is available, saving data temporarily...');
+      // If user is already verified, they should login instead
+      if (checkData.verified) {
+        Alert.alert('Account Already Active', 'This email is already verified. Please use the login page to access your account.');
+        return;
+      }
+
+      // Email exists but not verified yet - proceed to verification
+      console.log('Email found in database, proceeding to verification...');
       
-      // Temporarily save email and password securely
-      const temporaryUserData = {
+      // Save the password for later use after verification
+      const userData = {
         email: formData.email,
         password: formData.password,
         timestamp: new Date().toISOString()
       };
 
       // Store temporarily in AsyncStorage
-      await AsyncStorage.setItem('tempUserData', JSON.stringify(temporaryUserData));
-      console.log('Data saved temporarily');
+      await AsyncStorage.setItem('tempUserData', JSON.stringify(userData));
+      console.log('Password saved temporarily for verification');
 
       // Navigate to verification page
       router.push({
         pathname: '/account_verification',
         params: { 
-          email: temporaryUserData.email,
-          password: temporaryUserData.password
+          email: userData.email
         }
       });
 
-      Alert.alert('Success', 'Please verify your email to complete registration.');
+      Alert.alert('Success', 'Please enter your verification token to activate your account.');
 
     } catch (error) {
       console.error('Signup error:', error);
@@ -242,7 +247,7 @@ export default function CreateAccountWithValidation() {
         Alert.alert('Error', 'Something went wrong. Please try again.');
       }
     } finally {
-      setIsLoading(true);
+      setIsLoading(false);
     }
   };
 
