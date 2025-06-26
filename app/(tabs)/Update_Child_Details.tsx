@@ -161,7 +161,7 @@ export default function UpdateChildDetails() {
               <Ionicons name="chevron-back" size={24} color="#374151" />
             </TouchableOpacity>
             
-            <Text className="text-xl font-bold text-gray-700 mt-20">
+            <Text className="text-2xl font-bold text-gray-700 mt-14">
               Update Child Details
             </Text>
             
@@ -310,7 +310,8 @@ export default function UpdateChildDetails() {
                       shadowOffset: { width: 0, height: 4 },
                       shadowOpacity: 0.3,
                       shadowRadius: 8,
-                      elevation: 4
+                      elevation: 4,
+                      borderRadius: 16,
                     }}
                   >
                     <Text className="text-white text-lg font-semibold">
