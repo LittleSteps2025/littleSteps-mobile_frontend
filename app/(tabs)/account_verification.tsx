@@ -1,27 +1,31 @@
+import { API_BASE_URL } from '@/utility/index';
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
-import React, { useState, useRef, useEffect } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
+  NativeSyntheticEvent,
   Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
   Text,
   TextInput,
+  TextInputKeyPressEventData,
   TouchableOpacity,
   View,
-  Alert,
-  NativeSyntheticEvent,
-  TextInputKeyPressEventData,
 } from "react-native";
 
 function AccountVerification() {
+  const { email } = useLocalSearchParams();
+  const emailString = Array.isArray(email) ? email[0] : email;
+
   const [isLoading, setIsLoading] = useState(false);
   const [otp, setOtp] = useState(['', '', '', '']);
   const [timeLeft, setTimeLeft] = useState(86400); // 1 day
-  // Fix: Properly type the useRef for TextInput array
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
   // Timer countdown effect
@@ -32,7 +36,7 @@ function AccountVerification() {
     }
   }, [timeLeft]);
 
-  // Format time display - Fixed calculation
+  // Format time display
   const formatTime = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -59,36 +63,150 @@ function AccountVerification() {
     }
   };
 
+  // Get temporary user data
+  const getTempUserData = async () => {
+    try {
+      const tempData = await AsyncStorage.getItem('tempUserData');
+      if (tempData) {
+        return JSON.parse(tempData);
+      }
+      return null;
+    } catch (error) {
+      console.error('Error retrieving temp data:', error);
+      return null;
+    }
+  };
+
   // Verify OTP
   const handleVerifyOtp = async () => {
     const otpString = otp.join('');
-    
+
+    console.log('=== Verification Process ===');
+    console.log('Email:', emailString);
+    console.log('Entered OTP:', otpString);
+
     if (otpString.length !== 4) {
       Alert.alert('Error', 'Please enter the complete 4-digit code');
       return;
     }
 
     setIsLoading(true);
-    
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Navigate to next screen on success
-      router.push("/signin");
+      console.log('Making verification request to:', `${API_BASE_URL}/users/verify-token`);
+
+      // First verify the token
+      const response = await fetch(`${API_BASE_URL}/users/verify-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: emailString,
+          token: otpString
+        }),
+      });
+
+      console.log('Verification response status:', response.status);
+      const data = await response.json();
+      console.log('Verification response data:', data);
+
+      if (response.ok && data.status === 200) {
+        console.log('Token verified successfully!');
+
+        // Get temporary data for account creation
+        const tempData = await getTempUserData();
+        console.log('Retrieved temp data for account creation:', tempData);
+
+        if (tempData) {
+          console.log('Updating account with verified email and temp password...');
+
+          // Update the user account - include all required fields
+          const updateResponse = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(tempData.email)}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              name: tempData.name || tempData.email, // Use stored name or fallback to email
+              email: tempData.email, // Include email as required
+              password: tempData.password,
+              verified: true
+            }),
+          });
+
+          console.log('Account update response status:', updateResponse.status);
+          
+          const updateData = await updateResponse.json();
+          console.log('Account update response data:', updateData);
+
+          if (updateResponse.ok) {
+            console.log('Account updated successfully');
+            // Clear temporary data
+            await AsyncStorage.removeItem('tempUserData');
+            console.log('Temporary data cleared');
+
+            Alert.alert('Success', 'Account verified and password set successfully!', [
+              {
+                text: 'Continue',
+                onPress: () => router.push("/signin")
+              }
+            ]);
+          } else {
+            console.error('Failed to update account:', updateData);
+            throw new Error(updateData.message || 'Failed to update account');
+          }
+        } else {
+          console.error('No temporary data found');
+          throw new Error('No signup data found. Please start over.');
+        }
+      } else {
+        // Handle verification failure
+        console.error('Verification failed:', data);
+        throw new Error(data.message || 'Invalid or expired verification code');
+      }
+
     } catch (error) {
-      Alert.alert('Error', 'Invalid code. Please try again.');
+      console.error('Verification error:', error);
+      const errorMessage =
+        typeof error === 'object' && error !== null && 'message' in error
+          ? String((error as { message?: string }).message)
+          : 'Verification failed';
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
   // Resend OTP
-  const handleResendOtp = () => {
-    Alert.alert('Code Sent', 'A new verification code has been sent to your device.');
-    setTimeLeft(86400); // Reset timer to 1 day
-    setOtp(['', '', '', '']); // Clear current OTP
-    inputRefs.current[0]?.focus(); // Focus first input
+  const handleResendOtp = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/request-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: emailString,
+        }),
+      });
+
+      if (response.ok) {
+        setTimeLeft(300); // 5 minutes
+        setOtp(['', '', '', '']);
+        inputRefs.current[0]?.focus();
+        Alert.alert('Success', 'New verification code sent');
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to resend code');
+      }
+    } catch (error) {
+      const errorMessage =
+        typeof error === 'object' && error !== null && 'message' in error
+          ? String((error as { message?: string }).message)
+          : 'Failed to resend code';
+      Alert.alert('Error', errorMessage);
+    }
   };
 
   const isOtpComplete = otp.every(digit => digit !== '');
@@ -194,9 +312,8 @@ function AccountVerification() {
               <TouchableOpacity
                 onPress={handleVerifyOtp}
                 disabled={isLoading || !isOtpComplete}
-                className={`rounded-3xl py-4 items-center ${
-                  isLoading || !isOtpComplete ? "bg-purple-400" : "bg-purple-600"
-                }`}
+                className={`rounded-3xl py-4 items-center ${isLoading || !isOtpComplete ? "bg-purple-400" : "bg-purple-600"
+                  }`}
                 style={{
                   shadowColor: "#7c3aed",
                   shadowOffset: { width: 0, height: 4 },
