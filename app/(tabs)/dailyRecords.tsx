@@ -1,5 +1,6 @@
 // app/daily-meal-tracker.tsx
 import React, { useState } from 'react';
+import { API_BASE_URL } from '@/utility/index';
 import {
   View,
   Text,
@@ -14,15 +15,19 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
+console.log('API_BASE_URL:', API_BASE_URL);
 export default function DailyMealTracker() {
   const router = useRouter();
+
+   const getTodayDate = () => new Date().toISOString().slice(0, 10);
   
   const [mealData, setMealData] = useState({
     breakfast: '',
+    tea_time: '',
     lunch: '',
-    snacks: '',
-    medicines: '',
-    specialInstructions: '',
+    snack_time: '',
+    medicine: '',
+    special_notes: '',
     date: new Date().toLocaleDateString()
   });
 
@@ -37,25 +42,32 @@ export default function DailyMealTracker() {
     }));
   };
 
-const handleSubmit = async () => {
-  if (!mealData.breakfast && !mealData.lunch && !mealData.snacks) {
-    Alert.alert('Missing Information', 'Please enter at least one meal item.');
-    return;
-  }
+ const handleSubmit = async () => {
+     if (
+      !mealData.breakfast &&
+      !mealData.lunch &&
+      !mealData.tea_time &&
+      !mealData.snack_time && // Added snack_time to validation
+      !mealData.medicine &&
+      !mealData.special_notes
+    ) {
+      Alert.alert('Missing Information', 'Please enter at least one detail for the daily record (meal, medicine, or notes).');
+      return;
+    }
 
   const dataToSend = {
     breakfast: mealData.breakfast,
-    lunch: mealData.lunch,
-    snacks: mealData.snacks,
-    medicines: mealData.medicines,
-    specialInstructions: mealData.specialInstructions,
-    date: new Date().toISOString().slice(0, 10),
-    childId: 1, // Replace with actual child ID from login/session
-    teacherId: 1 // Replace if needed
+     tea_time: mealData.tea_time,
+     lunch: mealData.lunch,
+      snack_time: mealData.snack_time,
+      medicine: mealData.medicine,
+      special_notes: mealData.special_notes,
+      date: new Date().toISOString().slice(0, 10),
+      childId: 1
   };
 
   try {
-    const response = await fetch('http://<YOUR_LOCAL_IP>:3001/api/daily-records', {
+    const response = await fetch(`${API_BASE_URL}/parent/daily-records`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dataToSend)
@@ -65,10 +77,12 @@ const handleSubmit = async () => {
       Alert.alert('Success!', 'Meal saved successfully.');
       setMealData({
         breakfast: '',
-        lunch: '',
-        snacks: '',
-        medicines: '',
-        specialInstructions: '',
+        tea_time: '',
+          lunch: '',
+          
+          snack_time: '',
+          medicine: '',
+          special_notes: '',
         date: new Date().toLocaleDateString()
       });
     } else {
@@ -96,7 +110,7 @@ const handleSubmit = async () => {
       color: '#ec4899',
       bgColor: 'bg-pink-50',
       placeholder: 'What snacks did you pack?\ne.g., Cookies, juice, fruits...',
-      field: 'snacks'
+      field: 'tea_time'
     },
     {
       title: 'Lunch',
@@ -112,7 +126,7 @@ const handleSubmit = async () => {
       color: '#ec4899',
       bgColor: 'bg-pink-50',
       placeholder: 'What snacks did you pack?\ne.g., Cookies, juice, fruits...',
-      field: 'snacks'
+      field: 'snack_time'
     }
   ];
 
@@ -241,9 +255,9 @@ const handleSubmit = async () => {
 
                 {/* Input Field */}
                 <TextInput
-                  value={mealData.specialInstructions}
-                  onChangeText={(text) => handleInputChange('specialInstructions', text)}
-                  placeholder="Any special dietary instructions, allergies, or notes for the teachers..."
+                  value={mealData.medicine}
+                  onChangeText={(text) => handleInputChange('medicine', text)}
+                  placeholder="Any medication details or dosage instructions..."
                   multiline
                   numberOfLines={3}
                   className="text-base text-gray-700 p-4 rounded-xl"
@@ -287,8 +301,10 @@ const handleSubmit = async () => {
 
                 {/* Input Field */}
                 <TextInput
-                  value={mealData.specialInstructions}
-                  onChangeText={(text) => handleInputChange('specialInstructions', text)}
+                  value={mealData.special_notes
+
+                  }
+                  onChangeText={(text) => handleInputChange('special_notes', text)}
                   placeholder="Any special dietary instructions, allergies, or notes for the teachers..."
                   multiline
                   numberOfLines={3}
