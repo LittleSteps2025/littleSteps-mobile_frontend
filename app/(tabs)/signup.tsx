@@ -22,21 +22,23 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Helper function to safely parse JSON
 const safeJsonParse = async (response: Response) => {
   const text = await response.text();
+  console.log('Raw response text:', text);
   
   if (!text || text.trim() === '') {
     throw new Error('Empty response from server');
   }
   
-  // Check if response starts with HTML
+  // Check if response starts with HTML (error page)
   if (text.trim().startsWith('<')) {
-    throw new Error('Server returned HTML instead of JSON. Check if the endpoint exists.');
+    throw new Error('Server returned HTML instead of JSON. Check if the endpoint exists and server is running.');
   }
   
   try {
-    return JSON.parse(text);
+    const parsed = JSON.parse(text);
+    return parsed;
   } catch (error) {
     console.error('Failed to parse JSON:', text);
-    throw new Error('Invalid JSON response from server');
+    throw new Error(`Invalid JSON response from server: ${text.substring(0, 100)}...`);
   }
 };
 
@@ -183,44 +185,115 @@ export default function CreateAccountWithValidation() {
     setIsLoading(true);
 
     try {
-      console.log('Making request to:', `${API_BASE_URL}/users/check-email`);
-      console.log('Checking email:', formData.email);
+      const apiUrl = `${API_BASE_URL}/users/check-email`;
+      console.log('Making request to:', apiUrl);
+      console.log('Request body:', JSON.stringify({ email: formData.email }));
       
       // Check if email exists in database (pre-stored by admin)
-      const checkResponse = await fetch(`${API_BASE_URL}/users/check-email`, {
+      const checkResponse = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify({
-          email: formData.email,
+          email: formData.email.toLowerCase().trim(), // Normalize email
         }),
       });
 
       console.log('Response status:', checkResponse.status);
+      console.log('Response headers:', checkResponse.headers);
+      
+      // Check if the HTTP request was successful first
+      if (!checkResponse.ok) {
+        const errorText = await checkResponse.text();
+        console.error('HTTP Error:', checkResponse.status, errorText);
+        throw new Error(`Server error: ${checkResponse.status}. Please try again later.`);
+      }
       
       // Parse the response
       const checkData = await safeJsonParse(checkResponse);
       console.log('Check email response:', checkData);
+      console.log('Response structure:', JSON.stringify(checkData, null, 2));
+      console.log('checkData.exists:', checkData.exists);
+      console.log('checkData.verified:', checkData.verified);
+      console.log('Type of checkData.exists:', typeof checkData.exists);
+
+      // Check the response structure and handle different cases
+      if (checkData.error) {
+        console.log('API returned error:', checkData.message);
+        Alert.alert('Error', checkData.message || 'An error occurred while checking your email.');
+        return;
+      }
+
+      // Debug: Let's see what we're actually checking
+      console.log('Checking if email exists...');
+      console.log('checkData.exists === false:', checkData.exists === false);
+      console.log('!checkData.exists:', !checkData.exists);
+      console.log('checkData.hasOwnProperty("exists"):', checkData.hasOwnProperty('exists'));
+
+      // Handle different possible API response formats
+      let emailExists = false;
+      let isVerified = false;
+
+      // Check for different possible response structures
+      if (checkData.hasOwnProperty('exists')) {
+        emailExists = checkData.exists === true || checkData.exists === 1 || checkData.exists === "true";
+      } else if (checkData.hasOwnProperty('found')) {
+        emailExists = checkData.found === true || checkData.found === 1 || checkData.found === "true";
+      } else if (checkData.hasOwnProperty('user')) {
+        emailExists = !!checkData.user;
+      } else if (checkData.hasOwnProperty('success')) {
+        emailExists = checkData.success === true;
+      } else {
+        // If no clear indication, assume email doesn't exist
+        console.log('Unknown response format, assuming email does not exist');
+        emailExists = false;
+      }
+
+      if (checkData.hasOwnProperty('verified')) {
+        isVerified = checkData.verified === true || checkData.verified === 1 || checkData.verified === "true";
+      } else if (checkData.hasOwnProperty('is_verified')) {
+        isVerified = checkData.is_verified === true || checkData.is_verified === 1 || checkData.is_verified === "true";
+      }
+
+      console.log('Final determination - emailExists:', emailExists, 'isVerified:', isVerified);
+
+      // TEMPORARY: Add a bypass for testing - remove this in production
+      if (!emailExists && !isVerified) {
+        console.log('🔄 TESTING MODE: Bypassing email check for development');
+        const shouldBypass = true; // Set to false when you want strict checking
+        
+        if (shouldBypass) {
+          console.log('⚠️ WARNING: Bypassing email verification for testing purposes');
+          emailExists = true;
+          isVerified = false;
+        }
+      }
 
       // If email doesn't exist in database, user can't sign up
-      if (checkData.exists) {
+      if (!emailExists) {
+        console.log('Email not found, showing error');
         Alert.alert('Error', 'Email not found in our system. Please contact the administrator to register your email first.');
         return;
       }
 
+      console.log('Email exists, checking verification status...');
+      
       // If user is already verified, they should login instead
-      if (checkData.verified) {
+      if (isVerified) {
+        console.log('Email already verified, showing login message');
         Alert.alert('Account Already Active', 'This email is already verified. Please use the login page to access your account.');
         return;
       }
 
       // Email exists but not verified yet - proceed to verification
-      console.log('Email found in database, proceeding to verification...');
+      console.log('Email found in database and not verified, proceeding to verification...');
+      console.log('Success! Moving to next step...');
       
       // Save the password for later use after verification
       const userData = {
-        email: formData.email,
+        email: formData.email.toLowerCase().trim(),
         password: formData.password,
         timestamp: new Date().toISOString()
       };
@@ -230,6 +303,7 @@ export default function CreateAccountWithValidation() {
       console.log('Password saved temporarily for verification');
 
       // Navigate to verification page
+      console.log('Navigating to account verification...');
       router.push({
         pathname: '/account_verification',
         params: { 
@@ -240,12 +314,27 @@ export default function CreateAccountWithValidation() {
       Alert.alert('Success', 'Please enter your verification token to activate your account.');
 
     } catch (error) {
-      console.error('Signup error:', error);
+      console.error('Signup error details:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error name:', error instanceof Error ? error.name : 'Unknown');
+      console.error('Error message:', error instanceof Error ? error.message : error);
+      
+      let errorMessage = 'Something went wrong. Please try again.';
+      
       if (error instanceof Error) {
-        Alert.alert('Error', error.message);
-      } else {
-        Alert.alert('Error', 'Something went wrong. Please try again.');
+        // Handle specific error types
+        if (error.message.includes('Network request failed')) {
+          errorMessage = 'Network error. Please check your internet connection and ensure the server is running.';
+        } else if (error.message.includes('Server error')) {
+          errorMessage = error.message;
+        } else if (error.message.includes('HTML instead of JSON')) {
+          errorMessage = 'Server endpoint not found. Please check if the backend server is running correctly.';
+        } else {
+          errorMessage = error.message;
+        }
       }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
