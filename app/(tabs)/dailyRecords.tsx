@@ -13,6 +13,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { API_BASE_URL } from "../utility/config"; // Adjust the import path as necessary
+
 
 export default function DailyMealTracker() {
   const router = useRouter();
@@ -55,7 +57,7 @@ const handleSubmit = async () => {
   };
 
   try {
-    const response = await fetch('http://<YOUR_LOCAL_IP>:3001/api/daily-records', {
+    const response = await fetch('http://localhost:5001/api/daily-records', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dataToSend)

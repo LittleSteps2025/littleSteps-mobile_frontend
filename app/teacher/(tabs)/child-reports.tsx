@@ -11,18 +11,17 @@ import { LinearGradient } from "expo-linear-gradient";
 import { FileText, ArrowLeft } from "lucide-react-native";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "../../../utility/config";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Children() {
   const [children, setChildren] = useState([]);
   const [loading, setLoading] = useState(true);
 
-
-
-  
   useEffect(() => {
     const fetchReports = async () => {
       try {
-const response = await fetch("http://localhost:5001/api/reports");
+        const response = await fetch(`${API_BASE_URL}/api/reports`);
         const data = await response.json();
         setChildren(data);
       } catch (error) {
@@ -36,94 +35,118 @@ const response = await fetch("http://localhost:5001/api/reports");
   }, []);
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingBottom: 24 }}
+      showsVerticalScrollIndicator={false}
+    >
       <LinearGradient
-        colors={["#8B5CF6", "#EC4899"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
+        colors={[
+          "#DFC1FD",
+          "#f3e8ff",
+          "#F5ECFE",
+          "#F5ECFE",
+          "#e9d5ff",
+          "#DFC1FD",
+        ]}
       >
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <ArrowLeft size={24} color="#374151" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Today child reports</Text>
-      </LinearGradient>
+        <View style={styles.header}>
+          <View style={styles.headerRow}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.backButton}
+            >
+              <ArrowLeft size={24} color="#374151" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Today child reports</Text>
+          </View>
 
-      {loading ? (
-        <ActivityIndicator size="large" color="#8B5CF6" style={{ marginTop: 20 }} />
-      ) : (
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {children.map((child: any) => (
-            <View key={child.child_id} style={styles.childCard}>
-              <View style={styles.childHeader}>
-                <Image
-                  source={{ uri: child.avatar || "https://via.placeholder.com/60" }}
-                  style={styles.avatar}
-                />
-                <View style={styles.childInfo}>
-                  <Text style={styles.childName}>{child.child_name}</Text>
-                  <Text style={styles.childDetails}>
-                    {child.child_age} years old • {child.child_group} Group
-                  </Text>
-                </View>
-                <View style={styles.progressContainer}>
-                  <Text style={styles.progressText}>
-                    {child.progress || 0}%
-                  </Text>
-                  <View style={styles.progressBar}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        { width: `${child.progress || 0}%` },
-                      ]}
+          {loading ? (
+            <ActivityIndicator
+              size="large"
+              color="#8B5CF6"
+              style={{ marginTop: 20 }}
+            />
+          ) : (
+            <View style={styles.content}>
+              {children.map((child: any) => (
+                <View key={child.child_id} style={styles.childCard}>
+                  <View style={styles.childHeader}>
+                    <Image
+                      source={{
+                        uri: child.avatar || "https://via.placeholder.com/60",
+                      }}
+                      style={styles.avatar}
                     />
+                    <View style={styles.childInfo}>
+                      <Text style={styles.childName}>{child.child_name}</Text>
+                      <Text style={styles.childDetails}>
+                        {child.child_age} years old • {child.child_group} Group
+                      </Text>
+                    </View>
+                    <View style={styles.progressContainer}>
+                      <Text style={styles.progressText}>{child.progress}%</Text>
+                      <View style={styles.progressBar}>
+                        <View
+                          style={[
+                            styles.progressFill,
+                            { width: `${child.progress || 0}%` },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.todaySection}>
+                    <Text style={styles.todaySectionTitle}>Today's Record</Text>
+                    <TouchableOpacity
+                      style={styles.todayDetailsButton}
+                      onPress={() =>
+                        router.push(
+                          `/teacher/daily-report-form?childId=${child.childId}`
+                        )
+                      }
+                      activeOpacity={0.8}
+                    >
+                      <FileText size={20} color="#8B5CF6" strokeWidth={2} />
+                      <View style={styles.todayDetailsText}>
+                        <Text style={styles.todayDetailsTitle}>
+                          View Today's Details
+                        </Text>
+                        <Text style={styles.todayDetailsSubtitle}>
+                          Check progress and activities
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
                   </View>
                 </View>
-              </View>
-
-              <View style={styles.todaySection}>
-                <Text style={styles.todaySectionTitle}>Today's Record</Text>
-                <TouchableOpacity
-                  style={styles.todayDetailsButton}
-                  onPress={() =>
-                    router.push(`/teacher/daily-report-form?childId=${child.childId}`)
-
-                  }
-                  activeOpacity={0.8}
-                >
-                  
-                  <FileText size={20} color="#8B5CF6" strokeWidth={2} />
-                  <View style={styles.todayDetailsText}>
-                    <Text style={styles.todayDetailsTitle}>
-                      View Today's Details
-                    </Text>
-                    <Text style={styles.todayDetailsSubtitle}>
-                      Check progress and activities
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
+              ))}
             </View>
-          ))}
-        </ScrollView>
-      )}
-    </View>
+          )}
+        </View>
+      </LinearGradient>{" "}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9FAFB" },
-  header: { paddingTop: 60, paddingBottom: 32, paddingHorizontal: 24 },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    marginBottom: 8,
+  container: { flex: 1, backgroundColor: "#f3e8ff" },
+  header: {
+    paddingTop: 40,
+    paddingBottom: 32,
+    paddingHorizontal: 24,
   },
-  content: { flex: 1, paddingHorizontal: 24, marginTop: -16 },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#000000",
+  },
+  content: { flex: 1, paddingHorizontal: 24, marginTop: 20 },
   childCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
@@ -201,6 +224,5 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 12,
   },
 });

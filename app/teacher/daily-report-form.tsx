@@ -9,8 +9,22 @@ import {
   Switch,
   StyleSheet,
   ActivityIndicator,
-  Picker,
+  
 } from "react-native";
+import { Picker } from '@react-native-picker/picker';
+
+import { API_BASE_URL } from "../../utility/config"; // Adjust the import path as necessary
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+export default function Layout() {
+  return (
+    <SafeAreaProvider>
+      <Slot />
+    </SafeAreaProvider>
+  );
+}
+
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import {
@@ -69,7 +83,7 @@ export default function DailyReportForm() {
     async function fetchGuardians() {
       try {
         const res = await fetch(
-          `http://localhost:5001/api/guardians/${childId}`
+          `${API_BASE_URL}/api/guardians/${childId}`
         );
         const data = await res.json();
         setGuardians(data.map((g: any) => g.name));
@@ -84,64 +98,65 @@ export default function DailyReportForm() {
     const fetchReport = async () => {
       try {
         const response = await fetch(
-          `http://localhost:5001/api/reports/${childId}`
+          `${API_BASE_URL}/api/reports/${childId}`
         );
         const data = await response.json();
         const report = data[0];
 
         setChildName(report.child_name || "");
-        setReportFields([
-          {
-            id: "breakfast",
-            title: "Breakfast",
-            icon: Coffee,
-            time: report.breakfast_time || "",
-            description: report.breakfast || "No breakfast details recorded",
-            completed: !!report.breakfast,
-            required: true,
-            color: "#F59E0B",
-          },
-          {
-            id: "tea_time",
-            title: "Tea Time",
-            icon: Coffee,
-            time: report.tea_time_time || "",
-            description: report.tea_time || "No tea time details recorded",
-            completed: !!report.tea_time,
-            required: false,
-            color: "#D97706",
-          },
-          {
-            id: "lunch",
-            title: "Lunch",
-            icon: Utensils,
-            time: report.lunch_time || "",
-            description: report.lunch || "No lunch details recorded",
-            completed: !!report.lunch,
-            required: true,
-            color: "#EF4444",
-          },
-          {
-            id: "snack_time",
-            title: "Snack Time",
-            icon: Coffee,
-            time: report.snack_time_time || "",
-            description: report.snack_time || "No snack time details recorded",
-            completed: !!report.snack_time,
-            required: false,
-            color: "#06B6D4",
-          },
-          {
-            id: "medicine",
-            title: "Medicine",
-            icon: Pill,
-            time: report.medicine_time || "",
-            description: report.medicine || "No medicine details recorded",
-            completed: !!report.medicine,
-            required: false,
-            color: "#F97316",
-          },
-        ]);
+       setReportFields([
+  {
+    id: "breakfast",
+    title: "Breakfast",
+    icon: Coffee,
+    time: report.breakfast_time || "",
+    description: report.breakfast || "No breakfast details recorded",
+completed: !!report.breakfast_status,
+    required: true,
+    color: "#F59E0B",
+  },
+  {
+    id: "tea_time",
+    title: "Tea Time",
+    icon: Coffee,
+    time: report.tea_time_time || "",
+    description: report.tea_time || "No tea time details recorded",
+completed: !!report.tea_time_status,
+    required: false,
+    color: "#D97706",
+  },
+  {
+    id: "lunch",
+    title: "Lunch",
+    icon: Utensils,
+    time: report.lunch_time || "",
+    description: report.lunch || "No lunch details recorded",
+completed: !!report.lunch_status,
+    required: true,
+    color: "#EF4444",
+  },
+  {
+    id: "snack_time",
+    title: "Snack Time",
+    icon: Coffee,
+    time: report.snack_time_time || "",
+    description: report.snack_time || "No snack time details recorded",
+completed: !!report.snack_time_status,
+    required: false,
+    color: "#06B6D4",
+  },
+  {
+    id: "medicine",
+    title: "Medicine",
+    icon: Pill,
+    time: report.medicine_time || "",
+    description: report.medicine || "No medicine details recorded",
+completed: !!report.medicine_status,
+    required: false,
+    color: "#F97316",
+  },
+]);
+
 
         setSpecialNotes(report.special_notes || "");
         setDailySummary(report.day_summery || "");
@@ -189,7 +204,7 @@ export default function DailyReportForm() {
 
     try {
       const response = await fetch(
-        `http://localhost:5001/api/reports/${childId}/arrival`,
+        `${API_BASE_URL}/api/reports/${childId}/arrival`,
         {
           method: "PUT",
           headers: {
@@ -211,37 +226,51 @@ export default function DailyReportForm() {
   };
 
   const saveProgress = async () => {
-    setLastSaved(new Date());
+  setLastSaved(new Date());
 
-    const statusUpdates: { [key: string]: number } = {};
-    reportFields.forEach((field) => {
-      statusUpdates[field.id] = field.completed ? 1 : 0;
-    });
+  // Build the status fields object
+  const statusUpdates: { [key: string]: number } = {};
+  let completedTasks = 0;
 
-    try {
-      const response = await fetch(
-        `http://localhost:5001/api/reports/${childId}/status`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(statusUpdates),
-        }
-      );
+  reportFields.forEach((field) => {
+    statusUpdates[field.id] = field.completed ? 1 : 0;
+    if (field.completed) completedTasks++;
+  });
 
-      if (response.ok) {
-        Alert.alert("Progress Saved", "Status fields have been saved.");
-        router.back(); // Navigate back immediately after save
-      } else {
-        throw new Error("Failed to update status");
+  // Calculate progress percentage
+  const totalTasks = reportFields.length;
+  const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  // Add progress to the update payload
+  statusUpdates.progress = progressPercentage;
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/reports/${childId}/status`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(statusUpdates),
       }
-    } catch (error) {
-      console.error("Error saving status fields:", error);
-      Alert.alert("Error", "Failed to save progress.");
-    }
-  };
+    );
 
+    if (response.ok) {
+      Alert.alert("Progress Saved", "Status fields and progress have been saved.");
+      router.back(); // Navigate back immediately after save
+    } else {
+      throw new Error("Failed to update status");
+    }
+  } catch (error) {
+    console.error("Error saving status fields:", error);
+    Alert.alert("Error", "Failed to save progress.");
+  }
+};
+
+
+
+  
  const handleSubmit = async () => {
   if (!validateForm()) return;
 
@@ -261,7 +290,7 @@ export default function DailyReportForm() {
 
   try {
     const response = await fetch(
-      `http://localhost:5001/api/reports/${childId}/submit`,
+      `${API_BASE_URL}/api/reports/${childId}/submit`,
       {
         method: "PUT", // or POST depending on backend
         headers: {
@@ -324,9 +353,11 @@ export default function DailyReportForm() {
   }
 
   return (
+    <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
     <ScrollView style={styles.container}>
       {/* Header with Progress Bar */}
-      <LinearGradient colors={["#8B5CF6", "#EC4899"]} style={styles.header}>
+      <LinearGradient colors={['#DFC1FD', '#be2ed6']} style={styles.header}>
+        <View style={styles.headerRow}>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
@@ -345,6 +376,7 @@ export default function DailyReportForm() {
               <Calendar color="#fff" size={16} />
               <Text style={styles.headerInfoText}>{reportDate}</Text>
             </View>
+          </View>
           </View>
         </View>
 
@@ -414,7 +446,7 @@ export default function DailyReportForm() {
 
       {/* Report Fields */}
       {reportFields.map((field) => (
-        <View key={field.id} style={styles.taskCard}>
+  <View key={field.id} style={styles.taskCard}>
           <View style={styles.taskHeader}>
             <View style={styles.taskHeaderLeft}>
               <View
@@ -434,7 +466,7 @@ export default function DailyReportForm() {
                 value={field.completed}
                 onValueChange={() => toggleComplete(field.id)}
                 disabled={isSubmitted}
-                trackColor={{ false: "#E5E7EB", true: field.color }}
+                trackColor={{ false: "#E5E7EB", true:  "#10B981" }}
                 thumbColor={field.completed ? "#fff" : "#f4f3f4"}
               />
             </View>
@@ -518,9 +550,13 @@ export default function DailyReportForm() {
 
         <View style={styles.checkoutContent}>
           <View style={styles.checkoutField}>
-            <Text style={styles.checkoutFieldLabel}>
-              <Users size={16} color="#374151" />
-              <Text style={styles.checkoutFieldLabelText}> Pickup Person</Text>
+              <Text style={styles.checkoutFieldLabel}>
+                <View style={styles.checkoutFieldLabelRow}>
+  <Users size={16} color="#374151" />
+  <Text style={styles.checkoutFieldLabelText}> Pickup Person</Text>
+</View>
+
+              
             </Text>
             <View style={styles.pickerWrapper}>
               <View style={styles.pickerContainer}>
@@ -558,8 +594,11 @@ export default function DailyReportForm() {
 
           <View style={styles.checkoutField}>
             <Text style={styles.checkoutFieldLabel}>
-              <Clock size={16} color="#374151" />
-              <Text style={styles.checkoutFieldLabelText}> Checkout Time</Text>
+              <View style={styles.checkoutFieldLabelRow}>
+  <Clock size={16} color="#374151" />
+  <Text style={styles.checkoutFieldLabelText}> Checkout Time</Text>
+</View>
+
             </Text>
             <View style={styles.timeInputContainer}>
               <TextInput
@@ -640,11 +679,22 @@ export default function DailyReportForm() {
       </View>
 
       <View style={{ height: 32 }} />
-    </ScrollView>
+      </ScrollView>
+      </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+   headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+checkoutFieldLabelRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginBottom: 8,
+}
+,
   container: {
     flex: 1,
     backgroundColor: "#F8FAFC",
