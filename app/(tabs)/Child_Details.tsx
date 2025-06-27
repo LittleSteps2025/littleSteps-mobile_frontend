@@ -311,7 +311,7 @@ export default function ChildDetailsForm() {
                   }}
                 >
                   <View className="flex-row items-center">
-                    <Ionicons name="apps" size={24} color="#7c3aed" className="mr-2" />
+                    <Ionicons name="apps" size={24} color="#7c3aed" className="mr-2 mb-2" />
                     <Text className="text-purple-600 text-lg font-semibold ml-2">
                       Update Daily Activities
                     </Text>
