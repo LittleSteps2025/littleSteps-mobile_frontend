@@ -14,6 +14,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { API_BASE_URL } from "../utility/config"; // Adjust the import path as necessary
+
 
 console.log('API_BASE_URL:', API_BASE_URL);
 export default function DailyMealTracker() {
