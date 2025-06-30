@@ -26,6 +26,39 @@ function AccountVerification() {
   const [isLoading, setIsLoading] = useState(false);
   const [otp, setOtp] = useState(['', '', '', '']);
   const [timeLeft, setTimeLeft] = useState(86400); // 1 day
+ 
+
+  const handleVerify = async () => {
+    const enteredOtp = otp.join('');
+    if (enteredOtp.length !== 4) {
+      Alert.alert('Incomplete OTP', 'Please enter the full OTP.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const email = await AsyncStorage.getItem('tempEmail');
+      const password = await AsyncStorage.getItem('tempPassword');
+
+      const res = await fetch(`${API_BASE_URL}/parent/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, otp: enteredOtp }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        Alert.alert('Success', 'Account verified and registered.');
+        router.push('/(tabs)/verify_success');
+      } else {
+        Alert.alert('Error', data.message || 'Verification failed.');
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Network or server error.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
   // Timer countdown effect

@@ -1,7 +1,7 @@
 import { API_BASE_URL } from '@/utility/index';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { router, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
@@ -16,6 +16,25 @@ import {
   View
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleNext = async () => {
+    if (!email || !password) {
+      Alert.alert('Missing Info', 'Please enter both email and password.');
+      return;
+    }
+
+    try {
+      await AsyncStorage.setItem('tempEmail', email);
+      await AsyncStorage.setItem('tempPassword', password);
+      router.push('/(tabs)/account_verification');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to save data.');
+    }
+  };
 
 
 

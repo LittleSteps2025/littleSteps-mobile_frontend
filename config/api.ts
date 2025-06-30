@@ -1,8 +1,21 @@
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: 'http://192.168.114.156:5001', // Replace with your server URL
+  BASE_URL: 'http://192.168.114.156:3001', // Replace with your server URL
   ENDPOINTS: {
-    PARENT_LOGIN: '/api/parent/parent-login',
+    // Admin endpoints
+    ADD_PARENT: '/api/parent/add-parent',
+    
+    // Parent sign-up endpoints
+    VERIFY_EMAIL: '/api/parent/verify-email',
+    VERIFY_OTP: '/api/parent/verify-otp',
+    COMPLETE_REGISTRATION: '/api/parent/complete-registration',
+    RESEND_OTP: '/api/parent/resend-otp',
+    
+    // Login endpoints
+    PARENT_LOGIN: '/api/parent/login',
+    FIREBASE_LOGIN: '/api/parent/firebase-login',
+    
+    // Other endpoints
     USER_ROUTES: '/api/users', // if you have user-related routes
   }
 };
