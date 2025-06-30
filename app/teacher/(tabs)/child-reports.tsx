@@ -69,7 +69,8 @@ export default function Children() {
             />
           ) : (
             <View style={styles.content}>
-              {children.map((child: any) => (
+            {Array.isArray(children) &&
+  children.map((child: any) => (
                 <View key={child.child_id} style={styles.childCard}>
                   <View style={styles.childHeader}>
                     <Image
