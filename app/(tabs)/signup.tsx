@@ -34,6 +34,7 @@ const safeJsonParse = async (response: Response) => {
   
   try {
     return JSON.parse(text);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     console.error('Failed to parse JSON:', text);
     throw new Error('Invalid JSON response from server');

@@ -20,7 +20,7 @@ import { apiRequest, API_CONFIG } from '../../config/api';
 type FormData = {
   email: string;
   password: string;
-  confirmPassword: string;
+
 };
 
 type FormField = keyof FormData;
@@ -40,7 +40,7 @@ export default function CreateAccountWithValidation() {
   const [formData, setFormData] = useState<FormData>({
     email: '',
     password: '',
-    confirmPassword: ''
+
   });
   
   // Validation errors
@@ -105,9 +105,9 @@ export default function CreateAccountWithValidation() {
     }
     
     // Re-validate confirm password if password changes
-    if (field === 'password' && touched.confirmPassword && formData.confirmPassword) {
-      validateField('confirmPassword', formData.confirmPassword);
-    }
+    // if (field === 'password' && touched.confirmPassword && formData.confirmPassword) {
+    //   validateField('confirmPassword', formData.confirmPassword);
+    // }
   };
 
   // Handle input blur (when user leaves the field)
@@ -133,7 +133,7 @@ export default function CreateAccountWithValidation() {
     setTouched({
       email: true,
       password: true,
-      confirmPassword: true
+
     });
     
     return !emailError && !passwordError ;
