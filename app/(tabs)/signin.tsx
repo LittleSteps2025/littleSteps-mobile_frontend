@@ -14,7 +14,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { apiRequest, API_CONFIG } from '../../config/api';
+import { apiRequest, API_CONFIG } from '@/config/api';
 
 // Define types for better type safety
 type FormData = {
@@ -418,7 +418,7 @@ export default function CreateAccountWithValidation() {
               <Text className="text-base text-gray-500">
                 Are you new here?{' '}
               </Text>
-              <TouchableOpacity onPress={() => router.push('/signup')}>
+              <TouchableOpacity onPress={() => router.push('/welcome')}>
                 <Text className="text-base text-purple-600 font-semibold">
                   Create Account
                 </Text>
