@@ -14,6 +14,15 @@ import payment_child from "@/assets/images/payment_child.png";
 import baby_credit from "@/assets/images/baby_credit.png";
 import Kid1 from "@/assets/images/kid1.jpg";
 import daily_activities from "@/assets/images/daily_activity.png";
+import bye from "@/assets/images/bye.png";
+import complaint from "@/assets/images/complaint.png";
+import error from "@/assets/images/error.png";
+import event from "@/assets/images/event.png";
+import notification from "@/assets/images/notification.png";
+import privacy from "@/assets/images/privacy.png";
+import settings from "@/assets/images/setting.png";
+import support from "@/assets/images/support.png";
+import success from "@/assets/images/success.png";
 
 export const images={
     logo,
@@ -31,5 +40,14 @@ export const images={
     payment_child,
     baby_credit,
     Kid1,
-    daily_activities
+    daily_activities,
+    bye,
+    complaint,
+    error,
+    event,
+    notification,
+    privacy,
+    settings,
+    support,
+    success
 }
