@@ -1,10 +1,11 @@
+import CustomAlert from '@/components/CustomAlert';
 import { API_BASE_URL } from '@/utility/index';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -15,7 +16,6 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 
@@ -34,6 +34,7 @@ const safeJsonParse = async (response: Response) => {
   
   try {
     return JSON.parse(text);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     console.error('Failed to parse JSON:', text);
     throw new Error('Invalid JSON response from server');
@@ -75,6 +76,37 @@ export default function CreateAccountWithValidation() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState<TouchedFields>({});
+
+  // Custom Alert State
+  const [customAlert, setCustomAlert] = useState({
+    visible: false,
+    type: 'success' as 'success' | 'error',
+    title: '',
+    message: '',
+    showCancelButton: false,
+    onConfirm: undefined as (() => void) | undefined
+  });
+
+  const showCustomAlert = (
+    type: 'success' | 'error',
+    title: string,
+    message: string,
+    showCancelButton: boolean = false,
+    onConfirm?: () => void
+  ) => {
+    setCustomAlert({
+      visible: true,
+      type,
+      title,
+      message,
+      showCancelButton,
+      onConfirm
+    });
+  };
+
+  const hideCustomAlert = () => {
+    setCustomAlert(prev => ({ ...prev, visible: false }));
+  };
 
   // Validation rules
   const validateEmail = (email: string) => {
@@ -176,7 +208,7 @@ export default function CreateAccountWithValidation() {
   // Handle form submission
   const handleCreateAccount = async () => {
     if (!validateForm()) {
-      Alert.alert('Validation Error', 'Please fix the errors below');
+      showCustomAlert('error', 'Validation Error', 'Please fix the errors below');
       return;
     }
 
@@ -205,13 +237,13 @@ export default function CreateAccountWithValidation() {
 
       // If email doesn't exist in database, user can't sign up
       if (checkData.exists) {
-        Alert.alert('Error', 'Email not found in our system. Please contact the administrator to register your email first.');
+        showCustomAlert('error', 'Error', 'Email not found in our system. Please contact the administrator to register your email first.');
         return;
       }
 
       // If user is already verified, they should login instead
       if (checkData.verified) {
-        Alert.alert('Account Already Active', 'This email is already verified. Please use the login page to access your account.');
+        showCustomAlert('error', 'Account Already Active', 'This email is already verified. Please use the login page to access your account.');
         return;
       }
 
@@ -237,14 +269,16 @@ export default function CreateAccountWithValidation() {
         }
       });
 
-      Alert.alert('Success', 'Please enter your verification token to activate your account.');
+      showCustomAlert('success', 'Success', 'Please enter your verification token to activate your account.', false, () => {
+        router.push('/account_verification');
+      });
 
     } catch (error) {
       console.error('Signup error:', error);
       if (error instanceof Error) {
-        Alert.alert('Error', error.message);
+        showCustomAlert('error', 'Error', error.message);
       } else {
-        Alert.alert('Error', 'Something went wrong. Please try again.');
+        showCustomAlert('error', 'Error', 'Something went wrong. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -531,6 +565,19 @@ export default function CreateAccountWithValidation() {
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={customAlert.visible}
+        type={customAlert.type}
+        title={customAlert.title}
+        message={customAlert.message}
+        onClose={hideCustomAlert}
+        onConfirm={customAlert.onConfirm}
+        showCancelButton={customAlert.showCancelButton}
+        confirmText={customAlert.showCancelButton ? 'Yes' : 'OK'}
+        cancelText="Cancel"
+      />
     </LinearGradient>
   );
 }

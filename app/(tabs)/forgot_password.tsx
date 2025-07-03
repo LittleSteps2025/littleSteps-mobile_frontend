@@ -6,7 +6,6 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  Alert,
   StatusBar,
   SafeAreaView,
   KeyboardAvoidingView,
@@ -16,6 +15,8 @@ import {
   TextInput,
   Image,
 } from "react-native";
+import CustomAlert from '@/components/CustomAlert';
+import { useCustomAlert } from '@/hooks/useCustomAlert';
 
 type FormData = {
   email: string;
@@ -33,6 +34,7 @@ type TouchedFields = {
 
 function ForgotPassword() {
   const router = useRouter();
+  const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
 
   // Form state
   const [formData, setFormData] = useState<FormData>({
@@ -112,7 +114,7 @@ function ForgotPassword() {
   // Handle form submission
   const handleForgotPassword = async () => {
     if (!validateForm()) {
-      Alert.alert("Validation Error", "Please fix the errors below");
+      showCustomAlert("error", "Validation Error", "Please fix the errors below");
       return;
     }
 
@@ -123,14 +125,15 @@ function ForgotPassword() {
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Success
-      Alert.alert("Success", "Please check your email!", [
-        {
-          text: "Continue",
-          onPress: () => router.push("/restore_password"), // Changed from dashboard to login
-        },
-      ]);
-    } catch (error) {
-      Alert.alert("Error", "Something went wrong! Please try again.");
+      showCustomAlert(
+        "success",
+        "Success",
+        "Please check your email!",
+        false,
+        () => router.push("/restore_password")
+      );
+    } catch {
+      showCustomAlert("error", "Error", "Something went wrong! Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -250,6 +253,15 @@ function ForgotPassword() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      <CustomAlert
+        visible={customAlert.visible}
+        type={customAlert.type}
+        title={customAlert.title}
+        message={customAlert.message}
+        showCancelButton={customAlert.showCancelButton}
+        onConfirm={customAlert.onConfirm}
+        onClose={hideCustomAlert}
+      />
     </LinearGradient>
   );
 }

@@ -22,15 +22,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: '#9ca3af',
       }}
     >
-<Tabs.Screen
-  name="../index"  // instead of "../index"
-  options={{
-    title: 'Home',
-    tabBarIcon: ({ color }) => (
-      <Ionicons name="home" size={24} color={color} />
-    ),
-  }}
-/>
+
 
 <Tabs.Screen
   name="profiles"
