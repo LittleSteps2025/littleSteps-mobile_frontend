@@ -88,7 +88,7 @@ export default function ChildDetailsForm() {
       colors={['#DFC1FD', '#f3e8ff', '#F5ECFE', '#F5ECFE', '#e9d5ff', '#DFC1FD']}
       start={[0, 0]}
       end={[1, 1]}
-      className="flex-1 mt-5"
+      className="flex-1 "
     >
       <StatusBar barStyle="dark-content" backgroundColor="#DFC1FD" />
       <SafeAreaView className="flex-1">

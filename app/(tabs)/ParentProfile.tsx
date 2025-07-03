@@ -9,7 +9,8 @@ import {
   Image,
   Modal,
   TextInput,
-  Alert
+  Alert,
+  Pressable
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -269,7 +270,7 @@ export default function ParentProfile() {
           </View>
 
           {/* Profile Information Sections */}
-          <View className="px-6">
+          <View className="px-6 pb-40">
             {profileSections.map((section, sectionIndex) => (
               <View key={sectionIndex} className="mb-8">
                 <Text className="text-lg font-bold text-gray-700 mb-4">
@@ -359,6 +360,51 @@ export default function ParentProfile() {
             
           </View>
         </ScrollView>
+        <View className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md">
+                <View
+                  className="flex-row justify-around items-center py-4 px-6"
+                  style={{
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: -2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 8,
+                    elevation: 8,
+                  }}
+                >
+                  {/* Home */}
+                  <Pressable 
+                    className="items-center justify-center py-2"
+                    onPress={() => router.push('/ParentDashboard')}
+                  >
+                    <View className="w-12 h-12 items-center justify-center">
+                      <Ionicons name="home" size={24} color="#9ca3af" />
+                    </View>
+                    <Text className="text-xs text-gray-500 font-medium mt-1">Home</Text>
+                  </Pressable>
+        
+                  {/* Profile */}
+                  <Pressable
+                    className="items-center justify-center py-2"
+                    
+                  >
+                    <View className="w-12 h-12 items-center justify-center">
+                      <Ionicons name="person" size={24} color="#7c3aed" />
+                    </View>
+                    <Text className="text-xs text-purple-600 mt-1">Profile</Text>
+                  </Pressable>
+        
+                  {/* More */}
+                  <Pressable 
+                    className="items-center justify-center py-2"
+                    onPress={() => router.push('/ParentMore')}
+                  >
+                    <View className="w-12 h-12 items-center justify-center">
+                      <Ionicons name="ellipsis-horizontal" size={24} color="#9ca3af" />
+                    </View>
+                    <Text className="text-xs text-gray-500 mt-1">More</Text>
+                  </Pressable>
+                </View>
+              </View>
 
         {/* Edit Profile Modal */}
         <Modal

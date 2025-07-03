@@ -253,7 +253,10 @@ export default function ParentDashboard() {
           </Pressable>
 
           {/* More */}
-          <Pressable className="items-center justify-center py-2">
+          <Pressable 
+            className="items-center justify-center py-2"
+            onPress={() => router.push('/ParentMore')}
+          >
             <View className="w-12 h-12 items-center justify-center">
               <Ionicons name="ellipsis-horizontal" size={24} color="#9ca3af" />
             </View>
