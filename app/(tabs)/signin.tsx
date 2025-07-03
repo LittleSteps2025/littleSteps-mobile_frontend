@@ -1,20 +1,20 @@
+import CustomAlert from '@/components/CustomAlert';
+import { API_CONFIG, apiRequest } from '@/config/api';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
-  StatusBar,
-  SafeAreaView,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-  ScrollView
+  View
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { apiRequest, API_CONFIG } from '@/config/api';
 
 // Define types for better type safety
 type FormData = {
@@ -40,7 +40,6 @@ export default function CreateAccountWithValidation() {
   const [formData, setFormData] = useState<FormData>({
     email: '',
     password: '',
-
   });
   
   // Validation errors
@@ -50,6 +49,37 @@ export default function CreateAccountWithValidation() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState<TouchedFields>({});
+
+  // Custom Alert State
+  const [customAlert, setCustomAlert] = useState({
+    visible: false,
+    type: 'success' as 'success' | 'error',
+    title: '',
+    message: '',
+    showCancelButton: false,
+    onConfirm: undefined as (() => void) | undefined
+  });
+
+  const showCustomAlert = (
+    type: 'success' | 'error',
+    title: string,
+    message: string,
+    showCancelButton: boolean = false,
+    onConfirm?: () => void
+  ) => {
+    setCustomAlert({
+      visible: true,
+      type,
+      title,
+      message,
+      showCancelButton,
+      onConfirm
+    });
+  };
+
+  const hideCustomAlert = () => {
+    setCustomAlert(prev => ({ ...prev, visible: false }));
+  };
 
   // Validation rules
   const validateEmail = (email: string) => {
@@ -142,7 +172,7 @@ export default function CreateAccountWithValidation() {
   // Handle form submission
   const handleCreateAccount = async () => {
     if (!validateForm()) {
-      Alert.alert('Validation Error', 'Please fix the errors below');
+      showCustomAlert('error', 'Validation Error', 'Please fix the errors below');
       return;
     }
 
@@ -161,16 +191,9 @@ export default function CreateAccountWithValidation() {
       // Success - store user data if needed
       console.log('Login successful:', response);
       
-      Alert.alert(
-        'Success', 
-        'Login successful!',
-        [
-          {
-            text: 'Continue',
-            onPress: () => router.push('/ParentDashboard')
-          }
-        ]
-      );
+      showCustomAlert('success', 'Success', 'Login successful!', false, () => {
+        router.push('/ParentDashboard');
+      });
     } catch (error: any) {
       // Handle different error scenarios
       let errorMessage = 'Failed to login. Please try again.';
@@ -183,7 +206,7 @@ export default function CreateAccountWithValidation() {
         errorMessage = 'Please verify your email address before logging in.';
       }
       
-      Alert.alert('Login Error', errorMessage);
+      showCustomAlert('error', 'Login Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -427,6 +450,19 @@ export default function CreateAccountWithValidation() {
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={customAlert.visible}
+        type={customAlert.type}
+        title={customAlert.title}
+        message={customAlert.message}
+        onClose={hideCustomAlert}
+        onConfirm={customAlert.onConfirm}
+        showCancelButton={customAlert.showCancelButton}
+        confirmText={customAlert.showCancelButton ? 'Yes' : 'OK'}
+        cancelText="Cancel"
+      />
     </LinearGradient>
   );
 }

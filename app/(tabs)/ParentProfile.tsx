@@ -1,21 +1,21 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StatusBar,
-  SafeAreaView,
-  ScrollView,
-  Image,
-  Modal,
-  TextInput,
-  Alert,
-  Pressable
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import CustomAlert from '@/components/CustomAlert';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import {
+  Image,
+  Modal,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 export default function ParentProfile() {
   const router = useRouter();
@@ -29,6 +29,37 @@ export default function ParentProfile() {
     phoneNumber: '+94 77 123 4567',
     address: '45 Flower Road, Colombo 07, Sri Lanka'
   });
+
+  // Custom Alert State
+  const [customAlert, setCustomAlert] = useState({
+    visible: false,
+    type: 'success' as 'success' | 'error',
+    title: '',
+    message: '',
+    showCancelButton: false,
+    onConfirm: undefined as (() => void) | undefined
+  });
+
+  const showCustomAlert = (
+    type: 'success' | 'error',
+    title: string,
+    message: string,
+    showCancelButton: boolean = false,
+    onConfirm?: () => void
+  ) => {
+    setCustomAlert({
+      visible: true,
+      type,
+      title,
+      message,
+      showCancelButton,
+      onConfirm
+    });
+  };
+
+  const hideCustomAlert = () => {
+    setCustomAlert(prev => ({ ...prev, visible: false }));
+  };
 
   const handleBack = () => {
     router.back();
@@ -44,7 +75,7 @@ export default function ParentProfile() {
 
   const handleSaveProfile = () => {
     // Here you would typically save to backend
-    Alert.alert('Success', 'Profile updated successfully!');
+    showCustomAlert('success', 'Success', 'Profile updated successfully!');
     closeEditModal();
   };
 
@@ -59,10 +90,10 @@ export default function ParentProfile() {
   const requestPermissions = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(
+      showCustomAlert(
+        'error',
         'Permission Required',
-        'Sorry, we need camera roll permissions to change your profile photo.',
-        [{ text: 'OK' }]
+        'Sorry, we need camera roll permissions to change your profile photo.'
       );
       return false;
     }
@@ -73,33 +104,22 @@ export default function ParentProfile() {
     const hasPermission = await requestPermissions();
     if (!hasPermission) return;
 
-    Alert.alert(
+    showCustomAlert(
+      'success',
       'Select Photo',
       'Choose how you would like to select a photo',
-      [
-        {
-          text: 'Camera',
-          onPress: openCamera,
-        },
-        {
-          text: 'Photo Library',
-          onPress: openImageLibrary,
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-      ]
+      true,
+      openImageLibrary
     );
   };
 
   const openCamera = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(
+      showCustomAlert(
+        'error',
         'Permission Required',
-        'Sorry, we need camera permissions to take a photo.',
-        [{ text: 'OK' }]
+        'Sorry, we need camera permissions to take a photo.'
       );
       return;
     }
@@ -608,6 +628,19 @@ export default function ParentProfile() {
             </View>
           </View>
         </Modal>
+
+        {/* Custom Alert */}
+        <CustomAlert
+          visible={customAlert.visible}
+          type={customAlert.type}
+          title={customAlert.title}
+          message={customAlert.message}
+          onClose={hideCustomAlert}
+          onConfirm={customAlert.onConfirm}
+          showCancelButton={customAlert.showCancelButton}
+          confirmText={customAlert.showCancelButton ? 'Yes' : 'OK'}
+          cancelText="Cancel"
+        />
       </SafeAreaView>
     </LinearGradient>
   );
