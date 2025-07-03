@@ -2,7 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react'
-import { Alert, KeyboardAvoidingView, SafeAreaView, ScrollView, TouchableOpacity, View, Text, StatusBar, Platform, TextInput } from 'react-native';
+import { KeyboardAvoidingView, SafeAreaView, ScrollView, TouchableOpacity, View, Text, StatusBar, Platform, TextInput } from 'react-native';
+import CustomAlert from '@/components/CustomAlert';
+import { useCustomAlert } from '@/hooks/useCustomAlert';
 
 type FormData = {
   password: string;
@@ -19,7 +21,8 @@ type TouchedFields = {
   [K in FormField]?: boolean;
 };
 
-function new_password() {
+function NewPassword() {
+      const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
       const router = useRouter();
       
       // Form state
@@ -125,7 +128,7 @@ function new_password() {
     // Handle form submission
     const handleCreateAccount = async () => {
       if (!validateForm()) {
-        Alert.alert('Validation Error', 'Please fix the errors below');
+        showCustomAlert('error', 'Validation Error', 'Please fix the errors below');
         return;
       }
   
@@ -136,18 +139,15 @@ function new_password() {
         await new Promise(resolve => setTimeout(resolve, 2000));
         
         // Success
-        Alert.alert(
+        showCustomAlert(
+          'success', 
           'Success', 
           'Account created successfully!',
-          [
-            {
-              text: 'Continue',
-              onPress: () => router.push('/dashboard')
-            }
-          ]
+          false,
+          () => router.push('/dashboard')
         );
-      } catch (error) {
-        Alert.alert('Error', 'Failed to create account. Please try again.');
+      } catch {
+        showCustomAlert('error', 'Error', 'Failed to create account. Please try again.');
       } finally {
         setIsLoading(false);
       }
@@ -381,8 +381,17 @@ function new_password() {
           
         </KeyboardAvoidingView>
       </SafeAreaView>
+      <CustomAlert
+        visible={customAlert.visible}
+        type={customAlert.type}
+        title={customAlert.title}
+        message={customAlert.message}
+        showCancelButton={customAlert.showCancelButton}
+        onConfirm={customAlert.onConfirm}
+        onClose={hideCustomAlert}
+      />
     </LinearGradient>
   )
 }
 
-export default new_password
+export default NewPassword

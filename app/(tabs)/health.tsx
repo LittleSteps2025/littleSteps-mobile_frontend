@@ -10,9 +10,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
   Modal
 } from 'react-native';
+import CustomAlert from '@/components/CustomAlert';
+import { useCustomAlert } from '@/hooks/useCustomAlert';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +29,7 @@ interface HealthRecord {
 }
 
 export default function HealthRecords() {
+  const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
   const router = useRouter();
   
   // Health information state
@@ -91,13 +93,13 @@ export default function HealthRecords() {
   };
 
   const handleSaveHealthData = () => {
-    Alert.alert('Success', 'Health information updated successfully!');
+    showCustomAlert('success', 'Success', 'Health information updated successfully!');
     setIsEditing(false);
   };
 
   const handleAddRecord = () => {
     if (!newRecord.title || !newRecord.date) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      showCustomAlert('error', 'Error', 'Please fill in all required fields');
       return;
     }
 
@@ -115,7 +117,7 @@ export default function HealthRecords() {
       doctor: ''
     });
     setShowAddRecord(false);
-    Alert.alert('Success', 'Health record added successfully!');
+    showCustomAlert('success', 'Success', 'Health record added successfully!');
   };
 
   const getRecordIcon = (type: string) => {
@@ -610,6 +612,15 @@ export default function HealthRecords() {
           </View>
         </Modal>
       </SafeAreaView>
+      <CustomAlert
+        visible={customAlert.visible}
+        type={customAlert.type}
+        title={customAlert.title}
+        message={customAlert.message}
+        showCancelButton={customAlert.showCancelButton}
+        onConfirm={customAlert.onConfirm}
+        onClose={hideCustomAlert}
+      />
     </LinearGradient>
   );
 }
