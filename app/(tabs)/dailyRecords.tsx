@@ -20,7 +20,7 @@ console.log('API_BASE_URL:', API_BASE_URL);
 export default function DailyMealTracker() {
   const router = useRouter();
 
-   const getTodayDate = () => new Date().toISOString().slice(0, 10);
+   //const getTodayDate = () => new Date().toISOString().slice(0, 10);
   
   const [mealData, setMealData] = useState({
     breakfast: '',

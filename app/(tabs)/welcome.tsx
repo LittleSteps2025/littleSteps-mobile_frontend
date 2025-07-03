@@ -75,7 +75,7 @@ function Welcome() {
               Here For You Always
             </Text>
             <Text className="text-center pt-2 text-gray-700 px-4">
-              Get real-time updates, message teachers, and ensure your child's
+              Get real-time updates, message teachers, and ensure your child&apos;s
               day is full of care and joy.
             </Text>
             <TouchableOpacity
@@ -123,7 +123,7 @@ function Welcome() {
                 Create an Account
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity
+            {/* <TouchableOpacity
               className="rounded-3xl py-4 items-center mb-8 bg-purple-100 w-full mt-5 mx-6"
               style={{
                 shadowColor: "#7c3aed",
@@ -137,7 +137,7 @@ function Welcome() {
               <Text className="text-purple-500 text-lg font-semibold">
                 Log in
               </Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
         </View>
 

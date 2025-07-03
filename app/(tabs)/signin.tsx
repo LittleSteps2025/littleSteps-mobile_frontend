@@ -14,13 +14,13 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { apiRequest, API_CONFIG } from '../../config/api';
+import { apiRequest, API_CONFIG } from '@/config/api';
 
 // Define types for better type safety
 type FormData = {
   email: string;
   password: string;
-  confirmPassword: string;
+
 };
 
 type FormField = keyof FormData;
@@ -40,7 +40,7 @@ export default function CreateAccountWithValidation() {
   const [formData, setFormData] = useState<FormData>({
     email: '',
     password: '',
-    confirmPassword: ''
+
   });
   
   // Validation errors
@@ -105,9 +105,9 @@ export default function CreateAccountWithValidation() {
     }
     
     // Re-validate confirm password if password changes
-    if (field === 'password' && touched.confirmPassword && formData.confirmPassword) {
-      validateField('confirmPassword', formData.confirmPassword);
-    }
+    // if (field === 'password' && touched.confirmPassword && formData.confirmPassword) {
+    //   validateField('confirmPassword', formData.confirmPassword);
+    // }
   };
 
   // Handle input blur (when user leaves the field)
@@ -133,7 +133,7 @@ export default function CreateAccountWithValidation() {
     setTouched({
       email: true,
       password: true,
-      confirmPassword: true
+
     });
     
     return !emailError && !passwordError ;
@@ -418,7 +418,7 @@ export default function CreateAccountWithValidation() {
               <Text className="text-base text-gray-500">
                 Are you new here?{' '}
               </Text>
-              <TouchableOpacity onPress={() => router.push('/signup')}>
+              <TouchableOpacity onPress={() => router.push('/welcome')}>
                 <Text className="text-base text-purple-600 font-semibold">
                   Create Account
                 </Text>

@@ -330,7 +330,7 @@ function AccountVerification() {
                   fontSize: 16,
                   fontWeight: '600'
                 }}>
-                  Didn't receive the code? Contact Admin
+                  Didn&apos;t receive the code? Contact Admin
                 </Text>
               </TouchableOpacity>
             </View>
