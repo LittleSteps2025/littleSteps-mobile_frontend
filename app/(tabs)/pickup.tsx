@@ -1,22 +1,23 @@
 // app/pickup-details.tsx
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
-  StatusBar,
-  SafeAreaView,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Alert,
-  Modal,
-  Image
+  View
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
 interface EmergencyContact {
   id: string;
@@ -51,40 +52,40 @@ export default function PickupDetailsPage() {
   const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([
     {
       id: '1',
-      name: 'Sarah Johnson',
+      name: 'Malani Fernando',
       relationship: 'Mother',
       phoneNumber: '+94 77 123 4567',
-      photo: 'https://images.unsplash.com/photo-1494790108755-2616b332c2bd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=387&q=80',
+      photo:require('@/assets/images/mother.jpg') ,
       // isPrimary: true,
       // isAuthorized: true,
       // notes: 'Primary contact - Always available during school hours'
     },
     {
       id: '2',
-      name: 'Michael Johnson',
+      name: 'Damien Perera',
       relationship: 'Father',
       phoneNumber: '+94 71 987 6543',
-      photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80',
+      photo: require('@/assets/images/farther.jpg'),
       // isPrimary: false,
       // isAuthorized: true,
       // notes: 'Usually available after 4 PM'
     },
     {
       id: '3',
-      name: 'Mary Johnson',
+      name: 'Mary Perera',
       relationship: 'Grandmother',
       phoneNumber: '+94 11 234 5678',
-      photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=388&q=80',
+      photo: require('@/assets/images/grandMother.jpg'),
       // isPrimary: false,
       // isAuthorized: true,
       // notes: 'Emergency backup contact'
     },
     {
       id: '4',
-      name: 'Lisa Chen',
+      name: 'Kamal Alwis',
       relationship: 'Family Friend',
       phoneNumber: '+94 76 555 1234',
-      photo: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80',
+      photo: require('@/assets/images/friend.jpg'),
       // isPrimary: false,
       // isAuthorized: true,
       // notes: 'Authorized for emergency pickup only'
@@ -97,31 +98,49 @@ export default function PickupDetailsPage() {
     name: '',
     relationship: '',
     phoneNumber: '',
-    photo: '',
+    photo: undefined,
     // isPrimary: false,
     // isAuthorized: true,
     // notes: ''
   });
 
+  // Image picker handler
+  const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Please grant photo library permissions to upload a photo.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setNewContact(prev => ({ ...prev, photo: result.assets[0].uri }));
+    }
+  };
+
   const relationshipOptions = [
     'Mother', 'Father', 'Guardian', 'Grandmother', 'Grandfather', 
-    'Aunt', 'Uncle', 'Sibling', 'Family Friend', 'Nanny', 'Other'
+    'Aunt', 'Uncle', 'Sibling', 'Family Friend',  'Other'
   ];
 
   const handleBack = () => {
     router.back();
   };
 
-  const handleCallContact = (phoneNumber: string, name: string) => {
-    Alert.alert(
-      'Call Contact',
-      `Would you like to call ${name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Call', onPress: () => console.log(`Calling ${phoneNumber}`) }
-      ]
-    );
-  };
+  // const handleCallContact = (phoneNumber: string, name: string) => {
+  //   Alert.alert(
+  //     'Call Contact',
+  //     `Would you like to call ${name}?`,
+  //     [
+  //       { text: 'Cancel', style: 'cancel' },
+  //       { text: 'Call', onPress: () => console.log(`Calling ${phoneNumber}`) }
+  //     ]
+  //   );
+  // };
 
   const handleAddContact = () => {
     if (!newContact.name || !newContact.relationship || !newContact.phoneNumber) {
@@ -234,85 +253,64 @@ export default function PickupDetailsPage() {
       className="mb-4 p-5 rounded-2xl"
       style={{
         backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        shadowColor: '#000', // Fixed: removed conditional logic
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1, // Fixed: removed conditional logic
+        shadowOpacity: 0.1,
         shadowRadius: 8,
-        elevation: 3, // Fixed: removed conditional logic
-        borderWidth: 1, // Fixed: removed conditional logic
-        borderColor: '#e5e7eb' // Fixed: removed conditional logic
+        elevation: 3,
+        borderWidth: 1,
+        borderColor: '#e5e7eb'
       }}
     >
-      {/* <View className="flex-row items-center justify-between mb-4">
+      <View className="flex-row items-center justify-between">
         <View className="flex-row items-center">
-          {contact.isPrimary && (
-            <View className="bg-purple-100 px-3 py-1 rounded-full mr-3">
-              <Text className="text-purple-700 text-xs font-semibold">PRIMARY</Text>
+          {contact.photo ? (
+            typeof contact.photo === 'string' ? (
+              <Image
+                source={{ uri: contact.photo }}
+                className="w-16 h-16 rounded-full"
+                style={{
+                  borderWidth: 3,
+                  borderColor: '#e5e7eb'
+                }}
+              />
+            ) : (
+              <Image
+                source={contact.photo}
+                className="w-16 h-16 rounded-full"
+                style={{
+                  borderWidth: 3,
+                  borderColor: '#e5e7eb'
+                }}
+              />
+            )
+          ) : (
+            <View
+              className="w-16 h-16 rounded-full items-center justify-center"
+              style={{
+                backgroundColor: '#9ca3af',
+                borderWidth: 3,
+                borderColor: '#d1d5db'
+              }}
+            >
+              <Ionicons name="person" size={32} color="white" />
             </View>
           )}
-          <View className={`px-3 py-1 rounded-full ${contact.isAuthorized ? 'bg-green-100' : 'bg-red-100'}`}>
-            <Text className={`text-xs font-semibold ${contact.isAuthorized ? 'text-green-700' : 'text-red-700'}`}>
-              {contact.isAuthorized ? 'AUTHORIZED' : 'NOT AUTHORIZED'}
+          <View className="ml-4">
+            <Text className="text-xl font-bold text-gray-800 mb-1">
+              {contact.name}
+            </Text>
+            <Text className="text-purple-600 font-semibold mb-2">
+              {contact.relationship}
             </Text>
           </View>
-        </View> */}
-      <View className="flex-row items-center justify-between mb-4">
-        <View />
+        </View>
         <TouchableOpacity
           onPress={() => setShowContactDetails(contact.id)}
           className="w-8 h-8 items-center justify-center"
         >
           <Ionicons name="ellipsis-vertical" size={20} color="#6b7280" />
         </TouchableOpacity>
-      </View>
-
-      <View className="flex-row items-center">
-        <View className="mr-4">
-          {contact.photo ? (
-            <Image
-              source={{ uri: contact.photo }}
-              className="w-16 h-16 rounded-full"
-              style={{
-                borderWidth: 3,
-                borderColor: '#e5e7eb' // Fixed: removed conditional logic
-              }}
-            />
-          ) : (
-            <View 
-              className="w-16 h-16 rounded-full items-center justify-center"
-              style={{
-                backgroundColor: '#9ca3af', // Fixed: removed conditional logic
-                borderWidth: 3,
-                borderColor: '#d1d5db' // Fixed: removed conditional logic
-              }}
-            >
-              <Ionicons name="person" size={32} color="white" />
-            </View>
-          )}
-        </View>
-        
-        <View className="flex-1">
-          <Text className="text-xl font-bold text-gray-800 mb-1">
-            {contact.name}
-          </Text>
-          <Text className="text-purple-600 font-semibold mb-2">
-            {contact.relationship}
-          </Text>
-          <TouchableOpacity
-            onPress={() => handleCallContact(contact.phoneNumber, contact.name)}
-            className="flex-row items-center"
-          >
-            <Ionicons name="call" size={16} color="#10b981" />
-            <Text className="text-green-600 font-medium ml-2">
-              {contact.phoneNumber}
-            </Text>
-          </TouchableOpacity>
-          {/* {contact.notes && (
-            <Text className="text-gray-500 text-sm mt-2" numberOfLines={2}>
-              {contact.notes}
-            </Text>
-          )} */}
-        </View>
       </View>
     </View>
   );
@@ -482,6 +480,7 @@ export default function PickupDetailsPage() {
               </Text>
               
               <ScrollView showsVerticalScrollIndicator={false}>
+
                 <InputField
                   label="Full Name *"
                   value={newContact.name}
@@ -526,12 +525,28 @@ export default function PickupDetailsPage() {
                   keyboardType="phone-pad"
                 />
 
-                <InputField
-                  label="Photo URL (Optional)"
-                  value={newContact.photo}
-                  onChangeText={(value: string) => setNewContact(prev => ({ ...prev, photo: value }))}
-                  placeholder="https://example.com/photo.jpg"
-                />
+                {/* Image Picker for Photo */}
+                <View className="mb-4">
+                  <Text className="text-sm font-medium text-gray-600 mb-2 ml-1">
+                    Photo *
+                  </Text>
+                  <TouchableOpacity
+                    onPress={handlePickImage}
+                    className="w-32 h-32 bg-gray-100 rounded-2xl items-center justify-center self-start"
+                    style={{ borderWidth: 1, borderColor: '#e5e7eb' }}
+                  >
+                    {newContact.photo ? (
+                      <Image
+                        source={{ uri: newContact.photo }}
+                        className="w-32 h-32 rounded-2xl"
+                        style={{ resizeMode: 'cover' }}
+                      />
+                    ) : (
+                      <Ionicons name="camera" size={36} color="#a3a3a3" />
+                    )}
+                    <Text className="text-xs text-gray-500 mt-2">Tap to upload</Text>
+                  </TouchableOpacity>
+                </View>
 
                 {/* Fixed: Removed InputField for notes since it's not in the interface */}
                 {/* <InputField
@@ -631,12 +646,12 @@ export default function PickupDetailsPage() {
                         </Text>
                       </TouchableOpacity> */}
                       
-                      <TouchableOpacity
+                      {/* <TouchableOpacity
                         onPress={() => handleCallContact(contact.phoneNumber, contact.name)}
                         className="py-3 mb-3 rounded-2xl items-center bg-green-100"
                       >
                         <Text className="text-green-700 font-semibold">Call Contact</Text>
-                      </TouchableOpacity>
+                      </TouchableOpacity> */}
                       
                       {/* Fixed: Commented out isPrimary check since it's not in the interface */}
                       {/* {!contact.isPrimary && ( */}

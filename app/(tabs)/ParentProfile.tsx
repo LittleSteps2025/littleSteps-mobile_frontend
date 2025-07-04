@@ -20,14 +20,28 @@ import {
 export default function ParentProfile() {
   const router = useRouter();
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   
   // Edit form state
   const [editForm, setEditForm] = useState({
-    name: 'Sarah Johnson',
-    email: 'sarah.johnson@email.com',
+    name: 'Amali Perera',
+    email: 'amali@gmail.com',
     phoneNumber: '+94 77 123 4567',
     address: '45 Flower Road, Colombo 07, Sri Lanka'
+  });
+
+  // Password form state
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
   });
 
   // Custom Alert State
@@ -73,16 +87,75 @@ export default function ParentProfile() {
     setIsEditModalVisible(false);
   };
 
+  const openPasswordModal = () => {
+    setIsPasswordModalVisible(true);
+    setPasswordForm({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+  };
+
+  const closePasswordModal = () => {
+    setIsPasswordModalVisible(false);
+    setPasswordForm({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+    setShowPasswords({
+      current: false,
+      new: false,
+      confirm: false
+    });
+  };
+
   const handleSaveProfile = () => {
     // Here you would typically save to backend
     showCustomAlert('success', 'Success', 'Profile updated successfully!');
     closeEditModal();
   };
 
+  const handlePasswordChange = () => {
+    // Basic validation
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      showCustomAlert('error', 'Error', 'Please fill in all password fields.');
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      showCustomAlert('error', 'Error', 'New passwords do not match.');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 8) {
+      showCustomAlert('error', 'Error', 'New password must be at least 8 characters long.');
+      return;
+    }
+
+    // Here you would typically validate current password and save new password to backend
+    showCustomAlert('success', 'Success', 'Password changed successfully!');
+    closePasswordModal();
+  };
+
   const handleInputChange = (field: keyof typeof editForm, value: string) => {
     setEditForm(prev => ({
       ...prev,
       [field]: value
+    }));
+  };
+
+  const handlePasswordInputChange = (field: keyof typeof passwordForm, value: string) => {
+    setPasswordForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const togglePasswordVisibility = (field: keyof typeof showPasswords) => {
+    setShowPasswords(prev => ({
+      ...prev,
+      [field]: !prev[field]
     }));
   };
 
@@ -157,7 +230,7 @@ export default function ParentProfile() {
     address: editForm.address,
     profileImage: profileImage ? { uri: profileImage } : require('@/assets/images/kid1.jpg'), // Use selected image or default
     joinDate: 'January 2024',
-    children: ['Pramodi Peshila', 'Alex Johnson'] // List of children
+    children: ['Pramodi Peshila', 'Nimal Perera'] // List of children
   };
 
   const profileSections = [
@@ -209,8 +282,6 @@ export default function ParentProfile() {
     }
   ];
 
-  
-
   return (
     <LinearGradient
       colors={['#DFC1FD', '#f3e8ff', '#F5ECFE', '#F5ECFE', '#e9d5ff', '#DFC1FD']}
@@ -230,7 +301,7 @@ export default function ParentProfile() {
               <Ionicons name="chevron-back" size={24} color="#374151" />
             </TouchableOpacity>
             
-            <Text className="text-xl font-bold text-gray-700">
+            <Text className="text-2xl font-bold text-gray-700 mt-4">
               Parent Profile
             </Text>
 
@@ -335,96 +406,93 @@ export default function ParentProfile() {
               </View>
             ))}
 
-            {/* Quick Actions */}
-            {/* <View className="mb-8">
+            {/* Security Section */}
+            <View className="mb-8">
               <Text className="text-lg font-bold text-gray-700 mb-4">
-                More Options
+                Privacy & Security
               </Text>
-
-              <TouchableOpacity
-                onPress={() => router.push('/ParentDashboard')}
-                activeOpacity={0.8}
-                className="mb-4"
+              
+              <View
+                className="rounded-2xl p-6"
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  shadowColor: '#7c3aed',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 8,
+                  elevation: 4,
+                }}
               >
-                <LinearGradient
-                  colors={['#7c3aed', '#a855f7']}
-                  start={[0, 0]}
-                  end={[1, 1]}
-                  className="rounded-2xl p-5"
-                  style={{
-                    shadowColor: '#7c3aed',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.25,
-                    shadowRadius: 8,
-                    elevation: 6
-                  }}
+                <TouchableOpacity
+                  onPress={openPasswordModal}
+                  className="flex-row items-center py-4"
                 >
-                  <View className="flex-row items-center">
-                    <View className="w-12 h-12 rounded-full bg-white bg-opacity-20 items-center justify-center mr-4">
-                      <Ionicons name="grid-outline" size={24} color="white" />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-white text-lg font-bold mb-1">
-                        Parent Dashboard
-                      </Text>
-                      <Text className="text-white text-sm opacity-90">
-                        Access all parent features and tools
-                      </Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={24} color="white" />
+                  <View 
+                    className="w-12 h-12 rounded-full items-center justify-center mr-4"
+                    style={{ backgroundColor: '#dc262615' }}
+                  >
+                    <Ionicons name="lock-closed-outline" size={20} color="#dc2626" />
                   </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View> */}
-
-            
+                  <View className="flex-1">
+                    <Text className="text-sm font-medium text-gray-500 mb-1">
+                      Password
+                    </Text>
+                    <Text className="text-base font-semibold text-gray-800">
+                      Change Password
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         </ScrollView>
+        
         <View className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md">
-                <View
-                  className="flex-row justify-around items-center py-4 px-6"
-                  style={{
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: -2 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 8,
-                    elevation: 8,
-                  }}
-                >
-                  {/* Home */}
-                  <Pressable 
-                    className="items-center justify-center py-2"
-                    onPress={() => router.push('/ParentDashboard')}
-                  >
-                    <View className="w-12 h-12 items-center justify-center">
-                      <Ionicons name="home" size={24} color="#9ca3af" />
-                    </View>
-                    <Text className="text-xs text-gray-500 font-medium mt-1">Home</Text>
-                  </Pressable>
-        
-                  {/* Profile */}
-                  <Pressable
-                    className="items-center justify-center py-2"
-                    
-                  >
-                    <View className="w-12 h-12 items-center justify-center">
-                      <Ionicons name="person" size={24} color="#7c3aed" />
-                    </View>
-                    <Text className="text-xs text-purple-600 mt-1">Profile</Text>
-                  </Pressable>
-        
-                  {/* More */}
-                  <Pressable 
-                    className="items-center justify-center py-2"
-                    onPress={() => router.push('/ParentMore')}
-                  >
-                    <View className="w-12 h-12 items-center justify-center">
-                      <Ionicons name="ellipsis-horizontal" size={24} color="#9ca3af" />
-                    </View>
-                    <Text className="text-xs text-gray-500 mt-1">More</Text>
-                  </Pressable>
-                </View>
+          <View
+            className="flex-row justify-around items-center py-4 px-6"
+            style={{
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 8,
+              elevation: 8,
+            }}
+          >
+            {/* Home */}
+            <Pressable 
+              className="items-center justify-center py-2"
+              onPress={() => router.push('/ParentDashboard')}
+            >
+              <View className="w-12 h-12 items-center justify-center">
+                <Ionicons name="home" size={24} color="#9ca3af" />
               </View>
+              <Text className="text-xs text-gray-500 font-medium mt-1">Home</Text>
+            </Pressable>
+
+            {/* Profile */}
+            <Pressable
+              className="items-center justify-center py-2"
+              
+            >
+              <View className="w-12 h-12 items-center justify-center">
+                <Ionicons name="person" size={24} color="#7c3aed" />
+              </View>
+              <Text className="text-xs text-purple-600 mt-1">Profile</Text>
+            </Pressable>
+
+            {/* More */}
+            <Pressable 
+              className="items-center justify-center py-2"
+              onPress={() => router.push('/ParentMore')}
+            >
+              <View className="w-12 h-12 items-center justify-center">
+                <Ionicons name="ellipsis-horizontal" size={24} color="#9ca3af" />
+              </View>
+              <Text className="text-xs text-gray-500 mt-1">More</Text>
+            </Pressable>
+          </View>
+        </View>
 
         {/* Edit Profile Modal */}
         <Modal
@@ -621,6 +689,188 @@ export default function ParentProfile() {
                   >
                     <Text className="text-center text-white font-semibold text-base">
                       Save Changes
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Password Change Modal */}
+        <Modal
+          visible={isPasswordModalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={closePasswordModal}
+        >
+          <View 
+            className="flex-1 justify-end"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+          >
+            <TouchableOpacity 
+              className="flex-1"
+              onPress={closePasswordModal}
+              activeOpacity={1}
+            />
+            
+            <View 
+              className="rounded-t-3xl p-6"
+              style={{
+                backgroundColor: 'white',
+                maxHeight: '70%',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: -4 },
+                shadowOpacity: 0.25,
+                shadowRadius: 16,
+                elevation: 16
+              }}
+            >
+              {/* Modal Header */}
+              <View className="flex-row items-center justify-between mb-6">
+                <Text className="text-xl font-bold text-gray-800">
+                  Change Password
+                </Text>
+                <TouchableOpacity 
+                  onPress={closePasswordModal}
+                  className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center"
+                >
+                  <Ionicons name="close" size={18} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Password Form */}
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {/* Current Password */}
+                <View className="mb-4">
+                  <Text className="text-sm font-medium text-gray-700 mb-2">
+                    Current Password
+                  </Text>
+                  <View className="relative">
+                    <TextInput
+                      value={passwordForm.currentPassword}
+                      onChangeText={(value) => handlePasswordInputChange('currentPassword', value)}
+                      secureTextEntry={!showPasswords.current}
+                      className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 bg-gray-50"
+                      style={{
+                        fontSize: 16,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.05,
+                        shadowRadius: 2,
+                        elevation: 1
+                      }}
+                    />
+                    <TouchableOpacity
+                      onPress={() => togglePasswordVisibility('current')}
+                      className="absolute right-4 top-3"
+                    >
+                      <Ionicons 
+                        name={showPasswords.current ? 'eye-off' : 'eye'} 
+                        size={20} 
+                        color="#9ca3af" 
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* New Password */}
+                <View className="mb-4">
+                  <Text className="text-sm font-medium text-gray-700 mb-2">
+                    New Password
+                  </Text>
+                  <View className="relative">
+                    <TextInput
+                      value={passwordForm.newPassword}
+                      onChangeText={(value) => handlePasswordInputChange('newPassword', value)}
+                      secureTextEntry={!showPasswords.new}
+                      className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 bg-gray-50"
+                      style={{
+                        fontSize: 16,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.05,
+                        shadowRadius: 2,
+                        elevation: 1
+                      }}
+                    />
+                    <TouchableOpacity
+                      onPress={() => togglePasswordVisibility('new')}
+                      className="absolute right-4 top-3"
+                    >
+                      <Ionicons 
+                        name={showPasswords.new ? 'eye-off' : 'eye'} 
+                        size={20} 
+                        color="#9ca3af" 
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  <Text className="text-xs text-gray-500 mt-1">
+                    Password must be at least 8 characters long
+                  </Text>
+                </View>
+
+                {/* Confirm New Password */}
+                <View className="mb-6">
+                  <Text className="text-sm font-medium text-gray-700 mb-2">
+                    Confirm New Password
+                  </Text>
+                  <View className="relative">
+                    <TextInput
+                      value={passwordForm.confirmPassword}
+                      onChangeText={(value) => handlePasswordInputChange('confirmPassword', value)}
+                      secureTextEntry={!showPasswords.confirm}
+                      className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 bg-gray-50"
+                      style={{
+                        fontSize: 16,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.05,
+                        shadowRadius: 2,
+                        elevation: 1
+                      }}
+                    />
+                    <TouchableOpacity
+                      onPress={() => togglePasswordVisibility('confirm')}
+                      className="absolute right-4 top-3"
+                    >
+                      <Ionicons 
+                        name={showPasswords.confirm ? 'eye-off' : 'eye'} 
+                        size={20} 
+                        color="#9ca3af" 
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Action Buttons */}
+                <View className="flex-row space-x-3 mb-4">
+                  <TouchableOpacity
+                    onPress={closePasswordModal}
+                    className="flex-1 py-3 rounded-xl border border-gray-300 mr-2"
+                    style={{
+                      backgroundColor: '#f9fafb'
+                    }}
+                  >
+                    <Text className="text-center text-gray-700 font-semibold text-base">
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={handlePasswordChange}
+                    className="flex-1 py-3 rounded-xl"
+                    style={{
+                      backgroundColor: '#7c3aed',
+                      shadowColor: '#7c3aed',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 8,
+                      elevation: 4
+                    }}
+                  >
+                    <Text className="text-center text-white font-semibold text-base">
+                      Change Password
                     </Text>
                   </TouchableOpacity>
                 </View>

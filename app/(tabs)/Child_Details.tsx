@@ -124,7 +124,7 @@ export default function ChildDetailsForm() {
                   }}
                 >
                   <Image
-                    source={images.Kid1} // Replace with your image source
+                    source={require('@/assets/images/kid2.jpg')} // Replace with your image source
                     className="w-full h-full"
                     style={{ borderRadius: 64, borderWidth: 4, borderColor: '#7c3aed' }}
                   />
