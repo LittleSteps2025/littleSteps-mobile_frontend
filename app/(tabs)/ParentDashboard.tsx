@@ -12,9 +12,9 @@ const { width } = Dimensions.get('window');
 const children = [
   {
     id: '1',
-    name: 'Pramodii Peshila',
+    name: 'Pramodi Peshila',
     age: '5 years old',
-    image: require('@/assets/images/kid1.jpg'),
+    image: require('@/assets/images/kid2.jpg'),
     status: 'Active',
     gender: 'female', // Added gender field
   },
