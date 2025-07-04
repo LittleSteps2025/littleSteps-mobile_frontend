@@ -1,29 +1,29 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StatusBar,
-  SafeAreaView,
-  ScrollView,
-  Modal,
-  TextInput,
-  FlatList,
-  Pressable,
-  Image
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { images } from '@/assets/images/images';
 import CustomAlert from '@/components/CustomAlert';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import {
+  FlatList,
+  Image,
+  Modal,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 // Mock data for events
 const mockEvents = [
   {
     id: '1',
     title: 'Annual Sports Day',
-    date: '2024-07-15',
+    date: '2025-08-15',
     time: '09:00 AM',
     location: 'School Playground',
     description: 'Join us for our annual sports day celebration with fun activities for all children.',
@@ -33,7 +33,7 @@ const mockEvents = [
   {
     id: '2',
     title: 'Parent-Teacher Meeting',
-    date: '2024-07-20',
+    date: '2025-07-20',
     time: '02:00 PM',
     location: 'Classroom A',
     description: 'Discuss your child\'s progress and development with their teacher.',
@@ -43,7 +43,7 @@ const mockEvents = [
   {
     id: '3',
     title: 'Art Exhibition',
-    date: '2024-07-10',
+    date: '2025-07-10',
     time: '10:00 AM',
     location: 'Art Room',
     description: 'Showcase of children\'s artwork and creative projects.',
@@ -53,7 +53,7 @@ const mockEvents = [
   {
     id: '4',
     title: 'School Picnic',
-    date: '2024-07-25',
+    date: '2025-07-25',
     time: '08:00 AM',
     location: 'City Park',
     description: 'Fun-filled day out with games, food, and activities for families.',
@@ -64,7 +64,7 @@ const mockEvents = [
 
 export default function ParentMore() {
   const router = useRouter();
-  const [isPasswordResetModalVisible, setIsPasswordResetModalVisible] = useState(false);
+  
   const [isComplaintModalVisible, setIsComplaintModalVisible] = useState(false);
   const [isEventsModalVisible, setIsEventsModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
@@ -102,11 +102,11 @@ export default function ParentMore() {
   };
 
   // Password reset form state
-  const [passwordResetForm, setPasswordResetForm] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
+  // const [passwordResetForm, setPasswordResetForm] = useState({
+  //   currentPassword: '',
+  //   newPassword: '',
+  //   confirmPassword: ''
+  // });
 
   // Complaint form state
   const [complaintForm, setComplaintForm] = useState({
@@ -121,40 +121,40 @@ export default function ParentMore() {
   };
 
   // Password Reset Functions
-  const openPasswordResetModal = () => {
-    setIsPasswordResetModalVisible(true);
-  };
+  // const openPasswordResetModal = () => {
+  //   setIsPasswordResetModalVisible(true);
+  // };
 
-  const closePasswordResetModal = () => {
-    setIsPasswordResetModalVisible(false);
-    setPasswordResetForm({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    });
-  };
+  // const closePasswordResetModal = () => {
+  //   setIsPasswordResetModalVisible(false);
+  //   setPasswordResetForm({
+  //     currentPassword: '',
+  //     newPassword: '',
+  //     confirmPassword: ''
+  //   });
+  // };
 
-  const handlePasswordReset = () => {
-    if (!passwordResetForm.currentPassword || !passwordResetForm.newPassword || !passwordResetForm.confirmPassword) {
-      showCustomAlert('error', 'Error', 'Please fill all fields');
-      return;
-    }
+  // const handlePasswordReset = () => {
+  //   if (!passwordResetForm.currentPassword || !passwordResetForm.newPassword || !passwordResetForm.confirmPassword) {
+  //     showCustomAlert('error', 'Error', 'Please fill all fields');
+  //     return;
+  //   }
 
-    if (passwordResetForm.newPassword !== passwordResetForm.confirmPassword) {
-      showCustomAlert('error', 'Error', 'New passwords do not match');
-      return;
-    }
+  //   if (passwordResetForm.newPassword !== passwordResetForm.confirmPassword) {
+  //     showCustomAlert('error', 'Error', 'New passwords do not match');
+  //     return;
+  //   }
 
-    if (passwordResetForm.newPassword.length < 6) {
-      showCustomAlert('error', 'Error', 'Password must be at least 6 characters long');
-      return;
-    }
+  //   if (passwordResetForm.newPassword.length < 6) {
+  //     showCustomAlert('error', 'Error', 'Password must be at least 6 characters long');
+  //     return;
+  //   }
 
-    // Here you would typically call your backend API
-    showCustomAlert('success', 'Success', 'Password reset successfully!', false, () => {
-      closePasswordResetModal();
-    });
-  };
+  //   // Here you would typically call your backend API
+  //   showCustomAlert('success', 'Success', 'Password reset successfully!', false, () => {
+  //     closePasswordResetModal();
+  //   });
+  // };
 
   // Complaint Functions
   const openComplaintModal = () => {
@@ -222,50 +222,137 @@ export default function ParentMore() {
     }
   };
 
+  // Meeting Modal State and Logic
+  const [isMeetingModalVisible, setIsMeetingModalVisible] = useState(false);
+  const [meetingForm, setMeetingForm] = useState({
+    recipient: 'teacher',
+    date: '',
+    time: '',
+    reason: ''
+  });
+  const openMeetingModal = () => {
+    setIsMeetingModalVisible(true);
+  };
+  const closeMeetingModal = () => {
+    setIsMeetingModalVisible(false);
+    setMeetingForm({ recipient: 'teacher', date: '', time: '', reason: '' });
+  };
+  const handleMeetingRequest = () => {
+    if (!meetingForm.date || !meetingForm.time || !meetingForm.reason) {
+      showCustomAlert('error', 'Error', 'Please fill all fields');
+      return;
+    }
+    showCustomAlert('success', 'Request Sent', `Meeting request sent to ${meetingForm.recipient}.`, false, closeMeetingModal);
+  };
+
   const moreOptions = [
     {
-      title: 'Reset Password',
-      description: 'Change your account password',
-      item: images.settings,
-      color: ['#ef4444', '#f87171'],
-      onPress: openPasswordResetModal
+      title: 'Requesting Meetings',
+      description: 'Meet our staff or discuss concerns',
+      item: images.doctor,
+      color: ['#6366f1', '#8b5cf6'],
+      onPress: openMeetingModal
     },
     {
-      title: 'Submit Complaint',
+      title: 'Complaints & Feedbacks',
       description: 'Report issues or concerns',
       item: images.complaint,
-      color: ['#f59e0b', '#fbbf24'],
+      color: ['#ec4899', '#f97316'],
       onPress: openComplaintModal
     },
     {
       title: 'View Events',
       description: 'Check upcoming and past events',
       item: images.event,
-      color: ['#10b981', '#34d399'],
+      color: ['#10b981', '#06b6d4'],
       onPress: openEventsModal
     },
-    {
-      title: 'Notification Settings',
-      description: 'Manage your notifications',
-      item: images.notification,
-      color: ['#3b82f6', '#60a5fa'],
-      onPress: () => showCustomAlert('error', 'Coming Soon', 'This feature will be available soon!')
-    },
+    // {
+    //   title: 'Notification Settings',
+    //   description: 'Manage your notifications',
+    //   item: images.notification,
+    //   color: ['#3b82f6', '#60a5fa'],
+    //   onPress: () => showCustomAlert('error', 'Coming Soon', 'This feature will be available soon!')
+    // },
     {
       title: 'Help & Support',
       description: 'Get help or contact support',
       item: images.support,
-      color: ['#8b5cf6', '#a78bfa'],
-      onPress: () => showCustomAlert('success', 'Support', 'For support, please contact us at support@littlesteps.com')
+      color: ['#4E71FF', '#8DD8FF'],
+      onPress: () => setIsSupportModalVisible(true)
     },
     {
       title: 'Privacy Policy',
       description: 'Read our privacy policy',
       item: images.privacy,
       color: ['#6b7280', '#9ca3af'],
-      onPress: () => showCustomAlert('success', 'Privacy Policy', 'Our privacy policy ensures your data is protected.')
+      onPress: () => setIsPrivacyModalVisible(true)
     }
   ];
+
+  // Modal states for Help & Support and Privacy Policy
+  const [isSupportModalVisible, setIsSupportModalVisible] = useState(false);
+  const [isPrivacyModalVisible, setIsPrivacyModalVisible] = useState(false);
+        {/* Help & Support Modal */}
+        <Modal
+          visible={isSupportModalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setIsSupportModalVisible(false)}
+        >
+          <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <TouchableOpacity className="flex-1" onPress={() => setIsSupportModalVisible(false)} activeOpacity={1} />
+            <View className="rounded-t-3xl p-6" style={{ backgroundColor: 'white', maxHeight: '60%' }}>
+              <View className="flex-row items-center justify-between mb-6">
+                <Text className="text-xl font-bold text-gray-800">Help & Support</Text>
+                <TouchableOpacity onPress={() => setIsSupportModalVisible(false)} className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center">
+                  <Ionicons name="close" size={18} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
+              <View className="mb-4">
+                <Text className="text-base text-gray-700 mb-2">Contact Numbers</Text>
+                <View className="mb-2">
+                  <Text className="text-lg font-semibold text-purple-700">011-2345678</Text>
+                  <Text className="text-lg font-semibold text-purple-700">011-8765432</Text>
+                </View>
+                <Text className="text-base text-gray-700 mb-2 mt-4">Email Addresses</Text>
+                <View>
+                  <Text className="text-lg font-semibold text-purple-700">info@littlesteps.com</Text>
+                  <Text className="text-lg font-semibold text-purple-700">support@littlesteps.com</Text>
+                </View>
+              </View>
+              <Text className="text-sm text-gray-500">We are here to help you with any questions or concerns regarding your child's care and experience at our daycare centre.</Text>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Privacy Policy Modal */}
+        <Modal
+          visible={isPrivacyModalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setIsPrivacyModalVisible(false)}
+        >
+          <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <TouchableOpacity className="flex-1" onPress={() => setIsPrivacyModalVisible(false)} activeOpacity={1} />
+            <View className="rounded-t-3xl p-6" style={{ backgroundColor: 'white', maxHeight: '70%' }}>
+              <View className="flex-row items-center justify-between mb-6">
+                <Text className="text-xl font-bold text-gray-800">Privacy Policy</Text>
+                <TouchableOpacity onPress={() => setIsPrivacyModalVisible(false)} className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center">
+                  <Ionicons name="close" size={18} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView showsVerticalScrollIndicator={true}>
+                <Text className="text-base text-gray-700 mb-4 font-semibold">Rules and Regulations</Text>
+                <Text className="text-sm text-gray-700 mb-2">1. All personal information is kept confidential and is only used for daycare operations.</Text>
+                <Text className="text-sm text-gray-700 mb-2">2. We do not share your data with third parties without your consent.</Text>
+                <Text className="text-sm text-gray-700 mb-2">3. You have the right to access, update, or request deletion of your data at any time.</Text>
+                <Text className="text-sm text-gray-700 mb-2">4. Our staff are trained to handle your information securely and responsibly.</Text>
+                <Text className="text-sm text-gray-700 mb-2">5. For more details, please contact our support team.</Text>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
 
   return (
     <LinearGradient
@@ -278,7 +365,7 @@ export default function ParentMore() {
       <SafeAreaView className="flex-1">
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
           {/* Header */}
-          <View className="px-6 pt-4 pb-2 flex-row items-center justify-between">
+          <View className="px-6 pt-4 pb-2 flex-row items-center justify-between mt-2">
             <TouchableOpacity
               onPress={handleBack}
               className="w-10 h-10 justify-center items-center"
@@ -286,7 +373,7 @@ export default function ParentMore() {
               <Ionicons name="chevron-back" size={24} color="#374151" />
             </TouchableOpacity>
             
-            <Text className="text-xl font-bold text-gray-700">
+            <Text className="text-2xl font-bold text-gray-700 mt-8">
               More Options
             </Text>
 
@@ -295,9 +382,9 @@ export default function ParentMore() {
 
           {/* Page Title */}
           <View className="px-6 mt-4 mb-8">
-            <Text className="text-2xl font-bold text-gray-800 mb-2">
-              Settings & More
-            </Text>
+            {/* <Text className="text-2xl font-bold text-gray-800 mb-2">
+             More Options
+            </Text> */}
             <Text className="text-gray-600">
               Manage your account and explore additional features
             </Text>
@@ -360,8 +447,8 @@ export default function ParentMore() {
               style={{
                 backgroundColor: 'rgba(255,255,255,0.9)',
                 borderWidth: 2,
-                borderColor: '#ef4444',
-                shadowColor: '#000',
+                borderColor: '#7c3aed',
+                shadowColor: '#7c3aed',
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.1,
                 shadowRadius: 4,
@@ -370,7 +457,7 @@ export default function ParentMore() {
             >
               <View className="flex-row items-center">
                 <Image source={images.bye} style={{ width: 40, height: 40 }} />
-                <Text className="text-red-500 text-xl font-semibold ml-2">
+                <Text className="text-purple-500 text-xl font-semibold ml-2">
                   Logout
                 </Text>
               </View>
@@ -378,128 +465,95 @@ export default function ParentMore() {
           </View>
         </ScrollView>
 
-        {/* Password Reset Modal */}
+
+        {/* Meeting Modal */}
         <Modal
-          visible={isPasswordResetModalVisible}
+          visible={isMeetingModalVisible}
           animationType="slide"
           transparent={true}
-          onRequestClose={closePasswordResetModal}
+          onRequestClose={closeMeetingModal}
         >
-          <View 
-            className="flex-1 justify-end"
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-          >
-            <TouchableOpacity 
-              className="flex-1"
-              onPress={closePasswordResetModal}
-              activeOpacity={1}
-            />
-            
-            <View 
-              className="rounded-t-3xl p-6"
-              style={{
-                backgroundColor: 'white',
-                maxHeight: '80%',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: -4 },
-                shadowOpacity: 0.25,
-                shadowRadius: 16,
-                elevation: 16
-              }}
-            >
-              {/* Modal Header */}
+          <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <TouchableOpacity className="flex-1" onPress={closeMeetingModal} activeOpacity={1} />
+            <View className="rounded-t-3xl p-6" style={{ backgroundColor: 'white', maxHeight: '80%' }}>
               <View className="flex-row items-center justify-between mb-6">
-                <Text className="text-xl font-bold text-gray-800">
-                  Reset Password
-                </Text>
-                <TouchableOpacity 
-                  onPress={closePasswordResetModal}
-                  className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center"
-                >
+                <Text className="text-xl font-bold text-gray-800">Request Meeting</Text>
+                <TouchableOpacity onPress={closeMeetingModal} className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center">
                   <Ionicons name="close" size={18} color="#6b7280" />
                 </TouchableOpacity>
               </View>
-
               <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Current Password */}
+                {/* Recipient Selection */}
                 <View className="mb-4">
-                  <Text className="text-sm font-medium text-gray-700 mb-2">
-                    Current Password
-                  </Text>
+                  <Text className="text-sm font-medium text-gray-700 mb-2">Request to Meet *</Text>
+                  <View className="flex-row flex-wrap">
+                    {['teacher', 'supervisor'].map((role) => (
+                      <TouchableOpacity
+                        key={role}
+                        onPress={() => setMeetingForm(prev => ({ ...prev, recipient: role }))}
+                        className={`mr-2 mb-2 px-4 py-2 rounded-full border ${meetingForm.recipient === role ? 'bg-purple-600 border-purple-600' : 'bg-gray-100 border-gray-200'}`}
+                      >
+                        <Text className={`text-sm font-medium ${meetingForm.recipient === role ? 'text-white' : 'text-gray-700'}`}>{role.charAt(0).toUpperCase() + role.slice(1)}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                {/* Date */}
+                <View className="mb-4">
+                  <Text className="text-sm font-medium text-gray-700 mb-2">Date *</Text>
                   <TextInput
-                    value={passwordResetForm.currentPassword}
-                    onChangeText={(value) => setPasswordResetForm(prev => ({ ...prev, currentPassword: value }))}
-                    secureTextEntry
+                    value={meetingForm.date}
+                    onChangeText={value => setMeetingForm(prev => ({ ...prev, date: value }))}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50"
-                    placeholder="Enter current password"
+                    placeholder="YYYY-MM-DD"
                     style={{ fontSize: 16 }}
                   />
                 </View>
-
-                {/* New Password */}
+                {/* Time */}
                 <View className="mb-4">
-                  <Text className="text-sm font-medium text-gray-700 mb-2">
-                    New Password
-                  </Text>
+                  <Text className="text-sm font-medium text-gray-700 mb-2">Time *</Text>
                   <TextInput
-                    value={passwordResetForm.newPassword}
-                    onChangeText={(value) => setPasswordResetForm(prev => ({ ...prev, newPassword: value }))}
-                    secureTextEntry
+                    value={meetingForm.time}
+                    onChangeText={value => setMeetingForm(prev => ({ ...prev, time: value }))}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50"
-                    placeholder="Enter new password"
+                    placeholder="HH:MM AM/PM"
                     style={{ fontSize: 16 }}
                   />
                 </View>
-
-                {/* Confirm New Password */}
+                {/* Reason */}
                 <View className="mb-6">
-                  <Text className="text-sm font-medium text-gray-700 mb-2">
-                    Confirm New Password
-                  </Text>
+                  <Text className="text-sm font-medium text-gray-700 mb-2">Reason *</Text>
                   <TextInput
-                    value={passwordResetForm.confirmPassword}
-                    onChangeText={(value) => setPasswordResetForm(prev => ({ ...prev, confirmPassword: value }))}
-                    secureTextEntry
+                    value={meetingForm.reason}
+                    onChangeText={value => setMeetingForm(prev => ({ ...prev, reason: value }))}
+                    multiline
+                    numberOfLines={3}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50"
-                    placeholder="Confirm new password"
-                    style={{ fontSize: 16 }}
+                    placeholder="Briefly describe the reason for the meeting"
+                    style={{ fontSize: 16, textAlignVertical: 'top' }}
                   />
                 </View>
-
                 {/* Action Buttons */}
                 <View className="flex-row space-x-3 mb-4">
                   <TouchableOpacity
-                    onPress={closePasswordResetModal}
+                    onPress={closeMeetingModal}
                     className="flex-1 py-3 rounded-xl border border-gray-300"
                     style={{ backgroundColor: '#f9fafb' }}
                   >
-                    <Text className="text-center text-gray-700 font-semibold text-base">
-                      Cancel
-                    </Text>
+                    <Text className="text-center text-gray-700 font-semibold text-base">Cancel</Text>
                   </TouchableOpacity>
-
                   <TouchableOpacity
-                    onPress={handlePasswordReset}
+                    onPress={handleMeetingRequest}
                     className="flex-1 py-3 rounded-xl"
-                    style={{
-                      backgroundColor: '#ef4444',
-                      shadowColor: '#ef4444',
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.3,
-                      shadowRadius: 8,
-                      elevation: 4
-                    }}
+                    style={{ backgroundColor: '#7c3aed', shadowColor: '#7c3aed', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 }}
                   >
-                    <Text className="text-center text-white font-semibold text-base">
-                      Reset Password
-                    </Text>
+                    <Text className="text-center text-white font-semibold text-base">Request Meeting</Text>
                   </TouchableOpacity>
                 </View>
               </ScrollView>
             </View>
           </View>
         </Modal>
-
         {/* Complaint Modal */}
         <Modal
           visible={isComplaintModalVisible}
@@ -563,13 +617,13 @@ export default function ParentMore() {
                     Category
                   </Text>
                   <View className="flex-row flex-wrap">
-                    {['general', 'staff', 'facility', 'safety', 'other'].map((category) => (
+                    {['teacher', 'supervisor'].map((category) => (
                       <TouchableOpacity
                         key={category}
                         onPress={() => setComplaintForm(prev => ({ ...prev, category }))}
                         className={`mr-2 mb-2 px-4 py-2 rounded-full border ${
                           complaintForm.category === category
-                            ? 'bg-orange-500 border-orange-500'
+                            ? 'bg-purple-600 border-purple-600'
                             : 'bg-gray-100 border-gray-200'
                         }`}
                       >
@@ -584,7 +638,7 @@ export default function ParentMore() {
                 </View>
 
                 {/* Priority */}
-                <View className="mb-4">
+                {/* <View className="mb-4">
                   <Text className="text-sm font-medium text-gray-700 mb-2">
                     Priority
                   </Text>
@@ -607,7 +661,7 @@ export default function ParentMore() {
                       </TouchableOpacity>
                     ))}
                   </View>
-                </View>
+                </View> */}
 
                 {/* Description */}
                 <View className="mb-6">
@@ -645,8 +699,8 @@ export default function ParentMore() {
                     onPress={handleComplaintSubmit}
                     className="flex-1 py-3 rounded-xl"
                     style={{
-                      backgroundColor: '#f59e0b',
-                      shadowColor: '#f59e0b',
+                      backgroundColor: '#7c3aed',
+                      shadowColor: '#7c3aed',
                       shadowOffset: { width: 0, height: 4 },
                       shadowOpacity: 0.3,
                       shadowRadius: 8,
@@ -695,7 +749,7 @@ export default function ParentMore() {
               {/* Modal Header */}
               <View className="flex-row items-center justify-between mb-6">
                 <Text className="text-xl font-bold text-gray-800">
-                  School Events
+                  Daycare Events
                 </Text>
                 <TouchableOpacity 
                   onPress={closeEventsModal}
@@ -740,10 +794,10 @@ export default function ParentMore() {
                       </View>
                       <View className="items-center">
                         <View className={`px-2 py-1 rounded-full mb-2 ${
-                          item.status === 'upcoming' ? 'bg-green-100' : 'bg-gray-100'
+                          item.status === 'upcoming' ? 'bg-purple-100' : 'bg-gray-100'
                         }`}>
                           <Text className={`text-xs font-medium ${
-                            item.status === 'upcoming' ? 'text-green-600' : 'text-gray-600'
+                            item.status === 'upcoming' ? 'text-purple-600' : 'text-gray-600'
                           }`}>
                             {item.status}
                           </Text>
@@ -863,7 +917,7 @@ export default function ParentMore() {
                   </View>
 
                   {/* Action Button */}
-                  <View className="mt-6 mb-4">
+                  {/* <View className="mt-6 mb-4">
                     <TouchableOpacity
                       onPress={() => {
                         showCustomAlert('success', 'Event Reminder', 'You will be notified about this event!', false, () => {
@@ -884,7 +938,7 @@ export default function ParentMore() {
                         Set Reminder
                       </Text>
                     </TouchableOpacity>
-                  </View>
+                  </View> */}
                 </ScrollView>
               )}
             </View>
@@ -933,6 +987,67 @@ export default function ParentMore() {
                 </Pressable>
               </View>
             </View>
+
+        {/* Help & Support Modal */}
+        <Modal
+          visible={isSupportModalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setIsSupportModalVisible(false)}
+        >
+          <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <TouchableOpacity className="flex-1" onPress={() => setIsSupportModalVisible(false)} activeOpacity={1} />
+            <View className="rounded-t-3xl p-6" style={{ backgroundColor: 'white', maxHeight: '60%' }}>
+              <View className="flex-row items-center justify-between mb-6">
+                <Text className="text-xl font-bold text-gray-800">Help & Support</Text>
+                <TouchableOpacity onPress={() => setIsSupportModalVisible(false)} className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center">
+                  <Ionicons name="close" size={18} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
+              <View className="mb-4">
+                <Text className="text-base text-gray-700 mb-2">Contact Numbers</Text>
+                <View className="mb-2">
+                  <Text className="text-lg font-semibold text-purple-700">011-2345678</Text>
+                  <Text className="text-lg font-semibold text-purple-700">011-8765432</Text>
+                </View>
+                <Text className="text-base text-gray-700 mb-2 mt-4">Email Addresses</Text>
+                <View>
+                  <Text className="text-lg font-semibold text-purple-700">info@littlesteps.com</Text>
+                  <Text className="text-lg font-semibold text-purple-700">support@littlesteps.com</Text>
+                </View>
+              </View>
+              <Text className="text-sm text-gray-500">We are here to help you with any questions or concerns regarding your child's care and experience at our daycare centre.</Text>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Privacy Policy Modal */}
+        <Modal
+          visible={isPrivacyModalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setIsPrivacyModalVisible(false)}
+        >
+          <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <TouchableOpacity className="flex-1" onPress={() => setIsPrivacyModalVisible(false)} activeOpacity={1} />
+            <View className="rounded-t-3xl p-6" style={{ backgroundColor: 'white', maxHeight: '70%' }}>
+              <View className="flex-row items-center justify-between mb-6">
+                <Text className="text-xl font-bold text-gray-800">Privacy Policy</Text>
+                <TouchableOpacity onPress={() => setIsPrivacyModalVisible(false)} className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center">
+                  <Ionicons name="close" size={18} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView showsVerticalScrollIndicator={true}>
+                <Text className="text-base text-gray-700 mb-4 font-semibold">Rules and Regulations</Text>
+                <Text className="text-sm text-gray-700 mb-2">1. All personal information is kept confidential and is only used for daycare operations.</Text>
+                <Text className="text-sm text-gray-700 mb-2">2. We do not share your data with third parties without your consent.</Text>
+                <Text className="text-sm text-gray-700 mb-2">3. You have the right to access, update, or request deletion of your data at any time.</Text>
+                <Text className="text-sm text-gray-700 mb-2">4. Our staff are trained to handle your information securely and responsibly.</Text>
+                <Text className="text-sm text-gray-700 mb-2">5. For more details, please contact our support team.</Text>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
 
         {/* Custom Alert */}
         <CustomAlert
