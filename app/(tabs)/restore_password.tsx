@@ -1,25 +1,27 @@
 import { images } from "@/assets/images/images";
+import CustomAlert from '@/components/CustomAlert';
+import { useCustomAlert } from '@/hooks/useCustomAlert';
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Image,
   KeyboardAvoidingView,
+  NativeSyntheticEvent,
   Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
   Text,
   TextInput,
-  TouchableOpacity,
-  View,
-  Alert,
-  NativeSyntheticEvent,
   TextInputKeyPressEventData,
-  Image
+  TouchableOpacity,
+  View
 } from "react-native";
 
 function RestorePassword() {
+  const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
   const [isLoading, setIsLoading] = useState(false);
   const [otp, setOtp] = useState(["", "", "", ""]);
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
@@ -68,7 +70,7 @@ function RestorePassword() {
     const otpString = otp.join("");
 
     if (otpString.length !== 4) {
-      Alert.alert("Error", "Please enter the complete 4-digit code");
+      showCustomAlert("error", "Error", "Please enter the complete 4-digit code");
       return;
     }
 
@@ -80,8 +82,8 @@ function RestorePassword() {
 
       // Navigate to next screen on success
       router.push("/new_password");
-    } catch (error) {
-      Alert.alert("Error", "Invalid code. Please try again.");
+    } catch {
+      showCustomAlert("error", "Error", "Invalid code. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -89,7 +91,8 @@ function RestorePassword() {
 
   // Resend OTP
   const handleResendOtp = () => {
-    Alert.alert(
+    showCustomAlert(
+      "success",
       "Code Sent",
       "A new verification code has been sent to your device."
     );
@@ -141,7 +144,7 @@ function RestorePassword() {
                 Enter the 4-digit code
               </Text>
               <Text className="text-gray-600 mt-3 text-base leading-6">
-                We've sent the code to your email, check your inbox.
+                We&apos;ve sent the code to your email, check your inbox.
               </Text>
             </View>
 
@@ -227,13 +230,22 @@ function RestorePassword() {
             {/* Help Text */}
             <View className="px-7 mt-6">
               <Text className="text-gray-500 text-center text-sm">
-                Didn't receive the code? Check your messages or contact the
+                Didn&apos;t receive the code? Check your messages or contact the
                 institute for assistance.
               </Text>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      <CustomAlert
+        visible={customAlert.visible}
+        type={customAlert.type}
+        title={customAlert.title}
+        message={customAlert.message}
+        showCancelButton={customAlert.showCancelButton}
+        onConfirm={customAlert.onConfirm}
+        onClose={hideCustomAlert}
+      />
     </LinearGradient>
   );
 }
