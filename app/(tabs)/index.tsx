@@ -10,9 +10,9 @@ export default function Home() {
   useEffect(() => {
     const timer = setTimeout(() => {
       // Using router.push() to navigate to dashboard
-      router.replace('/welcome'); // Change this to your actual dashboard route
+      router.replace('/teacher'); // Change this to your actual dashboard route
       // or use router.replace('/dashboard') if you don't want user to go back
-    },5000); // 5000ms = 5 seconds
+    },500); // 5000ms = 5 seconds
 
     // Cleanup timer if component unmounts
     return () => clearTimeout(timer);
