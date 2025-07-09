@@ -1,5 +1,6 @@
 import CustomAlert from '@/components/CustomAlert';
 import { API_CONFIG, apiRequest } from '@/config/api';
+import { useCustomAlert } from '@/hooks/useCustomAlert';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -35,6 +36,7 @@ type TouchedFields = {
 
 export default function CreateAccountWithValidation() {
   const router = useRouter();
+  const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
   
   // Form state
   const [formData, setFormData] = useState<FormData>({
@@ -49,37 +51,6 @@ export default function CreateAccountWithValidation() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState<TouchedFields>({});
-
-  // Custom Alert State
-  const [customAlert, setCustomAlert] = useState({
-    visible: false,
-    type: 'success' as 'success' | 'error',
-    title: '',
-    message: '',
-    showCancelButton: false,
-    onConfirm: undefined as (() => void) | undefined
-  });
-
-  const showCustomAlert = (
-    type: 'success' | 'error',
-    title: string,
-    message: string,
-    showCancelButton: boolean = false,
-    onConfirm?: () => void
-  ) => {
-    setCustomAlert({
-      visible: true,
-      type,
-      title,
-      message,
-      showCancelButton,
-      onConfirm
-    });
-  };
-
-  const hideCustomAlert = () => {
-    setCustomAlert(prev => ({ ...prev, visible: false }));
-  };
 
   // Validation rules
   const validateEmail = (email: string) => {
