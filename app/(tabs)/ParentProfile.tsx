@@ -228,7 +228,7 @@ export default function ParentProfile() {
     email: editForm.email,
     phoneNumber: editForm.phoneNumber,
     address: editForm.address,
-    profileImage: profileImage ? { uri: profileImage } : require('@/assets/images/kid1.jpg'), // Use selected image or default
+    profileImage: profileImage ? { uri: profileImage } : require('@/assets/images/mother.jpg'), // Use selected image or default
     joinDate: 'January 2024',
     children: ['Pramodi Peshila', 'Nimal Perera'] // List of children
   };

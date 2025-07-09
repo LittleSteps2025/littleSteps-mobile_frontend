@@ -104,7 +104,7 @@ export default function Children() {
                       style={styles.todayDetailsButton}
                       onPress={() =>
                         router.push(
-                          `/teacher/daily-report-form?childId=${child.childId}`
+                          `/teacher/daily-report-form?report_id=${child.report_id}`
                         )
                       }
                       activeOpacity={0.8}

@@ -26,12 +26,12 @@ export default function DailyMealTracker() {
    //const getTodayDate = () => new Date().toISOString().slice(0, 10);
   
   const [mealData, setMealData] = useState({
-    breakfast: '',
-    tea_time: '',
+    breakfirst: '',
+    morning_snack: '',
     lunch: '',
-    snack_time: '',
+    evening_snack: '',
     medicine: '',
-    special_notes: '',
+    special_note: '',
     date: new Date().toLocaleDateString()
   });
 
@@ -48,26 +48,26 @@ export default function DailyMealTracker() {
 
  const handleSubmit = async () => {
      if (
-      !mealData.breakfast &&
+      !mealData.breakfirst &&
       !mealData.lunch &&
-      !mealData.tea_time &&
-      !mealData.snack_time && // Added snack_time to validation
+      !mealData.morning_snack &&
+      !mealData.evening_snack && // Added snack_time to validation
       !mealData.medicine &&
-      !mealData.special_notes
+      !mealData.special_note
     ) {
       showCustomAlert('error', 'Missing Information', 'Please enter at least one detail for the daily record (meal, medicine, or notes).');
       return;
     }
 
   const dataToSend = {
-    breakfast: mealData.breakfast,
-     tea_time: mealData.tea_time,
+    breakfirst: mealData.breakfirst,
+     morning_snack: mealData.morning_snack,
      lunch: mealData.lunch,
-      snack_time: mealData.snack_time,
+      evening_snack: mealData.evening_snack,
       medicine: mealData.medicine,
-      special_notes: mealData.special_notes,
+      special_note: mealData.special_note,
       date: new Date().toISOString().slice(0, 10),
-      childId: 1
+      child_id: 1
   };
 
   try {
@@ -80,13 +80,13 @@ export default function DailyMealTracker() {
     if (response.ok) {
       showCustomAlert('success', 'Success!', 'Meal saved successfully.');
       setMealData({
-        breakfast: '',
-        tea_time: '',
+        breakfirst: '',
+        morning_snack: '',
           lunch: '',
           
-          snack_time: '',
+          evening_snack: '',
           medicine: '',
-          special_notes: '',
+          special_note: '',
         date: new Date().toLocaleDateString()
       });
     } else {
@@ -106,7 +106,7 @@ export default function DailyMealTracker() {
       color: '#f59e0b',
       bgColor: 'bg-amber-50',
       placeholder: 'What did you pack for breakfast?\ne.g., Sandwich, milk, banana...',
-      field: 'breakfast'
+      field: 'breakfirst'
       },
     {
       title: 'Morning Snacks',
@@ -114,7 +114,7 @@ export default function DailyMealTracker() {
       color: '#ec4899',
       bgColor: 'bg-pink-50',
       placeholder: 'What snacks did you pack?\ne.g., Cookies, juice, fruits...',
-      field: 'tea_time'
+      field: 'morning_snack'
     },
     {
       title: 'Lunch',
@@ -130,7 +130,7 @@ export default function DailyMealTracker() {
       color: '#ec4899',
       bgColor: 'bg-pink-50',
       placeholder: 'What snacks did you pack?\ne.g., Cookies, juice, fruits...',
-      field: 'snack_time'
+      field: 'evening_snack'
     }
   ];
 
@@ -305,10 +305,10 @@ export default function DailyMealTracker() {
 
                 {/* Input Field */}
                 <TextInput
-                  value={mealData.special_notes
+                  value={mealData.special_note
 
                   }
-                  onChangeText={(text) => handleInputChange('special_notes', text)}
+                  onChangeText={(text) => handleInputChange('special_note', text)}
                   placeholder="Any special dietary instructions, allergies, or notes for the teachers..."
                   multiline
                   numberOfLines={3}
