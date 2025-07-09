@@ -1,3 +1,5 @@
+import CustomAlert from '@/components/CustomAlert';
+import { useCustomAlert } from '@/hooks/useCustomAlert';
 import { API_BASE_URL } from '@/utility/index';
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -5,7 +7,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   NativeSyntheticEvent,
   Platform,
@@ -20,6 +21,7 @@ import {
 } from "react-native";
 
 function AccountVerification() {
+  const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
   const { email } = useLocalSearchParams();
   const emailString = Array.isArray(email) ? email[0] : email;
 
@@ -86,7 +88,7 @@ function AccountVerification() {
     console.log('Entered OTP:', otpString);
 
     if (otpString.length !== 4) {
-      Alert.alert('Error', 'Please enter the complete 4-digit code');
+      showCustomAlert('error', 'Error', 'Please enter the complete 4-digit code');
       return;
     }
 
@@ -127,12 +129,13 @@ function AccountVerification() {
         await AsyncStorage.removeItem('tempUserData');
         console.log('Temporary data cleared');
 
-        Alert.alert('Success', 'Account verified and password set successfully!', [
-          {
-            text: 'Continue',
-            onPress: () => router.push("/signin")
-          }
-        ]);
+        showCustomAlert(
+          'success', 
+          'Success', 
+          'Account verified and password set successfully!',
+          false,
+          () => router.push("/signin")
+        );
       } else {
         // Handle verification failure
         console.error('Verification failed:', data);
@@ -145,7 +148,7 @@ function AccountVerification() {
         typeof error === 'object' && error !== null && 'message' in error
           ? String((error as { message?: string }).message)
           : 'Verification failed';
-      Alert.alert('Error', errorMessage);
+      showCustomAlert('error', 'Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -154,10 +157,10 @@ function AccountVerification() {
   // Resend OTP
   const handleResendOtp = async () => {
     try {
-      Alert.alert('Info', 'Please contact administrator for a new verification code.');
+      showCustomAlert('success', 'Info', 'Please contact administrator for a new verification code.');
     } catch (error) {
       console.error('Resend error:', error);
-      Alert.alert('Error', 'Failed to resend code');
+      showCustomAlert('error', 'Error', 'Failed to resend code');
     }
   };
 
@@ -337,6 +340,15 @@ function AccountVerification() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      <CustomAlert
+        visible={customAlert.visible}
+        type={customAlert.type}
+        title={customAlert.title}
+        message={customAlert.message}
+        showCancelButton={customAlert.showCancelButton}
+        onConfirm={customAlert.onConfirm}
+        onClose={hideCustomAlert}
+      />
     </LinearGradient>
   );
 }
