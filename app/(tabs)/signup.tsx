@@ -237,7 +237,7 @@ export default function CreateAccountWithValidation() {
 
       // If email doesn't exist in database, user can't sign up
       if (checkData.exists) {
-        showCustomAlert('error', 'Error', 'Email not found in our system. Please contact the administrator to register your email first.');
+        showCustomAlert('error', 'Error', 'Email not found in our system. Please contact the supervisor to register your email first.');
         return;
       }
 
@@ -328,7 +328,7 @@ export default function CreateAccountWithValidation() {
             {/* Content */}
             <View className="px-5 pt-5">
               <Text className="text-3xl font-bold text-gray-700 mb-2">
-                Create an account
+                Verify an account
               </Text>
               <Text className="text-base text-gray-500 mb-8">
                 Excited to have you on board!
@@ -544,7 +544,7 @@ export default function CreateAccountWithValidation() {
                 }}
               >
                 <Text className="text-white text-lg font-semibold">
-                  {isLoading ? 'Creating Account...' : 'Create an account'}
+                  {isLoading ? 'Verifying Account...' : 'Verify an account'}
                 </Text>
               </TouchableOpacity>
             </View>

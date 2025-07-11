@@ -19,29 +19,6 @@ import {
   View
 } from 'react-native';
 
-// Safe JSON parsing function
-const safeJsonParse = async (response: Response) => {
-  const text = await response.text();
-
-  if (!text || text.trim() === "") {
-    throw new Error("Empty response from server");
-  }
-
-  // Check if response starts with HTML
-  if (text.trim().startsWith("<")) {
-    throw new Error(
-      "Server returned HTML instead of JSON. Check if the endpoint exists."
-    );
-  }
-
-  try {
-    return JSON.parse(text);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error) {
-    console.error("Failed to parse JSON:", text);
-    throw new Error("Invalid JSON response from server");
-  }
-};
 
 // Define types for better type safety
 type FormData = {
@@ -59,6 +36,8 @@ type FormErrors = {
 type TouchedFields = {
   [K in FormField]?: boolean;
 };
+
+
 
 export default function CreateAccountWithValidation() {
   const router = useRouter();
@@ -176,14 +155,11 @@ export default function CreateAccountWithValidation() {
     setIsLoading(true);
     
     try {
-      console.log('Attempting login with email:', formData.email);
-      console.log('Making request to:', `${API_BASE_URL}/parents/parent-login`);
-      
-      // Call parent login API with safe JSON parsing
-      const response = await fetch(`${API_BASE_URL}/parents/parent-login`, {
+      // Call parent login API
+      const response = await fetch(`${API_BASE_URL}/teachers/teacherLogin`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           email: formData.email,
@@ -191,74 +167,28 @@ export default function CreateAccountWithValidation() {
         })
       });
 
-      console.log('Login response status:', response.status);
-      console.log('Login response ok:', response.ok);
-      
-      // Use safe JSON parsing
-      const data = await safeJsonParse(response);
-      console.log('Login response data:', data);
-      
-      // Debug: Log all success conditions
-      console.log('=== SUCCESS CONDITION DEBUG ===');
-      console.log('response.ok:', response.ok);
-      console.log('response.status:', response.status);
-      console.log('data.status:', data.status);
-      console.log('data.success:', data.success);
-      console.log('data.message:', data.message);
-      
-      // Check for success - be more flexible with success conditions
-      const isSuccess = response.ok || 
-                       response.status === 200 || 
-                       data.status === 200 || 
-                       data.success === true ||
-                       data.message === 'Login successful';
-      
-      console.log('isSuccess calculated as:', isSuccess);
-      
-      if (isSuccess) {
-        // Success - store user data if needed
-        console.log('Login successful:', data);
-        
-        showCustomAlert('success', 'Success', 'Login successful!', false, () => {
-          router.push('/ParentDashboard');
-        });
-        return;
-      } else {
-        // Handle login failure
-        console.error('Login failed:', data);
-        throw new Error(data.message || 'Login failed');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to login');
       }
+
+      // Success - store user data if needed
+      const responseData = await response.json();
+      console.log('Login successful:', responseData);
+
+      showCustomAlert('success', 'Success', 'Login successful!', false, () => {
+        router.push('/teacher');
+      });
     } catch (error: any) {
-      console.error('Login error:', error);
-      
-      // Don't show error if the message indicates success
-      if (error.message && error.message.toLowerCase().includes('login successful')) {
-        console.log('Ignoring success message thrown as error');
-        showCustomAlert('success', 'Success', 'Login successful!', false, () => {
-          router.push('/ParentDashboard');
-        });
-        return;
-      }
-      
       // Handle different error scenarios
       let errorMessage = 'Failed to login. Please try again.';
       
-      if (error instanceof Error) {
-        if (error.message.includes('HTML instead of JSON')) {
-          errorMessage = 'Server configuration error. The login endpoint may not exist. Please contact support.';
-        } else if (error.message.includes('Empty response')) {
-          errorMessage = 'No response from server. Please check your internet connection.';
-        } else if (error.message.includes('Invalid JSON')) {
-          errorMessage = 'Server returned invalid data. Please try again or contact support.';
-        } else if (error.message === 'Parent not found') {
-          errorMessage = 'No account found with this email address.';
-        } else if (error.message === 'Invalid password') {
-          errorMessage = 'Incorrect password. Please try again.';
-        } else if (error.message === 'Account not verified') {
-          errorMessage = 'Please verify your email address before logging in.';
-        } else {
-          errorMessage = error.message;
-        }
+      if (error.message === 'Parent not found') {
+        errorMessage = 'No account found with this email address.';
+      } else if (error.message === 'Invalid password') {
+        errorMessage = 'Incorrect password. Please try again.';
+      } else if (error.message === 'Account not verified') {
+        errorMessage = 'Please verify your email address before logging in.';
       }
       
       showCustomAlert('error', 'Login Error', errorMessage);
@@ -266,48 +196,6 @@ export default function CreateAccountWithValidation() {
       setIsLoading(false);
     }
   };
-
-  // Debug function to test API connectivity (remove in production)
-  // const testApiConnectivity = async () => {
-  //   setIsLoading(true);
-  //   try {
-  //     console.log('=== API CONNECTIVITY TEST ===');
-  //     console.log('API Base URL:', API_BASE_URL);
-  //     console.log('Testing endpoint:', `${API_BASE_URL}/api/parents/parent-login`);
-      
-  //     const response = await fetch(`${API_BASE_URL}/api/parents/parent-login`, {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify({
-  //         email: 'test@test.com',
-  //         password: 'testpassword'
-  //       })
-  //     });
-
-  //     console.log('Test response status:', response.status);
-  //     console.log('Test response headers:', response.headers);
-      
-  //     const responseText = await response.text();
-  //     console.log('Raw response:', responseText);
-      
-  //     showCustomAlert(
-  //       'success',
-  //       'API Test Result',
-  //       `Status: ${response.status}\nResponse: ${responseText.substring(0, 100)}...`
-  //     );
-  //   } catch (error: any) {
-  //     console.error('API test error:', error);
-  //     showCustomAlert(
-  //       'error',
-  //       'API Test Failed',
-  //       `Error: ${error.message}`
-  //     );
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
 
   // Get password strength
   // const getPasswordStrength = (password: string) => {
@@ -340,14 +228,14 @@ export default function CreateAccountWithValidation() {
         >
           <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
             {/* Header */}
-            <View className="px-5 pt-2">
+            {/* <View className="px-5 pt-2">
               <TouchableOpacity 
                 onPress={() => router.back()}
                 className="w-10 h-10 justify-center items-center"
               >
                 <Ionicons name="chevron-back" size={24} color="#374151" />
               </TouchableOpacity>
-            </View>
+            </View> */}
 
             {/* Content */}
             <View className="px-5 pt-5">
@@ -357,10 +245,7 @@ export default function CreateAccountWithValidation() {
               <Text className="text-base text-gray-500 mb-8">
                 Excited to have you on board!
               </Text>
-              <View className=' items-center justify-center'>
-                <Image source={images.parents} className='w-40 h-40' />
-              </View>
-              
+              <Image source={images.teacher} className="w-40 h-40 mx-auto mb-8 border rounded-full border-purple-400 border-2" />
               {/* Email Input */}
               <Text className="text-base text-gray-700 mb-2 font-medium">
                 Email
@@ -443,7 +328,7 @@ export default function CreateAccountWithValidation() {
               </View>
               <View className="px-5 pb-8 items-end">
             <View className="flex-row items-center">
-              <TouchableOpacity onPress={() => router.push('/forgot_password')}>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/forgot_password')}>
                 <Text className="text-base text-purple-600 font-semibold">
                   Forgot password ?
                 </Text>
@@ -517,7 +402,7 @@ export default function CreateAccountWithValidation() {
               <TouchableOpacity
                 onPress={handleCreateAccount}
                 disabled={isLoading}
-                className={`rounded-3xl py-4 items-center mb-4 ${
+                className={`rounded-3xl py-4 items-center mb-8 ${
                   isLoading ? 'bg-purple-400' : 'bg-purple-600'
                 }`}
                 style={{
@@ -539,13 +424,9 @@ export default function CreateAccountWithValidation() {
           <View className="px-5 pb-8 items-center">
             <View className="flex-row items-center">
               <Text className="text-base text-gray-500">
-                Are you new here?{' '}
+                Are you new here? please contact supervisor
               </Text>
-              <TouchableOpacity onPress={() => router.push('/welcome')}>
-                <Text className="text-base text-purple-600 font-semibold">
-                  Verify Account
-                </Text>
-              </TouchableOpacity>
+
             </View>
           </View>
         </KeyboardAvoidingView>
