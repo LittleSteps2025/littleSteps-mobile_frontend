@@ -20,6 +20,28 @@ import {
   View,
 } from "react-native";
 
+const safeJsonParse = async (response: Response) => {
+  const text = await response.text();
+
+  if (!text || text.trim() === "") {
+    throw new Error("Empty response from server");
+  }
+
+  // Check if response starts with HTML
+  if (text.trim().startsWith("<")) {
+    throw new Error(
+      `Server returned HTML instead of JSON. Check if the endpoint exists. Response: ${text.substring(0, 200)}...`
+    );
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    console.error("Failed to parse JSON:", text);
+    throw new Error(`Invalid JSON response from server: ${text.substring(0, 100)}...`);
+  }
+};
+
 function AccountVerification() {
   const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
   const { email } = useLocalSearchParams();
@@ -104,6 +126,11 @@ function AccountVerification() {
       }
 
       console.log('Making verification request to:', `${API_BASE_URL}/users/verify-token`);
+      console.log('Request payload:', {
+        email: emailString,
+        token: otpString,
+        password: '[HIDDEN]' // Don't log actual password
+      });
 
       // Verify token and set password in one call
       const response = await fetch(`${API_BASE_URL}/users/verify-token`, {
@@ -119,7 +146,11 @@ function AccountVerification() {
       });
 
       console.log('Verification response status:', response.status);
-      const data = await response.json();
+      console.log('Verification response ok:', response.ok);
+      console.log('Verification response status text:', response.statusText);
+      
+      // Use safe JSON parsing
+      const data = await safeJsonParse(response);
       console.log('Verification response data:', data);
 
       if (response.ok && data.status === 200) {
@@ -144,11 +175,23 @@ function AccountVerification() {
 
     } catch (error) {
       console.error('Verification error:', error);
-      const errorMessage =
-        typeof error === 'object' && error !== null && 'message' in error
-          ? String((error as { message?: string }).message)
-          : 'Verification failed';
-      showCustomAlert('error', 'Error', errorMessage);
+      
+      let errorMessage = 'Verification failed. Please try again.';
+      
+      // Handle different types of errors
+      if (error instanceof Error) {
+        if (error.message.includes('HTML instead of JSON')) {
+          errorMessage = 'Server configuration error. The verification endpoint may not exist. Please contact support.';
+        } else if (error.message.includes('Empty response')) {
+          errorMessage = 'No response from server. Please check your internet connection.';
+        } else if (error.message.includes('Invalid JSON')) {
+          errorMessage = 'Server returned invalid data. Please try again or contact support.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      showCustomAlert('error', 'Verification Error', errorMessage);
     } finally {
       setIsLoading(false);
     }

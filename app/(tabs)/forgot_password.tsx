@@ -1,22 +1,44 @@
 import { images } from "@/assets/images/images";
+import CustomAlert from "@/components/CustomAlert";
+import { API_BASE_URL } from "@/utility";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  StatusBar,
-  SafeAreaView,
+  Image,
   KeyboardAvoidingView,
   Platform,
+  SafeAreaView,
   ScrollView,
-  TouchableOpacity,
+  StatusBar,
+  Text,
   TextInput,
-  Image,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import CustomAlert from '@/components/CustomAlert';
-import { useCustomAlert } from '@/hooks/useCustomAlert';
+const safeJsonParse = async (response: Response) => {
+  const text = await response.text();
+
+  if (!text || text.trim() === "") {
+    throw new Error("Empty response from server");
+  }
+
+  // Check if response starts with HTML
+  if (text.trim().startsWith("<")) {
+    throw new Error(
+      "Server returned HTML instead of JSON. Check if the endpoint exists."
+    );
+  }
+
+  try {
+    return JSON.parse(text);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (error) {
+    console.error("Failed to parse JSON:", text);
+    throw new Error("Invalid JSON response from server");
+  }
+};
 
 type FormData = {
   email: string;
@@ -33,8 +55,36 @@ type TouchedFields = {
 };
 
 function ForgotPassword() {
+  const [customAlert, setCustomAlert] = useState({
+    visible: false,
+    type: "success" as "success" | "error",
+    title: "",
+    message: "",
+    showCancelButton: false,
+    onConfirm: undefined as (() => void) | undefined,
+  });
+
+  const showCustomAlert = (
+    type: "success" | "error",
+    title: string,
+    message: string,
+    showCancelButton: boolean = false,
+    onConfirm?: () => void
+  ) => {
+    setCustomAlert({
+      visible: true,
+      type,
+      title,
+      message,
+      showCancelButton,
+      onConfirm,
+    });
+  };
+
+  const hideCustomAlert = () => {
+    setCustomAlert((prev) => ({ ...prev, visible: false }));
+  };
   const router = useRouter();
-  const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
 
   // Form state
   const [formData, setFormData] = useState<FormData>({
@@ -48,11 +98,38 @@ function ForgotPassword() {
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState<TouchedFields>({});
 
-  const validateEmail = (email: string) => {
+  const validateEmailFormat = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email) return "Email is required";
     if (!emailRegex.test(email)) return "Please enter a valid email address";
     return null;
+  };
+
+  const checkEmailExists = async (email: string): Promise<boolean> => {
+    try {
+      const checkResponse = await fetch(`${API_BASE_URL}/parents/get-verified-parent`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      console.log("Email check response status:", checkResponse.status);
+
+      if (checkResponse.status !== 200) {
+        console.error("Email check failed with status:", checkResponse.status);
+        return false;
+      }
+
+      const checkData = await safeJsonParse(checkResponse);
+      console.log("Email check response:", checkData);
+
+      return checkResponse.ok;
+    } catch (error) {
+      console.error("Error checking email existence:", error);
+      return false;
+    }
   };
 
   // Real-time validation
@@ -61,7 +138,7 @@ function ForgotPassword() {
 
     switch (field) {
       case "email":
-        error = validateEmail(value);
+        error = validateEmailFormat(value);
         break;
     }
 
@@ -97,7 +174,7 @@ function ForgotPassword() {
 
   // Validate entire form
   const validateForm = () => {
-    const emailError = validateEmail(formData.email);
+    const emailError = validateEmailFormat(formData.email);
 
     const newErrors: FormErrors = {
       email: emailError,
@@ -113,27 +190,81 @@ function ForgotPassword() {
 
   // Handle form submission
   const handleForgotPassword = async () => {
-    if (!validateForm()) {
-      showCustomAlert("error", "Validation Error", "Please fix the errors below");
+    setIsLoading(true);
+    
+    // First validate email format
+    const isValid = validateForm();
+    if (!isValid) {
+      showCustomAlert(
+        "error",
+        "Validation Error",
+        "Please enter a valid email address"
+      );
+      setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
-
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Check if email exists in the system
+      const emailExists = await checkEmailExists(formData.email);
+      
+      if (!emailExists) {
+        showCustomAlert(
+          "error",
+          "Email Not Found",
+          "Email not found in our system. Please contact the supervisor to register your email first."
+        );
+        setIsLoading(false);
+        return;
+      }
 
-      // Success
-      showCustomAlert(
-        "success",
-        "Success",
-        "Please check your email!",
-        false,
-        () => router.push("/restore_password")
-      );
-    } catch {
-      showCustomAlert("error", "Error", "Something went wrong! Please try again.");
+      // Generate and send 4-digit code
+      console.log('Generating password reset code for:', formData.email);
+      
+      const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email
+        })
+      });
+
+      console.log('Reset code response status:', response.status);
+      
+      const data = await safeJsonParse(response);
+      console.log('Reset code response data:', data);
+      
+      if (response.ok && (data.status === 200 || data.success)) {
+        showCustomAlert(
+          "success",
+          "Code Sent",
+          "A 4-digit verification code has been sent to your email. Please check your inbox.",
+          false,
+          () => router.push(`/restore_password?email=${formData.email}`)
+        );
+      } else {
+        throw new Error(data.message || 'Failed to send reset code');
+      }
+    } catch (error: any) {
+      console.error("Password reset error:", error);
+      
+      let errorMessage = "Failed to send password reset code. Please try again later.";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('HTML instead of JSON')) {
+          errorMessage = 'Server configuration error. The reset endpoint may not exist. Please contact support.';
+        } else if (error.message.includes('Empty response')) {
+          errorMessage = 'No response from server. Please check your internet connection.';
+        } else if (error.message.includes('Invalid JSON')) {
+          errorMessage = 'Server returned invalid data. Please try again or contact support.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      showCustomAlert("error", "Reset Failed", errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -253,14 +384,17 @@ function ForgotPassword() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      {/* Custom Alert */}
       <CustomAlert
         visible={customAlert.visible}
         type={customAlert.type}
         title={customAlert.title}
         message={customAlert.message}
-        showCancelButton={customAlert.showCancelButton}
-        onConfirm={customAlert.onConfirm}
         onClose={hideCustomAlert}
+        onConfirm={customAlert.onConfirm}
+        showCancelButton={customAlert.showCancelButton}
+        confirmText={customAlert.showCancelButton ? "Yes" : "OK"}
+        cancelText="Cancel"
       />
     </LinearGradient>
   );
