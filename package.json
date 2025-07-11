@@ -33,6 +33,7 @@
     "expo-symbols": "~0.4.5",
     "expo-system-ui": "~5.0.8",
     "expo-web-browser": "~14.1.6",
+    "firebase": "^11.10.0",
     "lucide-react": "^0.523.0",
     "lucide-react-native": "^0.522.0",
     "nativewind": "^4.1.23",
