@@ -1,4 +1,5 @@
 // app/(tabs)/dashboard.tsx
+
 import { AuthGuard } from "@/components/AuthGuard";
 import { useUser } from "@/contexts/UserContext";
 import { mockAlerts } from "@/data/mockData";
@@ -42,7 +43,11 @@ export default function ParentDashboard() {
     (alert: { isRead: any }) => !alert.isRead
   ).length;
 
+
+export default function ParentDashboard() {
+  const [unreadCount, setUnreadCount] = useState(0);
   const router = useRouter();
+
 
   // Fetch children data when user is available
   useEffect(() => {
@@ -237,6 +242,25 @@ export default function ParentDashboard() {
 
   // Use children from API data
   const userChildren = childrenData;
+
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/announcements/parent`);
+        if (!response.ok) throw new Error('Failed to fetch');
+        const data = await response.json();
+        // Count unread announcements (assuming isRead is false by default)
+        const count = Array.isArray(data)
+          ? data.filter((item: any) => !item.isRead).length
+          : 0;
+        setUnreadCount(count);
+      } catch (err) {
+        setUnreadCount(0);
+      }
+    };
+    fetchUnreadCount();
+  }, []);
+
 
   const renderChild = ({ item, index }: { item: any; index: number }) => (
     <Pressable
@@ -440,6 +464,7 @@ export default function ParentDashboard() {
             </Text>
           </View>
 
+
           <FlatList
             data={userChildren}
             keyExtractor={(item) => item.id}
@@ -453,6 +478,7 @@ export default function ParentDashboard() {
                 ) : (
                   <Text className="text-gray-600">No children found</Text>
                 )}
+
               </View>
             )}
           />
