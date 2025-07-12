@@ -25,6 +25,8 @@ export default function ParentDashboard() {
   const [alerts] = useState(mockAlerts);
   const [childrenData, setChildrenData] = useState<any[]>([]);
   const [isLoadingChildren, setIsLoadingChildren] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const router = useRouter();
 
   // Debug: Show what's in session storage
   useEffect(() => {
@@ -39,32 +41,14 @@ export default function ParentDashboard() {
     }
   }, [user]);
 
-  const unreadAlerts = alerts.filter(
-    (alert: { isRead: any }) => !alert.isRead
-  ).length;
-
-
-export default function ParentDashboard() {
-  const [unreadCount, setUnreadCount] = useState(0);
-  const router = useRouter();
-
-
   // Fetch children data when user is available
   useEffect(() => {
     const fetchChildrenData = async () => {
       if (!user?.id) {
-        console.log("No user ID available");
         setIsLoadingChildren(false);
         return;
       }
-
-      // Check if children data is already in session
       if (user.children && user.children.length > 0) {
-        console.log("✅ Using children data from session:", user.children);
-        console.log("📱 Session contains", user.children.length, "children");
-        console.log("👤 User details preserved in session");
-
-        // Transform session data for display
         const sessionChildren = user.children.map((child: any) => ({
           id: child.id,
           name: child.name,
@@ -78,44 +62,26 @@ export default function ParentDashboard() {
           allergies: child.allergies || [],
           emergencyContact: child.emergencyContact || "",
         }));
-
         setChildrenData(sessionChildren);
         setIsLoadingChildren(false);
         return;
       }
-
-      console.log("🌐 No children data in session, fetching from API...");
-
       try {
-        console.log("=== FETCHING CHILDREN DATA ===");
-        console.log("User ID:", user.id);
-
         const response = await fetch(
           `${API_BASE_URL}/children/details/${user.id}`,
           {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
-              // Add authorization header if you have token
               ...((await getAuthToken()) && {
                 Authorization: `Bearer ${await getAuthToken()}`,
               }),
             },
           }
         );
-
-        console.log("Response from children details:", response);
-        console.log("Response status:", response.status);
-        console.log("Response ok:", response.ok);
-
         if (response.ok) {
           const data = await response.json();
-          console.log("Children data received:", data);
-
-          // Handle different response structures
           const childrenList = data.children || data.data || data || [];
-
-          // Transform backend data to match frontend structure
           const transformedChildren = childrenList.map((child: any) => ({
             id: child.id?.toString() || child.childId?.toString() || "",
             name: child.name || child.fullName || child.childName || "",
@@ -133,12 +99,7 @@ export default function ParentDashboard() {
             allergies: child.allergies || [],
             emergencyContact: child.emergencyContact || "",
           }));
-
-          console.log("Transformed children:", transformedChildren);
           setChildrenData(transformedChildren);
-
-          // Save children data to session (preserving all existing user details)
-          // Also add any additional data fields from the API response
           await updateChildren(
             transformedChildren.map((child: any) => ({
               id: child.id,
@@ -151,17 +112,12 @@ export default function ParentDashboard() {
               blood_type: child.blood_type,
               allergies: child.allergies,
               emergencyContact: child.emergencyContact,
-              // Add any other fields from your API response
               lastUpdated: new Date().toISOString(),
-              // Save the raw data too for completeness
-              apiData: data.children ? 
-                data.children.find((c: any) => c.id?.toString() === child.id) : null
+              apiData: data.children
+                ? data.children.find((c: any) => c.id?.toString() === child.id)
+                : null,
             }))
           );
-        } else {
-          console.error("Failed to fetch children. Status:", response.status);
-          const errorText = await response.text();
-          console.error("Error response:", errorText);
         }
       } catch (error) {
         console.error("Error fetching children:", error);
@@ -169,7 +125,6 @@ export default function ParentDashboard() {
         setIsLoadingChildren(false);
       }
     };
-
     fetchChildrenData();
   }, [user?.id, user?.children, updateChildren]);
 
@@ -178,7 +133,6 @@ export default function ParentDashboard() {
     try {
       return await AsyncStorage.getItem("authToken");
     } catch (error) {
-      console.error("Error getting auth token:", error);
       return null;
     }
   };
@@ -192,64 +146,13 @@ export default function ParentDashboard() {
     return `${age} years old`;
   };
 
-  // Example function to update specific child data in session
-  const updateChildDataInSession = async (childId: string, newData: any) => {
-    if (!user?.children) return;
-    
-    try {
-      // Find existing children data and update the specific child
-      const updatedChildren = user.children.map(child => 
-        child.id === childId
-          ? { ...child, ...newData, lastUpdated: new Date().toISOString() }
-          : child
-      );
-      
-      // Update the session with the new data
-      await updateChildren(updatedChildren);
-      console.log(`✅ Child ${childId} updated in session successfully`);
-    } catch (error) {
-      console.error(`❌ Failed to update child ${childId} in session:`, error);
-    }
-  };
-
-  // Example: How to fetch and update a specific child's data
-  const fetchAndUpdateChildDetails = async (childId: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/children/${childId}/details`, {
-        headers: {
-          Authorization: `Bearer ${await getAuthToken()}`,
-          "Content-Type": "application/json"
-        }
-      });
-      
-      if (!response.ok) throw new Error(`API error: ${response.status}`);
-      
-      const childDetails = await response.json();
-      
-      // Update this specific child in the session
-      await updateChildDataInSession(childId, {
-        medicalRecords: childDetails.medicalRecords,
-        attendance: childDetails.attendance,
-        recentActivities: childDetails.recentActivities
-      });
-      
-      return childDetails;
-    } catch (error) {
-      console.error("Error fetching child details:", error);
-      return null;
-    }
-  };
-
-  // Use children from API data
-  const userChildren = childrenData;
-
+  // Fetch unread announcement count and update when focused
   useEffect(() => {
     const fetchUnreadCount = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/announcements/parent`);
         if (!response.ok) throw new Error('Failed to fetch');
         const data = await response.json();
-        // Count unread announcements (assuming isRead is false by default)
         const count = Array.isArray(data)
           ? data.filter((item: any) => !item.isRead).length
           : 0;
@@ -259,8 +162,13 @@ export default function ParentDashboard() {
       }
     };
     fetchUnreadCount();
-  }, []);
+    // Optionally, add focus listener if needed for your router
+    // Example for Expo Router:
+    // const unsubscribe = router.addListener?.('focus', fetchUnreadCount);
+    // return () => { if (unsubscribe) unsubscribe(); };
+  }, [router]);
 
+  const userChildren = childrenData;
 
   const renderChild = ({ item, index }: { item: any; index: number }) => (
     <Pressable
@@ -304,23 +212,20 @@ export default function ParentDashboard() {
                 className="w-20 h-20 rounded-full"
                 style={{
                   borderWidth: 3,
-                  borderColor: item.gender === "female" ? "#ec4899" : "#3b82f6", // Pink for female, blue for male
+                  borderColor: item.gender === "female" ? "#ec4899" : "#3b82f6",
                 }}
               />
-
               {/* Status Indicator */}
               <View className="absolute -top-1 -right-1 w-6 h-6 bg-green-400 rounded-full border-2 border-white items-center justify-center ">
                 <View className="w-2 h-2 bg-green-600 rounded-full" />
               </View>
             </View>
-
             {/* Child Info */}
             <View className="flex-1 ml-4">
               <Text className="text-xl font-bold text-gray-800 mb-2">
                 {item.name}
               </Text>
               <Text className="text-sm text-gray-600 mb-2">{item.age}</Text>
-
               {/* Status Row */}
               <View className="flex-row items-center">
                 <View className="flex-row items-center bg-green-100 px-3 py-1 rounded-full">
@@ -331,7 +236,6 @@ export default function ParentDashboard() {
                 </View>
               </View>
             </View>
-
             {/* Arrow Icon */}
             <Pressable
               onPress={() =>
@@ -348,16 +252,9 @@ export default function ParentDashboard() {
               }
               className="ml-4"
             >
-              {/* <LinearGradient
-              colors={['#7c3aed', '#a855f7']}
-              start={[0, 0]}
-              end={[1, 1]}
-                className="w-12 h-12 rounded-full items-center justify-center "
-              > */}
               <View className="bg-purple-500 rounded-full w-10 h-10  items-center justify-center ">
                 <Ionicons name="chevron-forward" size={20} color="white" />
               </View>
-              {/* </LinearGradient> */}
             </Pressable>
           </View>
         </LinearGradient>
@@ -394,10 +291,9 @@ export default function ParentDashboard() {
                 Track your children&apos;s progress
               </Text>
             </View>
-
-            <TouchableOpacity className="relative p-8">
+            <TouchableOpacity className="relative p-8" onPress={() => router.push("/announcements")}>
               <Bell size={24} color="#6B7280" />
-              {unreadAlerts > 0 && (
+              {unreadCount > 0 && (
                 <View
                   style={{
                     position: "absolute",
@@ -418,13 +314,12 @@ export default function ParentDashboard() {
                       fontWeight: "600",
                     }}
                   >
-                    {unreadAlerts}
+                    {unreadCount}
                   </Text>
                 </View>
               )}
             </TouchableOpacity>
           </View>
-
           {/* Stats Cards */}
           <View className="flex-row justify-between">
             <LinearGradient
@@ -438,7 +333,6 @@ export default function ParentDashboard() {
                 {userChildren.length}
               </Text>
             </LinearGradient>
-
             <LinearGradient
               colors={["rgba(255,255,255,0.8)", "rgba(255,255,255,0.6)"]}
               start={[0, 0]}
@@ -455,7 +349,6 @@ export default function ParentDashboard() {
             </LinearGradient>
           </View>
         </View>
-
         {/* Children List */}
         <View className="flex-1 bg-gray-50 rounded-t-[30px] pt-6  ">
           <View className="flex-row items-center justify-between px-6 mb-4">
@@ -463,8 +356,6 @@ export default function ParentDashboard() {
               Your Children
             </Text>
           </View>
-
-
           <FlatList
             data={userChildren}
             keyExtractor={(item) => item.id}
@@ -478,12 +369,10 @@ export default function ParentDashboard() {
                 ) : (
                   <Text className="text-gray-600">No children found</Text>
                 )}
-
               </View>
             )}
           />
         </View>
-
         {/* Bottom Navigation */}
         <View className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md">
           <View
@@ -505,7 +394,6 @@ export default function ParentDashboard() {
                 Home
               </Text>
             </Pressable>
-
             {/* Profile */}
             <Pressable
               className="items-center justify-center py-2"
@@ -516,7 +404,6 @@ export default function ParentDashboard() {
               </View>
               <Text className="text-xs text-gray-500 mt-1">Profile</Text>
             </Pressable>
-
             {/* More */}
             <Pressable
               className="items-center justify-center py-2"
