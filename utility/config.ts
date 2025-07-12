@@ -7,4 +7,4 @@ Platform.OS === "web"
     // : "http://192.168.114.156:5001"; // Replace with your real IP
 
         //pramodiIp
-        : "http://192.168.43.74:5001"; 
+        : "http://10.47.127.74:5001"; 
