@@ -1,8 +1,9 @@
-import {useRouter } from "expo-router";
-import { Image, View } from "react-native";
-import {images} from '@/assets/images/images'
-import {LinearGradient} from "expo-linear-gradient";
+import { images } from '@/assets/images/images';
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import { useEffect } from "react";
+import { Image, View } from "react-native";
+
 
 export default function Home() {
   const router = useRouter();
