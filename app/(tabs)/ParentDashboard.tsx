@@ -1,11 +1,11 @@
 // app/(tabs)/dashboard.tsx
-import { View, Text, FlatList, Image, Pressable, StatusBar, Dimensions, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
+import { API_BASE_URL } from '@/utility/index';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { Bell } from 'lucide-react-native'
-import { mockAlerts } from '@/data/mockData';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { Bell } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { Dimensions, FlatList, Image, Pressable, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -29,11 +29,28 @@ const children = [
 ];
 
 
-export default function ParentDashboard() {
-  const [alerts] = useState(mockAlerts);
-  const unreadAlerts = alerts.filter((alert: { isRead: any; }) => !alert.isRead).length;
 
+export default function ParentDashboard() {
+  const [unreadCount, setUnreadCount] = useState(0);
   const router = useRouter();
+
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/announcements/parent`);
+        if (!response.ok) throw new Error('Failed to fetch');
+        const data = await response.json();
+        // Count unread announcements (assuming isRead is false by default)
+        const count = Array.isArray(data)
+          ? data.filter((item: any) => !item.isRead).length
+          : 0;
+        setUnreadCount(count);
+      } catch (err) {
+        setUnreadCount(0);
+      }
+    };
+    fetchUnreadCount();
+  }, []);
 
   const renderChild = ({ item, index }: { item: any; index: number }) => (
     <Pressable
@@ -156,9 +173,9 @@ export default function ParentDashboard() {
             </Text>
           </View>
 
-          <TouchableOpacity className='relative p-8'>
+          <TouchableOpacity className='relative p-8' onPress={() => router.push('/announcements')}>
             <Bell size={24} color="#6B7280" />
-            {unreadAlerts > 0 && (
+            {unreadCount > 0 && (
               <View style={{
                 position: 'absolute',
                 top: 15,
@@ -174,7 +191,7 @@ export default function ParentDashboard() {
                   color: '#FFFFFF',
                   fontSize: 12,
                   fontWeight: '600'
-                }}>{unreadAlerts}</Text>
+                }}>{unreadCount}</Text>
               </View>
             )}
           </TouchableOpacity>
