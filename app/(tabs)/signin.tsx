@@ -1,5 +1,6 @@
 import { images } from '@/assets/images/images';
 import CustomAlert from '@/components/CustomAlert';
+import { useUser } from '@/contexts/UserContext';
 import { useCustomAlert } from '@/hooks/useCustomAlert';
 import { API_BASE_URL } from '@/utility';
 import { Ionicons } from '@expo/vector-icons';
@@ -62,6 +63,7 @@ type TouchedFields = {
 
 export default function CreateAccountWithValidation() {
   const router = useRouter();
+  const { login } = useUser();
   const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
   
   // Form state
@@ -216,12 +218,68 @@ export default function CreateAccountWithValidation() {
       console.log('isSuccess calculated as:', isSuccess);
       
       if (isSuccess) {
-        // Success - store user data if needed
+        // Success - store user data and token in session
         console.log('Login successful:', data);
         
-        showCustomAlert('success', 'Success', 'Login successful!', false, () => {
-          router.push('/ParentDashboard');
-        });
+        // Extract user data from response - Handle nested data structure
+        const backendUser = data.data?.user || data.user || data;
+        const userData = {
+          id: backendUser?.id || backendUser?.parentId || '',
+          email: backendUser?.email || formData.email,
+          fullName: backendUser?.name || backendUser?.fullName || '',
+          phone: backendUser?.phone || '',
+          address: backendUser?.address || '',
+          profileImage: backendUser?.image || backendUser?.profileImage || '',
+          children: backendUser?.children || [],
+          role: 'parent' as const
+        };
+        
+        console.log('=== USER DATA EXTRACTION DEBUG ===');
+        console.log('Extracted userData:', userData);
+        
+        // Extract token from response - We know it's in data.data.token
+        const token = data.data?.token || 
+                     data.token || 
+                     data.authToken || 
+                     data.accessToken || 
+                     data.jwt || 
+                     data.access_token ||
+                     data.data?.authToken ||
+                     data.data?.accessToken ||
+                     data.data?.jwt ||
+                     '';
+        
+        console.log('=== TOKEN EXTRACTION DEBUG ===');
+        console.log('Token found:', token ? 'YES' : 'NO');
+        console.log('Token length:', token.length);
+        console.log('Token preview:', token.substring(0, 50) + '...');
+        
+        if (token) {
+          console.log('=== STORING SESSION DATA ===');
+          
+          // Store session data using UserContext
+          await login(userData, token);
+          
+          console.log('✅ Session stored successfully');
+          
+          showCustomAlert('success', 'Success', 'Login successful!', false, () => {
+            router.push('/ParentDashboard');
+          });
+        } else {
+          console.error('❌ NO TOKEN FOUND IN RESPONSE');
+          console.error('Available fields:', Object.keys(data));
+          if (data.data) {
+            console.error('Available data fields:', Object.keys(data.data));
+          }
+          
+          // Store user data without token (temporary solution)
+          await login(userData, 'temporary-session-' + Date.now());
+          
+          showCustomAlert('success', 'Login Successful', 'Logged in successfully! Note: Some features may be limited.', false, () => {
+            router.push('/ParentDashboard');
+          });
+        }
+        
         return;
       } else {
         // Handle login failure
