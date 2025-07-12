@@ -1,3 +1,5 @@
+import CustomAlert from '@/components/CustomAlert';
+import { useCustomAlert } from '@/hooks/useCustomAlert';
 import { API_BASE_URL } from '@/utility/index';
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -5,7 +7,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   NativeSyntheticEvent,
   Platform,
@@ -19,7 +20,30 @@ import {
   View,
 } from "react-native";
 
+const safeJsonParse = async (response: Response) => {
+  const text = await response.text();
+
+  if (!text || text.trim() === "") {
+    throw new Error("Empty response from server");
+  }
+
+  // Check if response starts with HTML
+  if (text.trim().startsWith("<")) {
+    throw new Error(
+      `Server returned HTML instead of JSON. Check if the endpoint exists. Response: ${text.substring(0, 200)}...`
+    );
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    console.error("Failed to parse JSON:", text);
+    throw new Error(`Invalid JSON response from server: ${text.substring(0, 100)}...`);
+  }
+};
+
 function AccountVerification() {
+  const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
   const { email } = useLocalSearchParams();
   const emailString = Array.isArray(email) ? email[0] : email;
 
@@ -86,16 +110,29 @@ function AccountVerification() {
     console.log('Entered OTP:', otpString);
 
     if (otpString.length !== 4) {
-      Alert.alert('Error', 'Please enter the complete 4-digit code');
+      showCustomAlert('error', 'Error', 'Please enter the complete 4-digit code');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      console.log('Making verification request to:', `${API_BASE_URL}/users/verify-token`);
+      // Get temporary data for password
+      const tempData = await getTempUserData();
+      console.log('Retrieved temp data:', tempData);
 
-      // First verify the token
+      if (!tempData) {
+        throw new Error('No signup data found. Please start over.');
+      }
+
+      console.log('Making verification request to:', `${API_BASE_URL}/users/verify-token`);
+      console.log('Request payload:', {
+        email: emailString,
+        token: otpString,
+        password: '[HIDDEN]' // Don't log actual password
+      });
+
+      // Verify token and set password in one call
       const response = await fetch(`${API_BASE_URL}/users/verify-token`, {
         method: 'POST',
         headers: {
@@ -103,63 +140,33 @@ function AccountVerification() {
         },
         body: JSON.stringify({
           email: emailString,
-          token: otpString
+          token: otpString,
+          password: tempData.password // Send password along with token
         }),
       });
 
       console.log('Verification response status:', response.status);
-      const data = await response.json();
+      console.log('Verification response ok:', response.ok);
+      console.log('Verification response status text:', response.statusText);
+      
+      // Use safe JSON parsing
+      const data = await safeJsonParse(response);
       console.log('Verification response data:', data);
 
       if (response.ok && data.status === 200) {
-        console.log('Token verified successfully!');
+        console.log('Token verified and password set successfully!');
 
-        // Get temporary data for account creation
-        const tempData = await getTempUserData();
-        console.log('Retrieved temp data for account creation:', tempData);
+        // Clear temporary data
+        await AsyncStorage.removeItem('tempUserData');
+        console.log('Temporary data cleared');
 
-        if (tempData) {
-          console.log('Updating account with verified email and temp password...');
-
-          // Update the user account - include all required fields
-          const updateResponse = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(tempData.email)}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              name: tempData.name || tempData.email, // Use stored name or fallback to email
-              email: tempData.email, // Include email as required
-              password: tempData.password,
-              verified: true
-            }),
-          });
-
-          console.log('Account update response status:', updateResponse.status);
-          
-          const updateData = await updateResponse.json();
-          console.log('Account update response data:', updateData);
-
-          if (updateResponse.ok) {
-            console.log('Account updated successfully');
-            // Clear temporary data
-            await AsyncStorage.removeItem('tempUserData');
-            console.log('Temporary data cleared');
-
-            Alert.alert('Success', 'Account verified and password set successfully!', [
-              {
-                text: 'Continue',
-                onPress: () => router.push("/signin")
-              }
-            ]);
-          } else {
-            console.error('Failed to update account:', updateData);
-            throw new Error(updateData.message || 'Failed to update account');
-          }
-        } else {
-          console.error('No temporary data found');
-          throw new Error('No signup data found. Please start over.');
-        }
+        showCustomAlert(
+          'success', 
+          'Success', 
+          'Account verified and password set successfully!',
+          false,
+          () => router.push("/signin")
+        );
       } else {
         // Handle verification failure
         console.error('Verification failed:', data);
@@ -168,11 +175,23 @@ function AccountVerification() {
 
     } catch (error) {
       console.error('Verification error:', error);
-      const errorMessage =
-        typeof error === 'object' && error !== null && 'message' in error
-          ? String((error as { message?: string }).message)
-          : 'Verification failed';
-      Alert.alert('Error', errorMessage);
+      
+      let errorMessage = 'Verification failed. Please try again.';
+      
+      // Handle different types of errors
+      if (error instanceof Error) {
+        if (error.message.includes('HTML instead of JSON')) {
+          errorMessage = 'Server configuration error. The verification endpoint may not exist. Please contact support.';
+        } else if (error.message.includes('Empty response')) {
+          errorMessage = 'No response from server. Please check your internet connection.';
+        } else if (error.message.includes('Invalid JSON')) {
+          errorMessage = 'Server returned invalid data. Please try again or contact support.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      showCustomAlert('error', 'Verification Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -181,31 +200,10 @@ function AccountVerification() {
   // Resend OTP
   const handleResendOtp = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/users/request-verification`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: emailString,
-        }),
-      });
-
-      if (response.ok) {
-        setTimeLeft(300); // 5 minutes
-        setOtp(['', '', '', '']);
-        inputRefs.current[0]?.focus();
-        Alert.alert('Success', 'New verification code sent');
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to resend code');
-      }
+      showCustomAlert('success', 'Info', 'Please contact administrator for a new verification code.');
     } catch (error) {
-      const errorMessage =
-        typeof error === 'object' && error !== null && 'message' in error
-          ? String((error as { message?: string }).message)
-          : 'Failed to resend code';
-      Alert.alert('Error', errorMessage);
+      console.error('Resend error:', error);
+      showCustomAlert('error', 'Error', 'Failed to resend code');
     }
   };
 
@@ -213,130 +211,187 @@ function AccountVerification() {
 
   return (
     <LinearGradient
-      colors={[
-        "#DFC1FD",
-        "#f3e8ff",
-        "#F5ECFE",
-        "#F5ECFE",
-        "#e9d5ff",
-        "#DFC1FD",
-      ]}
+      colors={['#DFC1FD', '#f3e8ff', '#F5ECFE', '#F5ECFE', '#e9d5ff', '#DFC1FD']}
       start={[0, 0]}
       end={[1, 1]}
-      className="flex-1"
+      style={{ flex: 1 }}
     >
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="transparent"
-        translucent
-      />
-      <SafeAreaView className="flex-1 mt-7">
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <SafeAreaView style={{ flex: 1, marginTop: 28 }}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          className="flex-1"
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
         >
-          <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
             {/* Header */}
-            <View className="px-5 pt-2">
+            <View style={{ paddingHorizontal: 20, paddingTop: 8 }}>
               <TouchableOpacity
                 onPress={() => router.back()}
-                className="w-10 h-10 justify-center items-center"
+                style={{
+                  width: 40,
+                  height: 40,
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
               >
                 <Ionicons name="chevron-back" size={24} color="#374151" />
               </TouchableOpacity>
             </View>
 
-            {/* Title and Description */}
-            <View className="px-7 mt-5">
-              <Text className="text-black font-extrabold text-3xl">
-                Verify Account
+            {/* Content */}
+            <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
+              <Text style={{
+                fontSize: 28,
+                fontWeight: 'bold',
+                color: '#374151',
+                marginBottom: 8
+              }}>
+                Account Verification
               </Text>
-              <Text className="text-gray-600 mt-3 text-base leading-6">
-                Enter the 4-digit code sent to you when registering the child to the institute.
+              <Text style={{
+                fontSize: 16,
+                color: '#6b7280',
+                marginBottom: 32
+              }}>
+                Enter the 4-digit code to verify your account
               </Text>
-            </View>
 
-            {/* OTP Input Fields */}
-            <View className="flex-row justify-center items-center mt-10 px-7">
-              {otp.map((digit, index) => (
-                <TextInput
-                  key={index}
-                  ref={(ref) => {
-                    inputRefs.current[index] = ref;
-                  }}
-                  value={digit}
-                  onChangeText={(value) => handleOtpChange(value, index)}
-                  onKeyPress={(e) => handleKeyPress(e, index)}
-                  placeholder="0"
-                  placeholderTextColor="#9ca3af"
-                  keyboardType="numeric"
-                  maxLength={1}
-                  textAlign="center"
-                  style={{
-                    backgroundColor: "white",
-                    borderRadius: 12,
-                    width: 60,
-                    height: 60,
-                    fontSize: 24,
-                    fontWeight: '600',
-                    borderWidth: 2,
-                    borderColor: digit ? "#7c3aed" : "transparent",
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 4,
-                    elevation: 3,
-                    marginHorizontal: 8,
-                  }}
-                />
-              ))}
-            </View>
-
-            {/* Timer and Resend */}
-            <View className="flex-row justify-center items-center mt-8">
-              {timeLeft > 0 ? (
-                <Text className="text-gray-600 text-center">
-                  Code expires in {formatTime(timeLeft)}
+              {/* Email Display */}
+              <View style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                padding: 16,
+                borderRadius: 12,
+                marginBottom: 24
+              }}>
+                <Text style={{
+                  fontSize: 14,
+                  color: '#6b7280',
+                  marginBottom: 4
+                }}>
+                  Verification code for:
                 </Text>
-              ) : (
-                <TouchableOpacity onPress={handleResendOtp}>
-                  <Text className="text-purple-600 font-semibold text-center underline">
-                    Resend Code
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
+                <Text style={{
+                  fontSize: 16,
+                  fontWeight: '600',
+                  color: '#374151'
+                }}>
+                  {emailString}
+                </Text>
+              </View>
 
-            {/* Verify Button */}
-            <View className="mx-7 mt-10">
+              {/* OTP Input */}
+              <View style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                marginBottom: 24
+              }}>
+                {[0, 1, 2, 3].map((index) => (
+                  <TextInput
+                    key={index}
+                    ref={(ref) => {
+                      inputRefs.current[index] = ref;
+                    }}
+                    value={otp[index]}
+                    onChangeText={(value) => handleOtpChange(value, index)}
+                    onKeyPress={(e) => handleKeyPress(e, index)}
+                    style={{
+                      width: 70,
+                      height: 70,
+                      backgroundColor: 'white',
+                      borderRadius: 12,
+                      textAlign: 'center',
+                      fontSize: 24,
+                      fontWeight: 'bold',
+                      color: '#374151',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 4,
+                      elevation: 3
+                    }}
+                    keyboardType="numeric"
+                    maxLength={1}
+                    selectTextOnFocus
+                  />
+                ))}
+              </View>
+
+              {/* Timer */}
+              <View style={{
+                alignItems: 'center',
+                marginBottom: 24
+              }}>
+                <Text style={{
+                  fontSize: 14,
+                  color: '#6b7280',
+                  marginBottom: 4
+                }}>
+                  Time remaining
+                </Text>
+                <Text style={{
+                  fontSize: 20,
+                  fontWeight: 'bold',
+                  color: timeLeft > 300 ? '#22c55e' : '#ef4444'
+                }}>
+                  {formatTime(timeLeft)}
+                </Text>
+              </View>
+
+              {/* Verify Button */}
               <TouchableOpacity
                 onPress={handleVerifyOtp}
-                disabled={isLoading || !isOtpComplete}
-                className={`rounded-3xl py-4 items-center ${isLoading || !isOtpComplete ? "bg-purple-400" : "bg-purple-600"
-                  }`}
+                disabled={!isOtpComplete || isLoading}
                 style={{
-                  shadowColor: "#7c3aed",
+                  backgroundColor: isOtpComplete && !isLoading ? '#7c3aed' : '#9ca3af',
+                  borderRadius: 24,
+                  paddingVertical: 16,
+                  alignItems: 'center',
+                  marginBottom: 16,
+                  shadowColor: '#7c3aed',
                   shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
+                  shadowOpacity: isOtpComplete ? 0.3 : 0,
                   shadowRadius: 8,
-                  elevation: 4,
+                  elevation: isOtpComplete ? 4 : 0
                 }}
               >
-                <Text className="text-white text-lg font-semibold">
-                  {isLoading ? "Verifying..." : "Verify Code"}
+                <Text style={{
+                  color: 'white',
+                  fontSize: 18,
+                  fontWeight: '600'
+                }}>
+                  {isLoading ? 'Verifying...' : 'Verify Account'}
                 </Text>
               </TouchableOpacity>
-            </View>
 
-            {/* Help Text */}
-            <View className="px-7 mt-6">
-              <Text className="text-gray-500 text-center text-sm">
-                Didn't receive the code? Check your messages or contact the institute for assistance.
-              </Text>
+              {/* Resend Button */}
+              <TouchableOpacity
+                onPress={handleResendOtp}
+                style={{
+                  alignItems: 'center',
+                  paddingVertical: 12
+                }}
+              >
+                <Text style={{
+                  color: '#7c3aed',
+                  fontSize: 16,
+                  fontWeight: '600'
+                }}>
+                  Didn&apos;t receive the code? Contact Admin
+                </Text>
+              </TouchableOpacity>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      <CustomAlert
+        visible={customAlert.visible}
+        type={customAlert.type}
+        title={customAlert.title}
+        message={customAlert.message}
+        showCancelButton={customAlert.showCancelButton}
+        onConfirm={customAlert.onConfirm}
+        onClose={hideCustomAlert}
+      />
     </LinearGradient>
   );
 }

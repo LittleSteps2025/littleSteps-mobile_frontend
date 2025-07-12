@@ -1,8 +1,34 @@
+import CustomAlert from '@/components/CustomAlert';
+import { useCustomAlert } from '@/hooks/useCustomAlert';
+import { API_BASE_URL } from '@/utility';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react'
-import { Alert, KeyboardAvoidingView, SafeAreaView, ScrollView, TouchableOpacity, View, Text, StatusBar, Platform, TextInput } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+// Safe JSON parsing function
+const safeJsonParse = async (response: Response) => {
+  const text = await response.text();
+
+  if (!text || text.trim() === "") {
+    throw new Error("Empty response from server");
+  }
+
+  // Check if response starts with HTML
+  if (text.trim().startsWith("<")) {
+    throw new Error(
+      "Server returned HTML instead of JSON. Check if the endpoint exists."
+    );
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    console.error("Failed to parse JSON:", text);
+    throw new Error("Invalid JSON response from server");
+  }
+};
 
 type FormData = {
   password: string;
@@ -19,8 +45,12 @@ type TouchedFields = {
   [K in FormField]?: boolean;
 };
 
-function new_password() {
+function NewPassword() {
+      const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
       const router = useRouter();
+      const { email, resetToken } = useLocalSearchParams();
+      const emailString = Array.isArray(email) ? email[0] : email;
+      const tokenString = Array.isArray(resetToken) ? resetToken[0] : resetToken;
       
       // Form state
       const [formData, setFormData] = useState<FormData>({
@@ -125,29 +155,72 @@ function new_password() {
     // Handle form submission
     const handleCreateAccount = async () => {
       if (!validateForm()) {
-        Alert.alert('Validation Error', 'Please fix the errors below');
+        showCustomAlert('error', 'Validation Error', 'Please fix the errors below');
+        return;
+      }
+
+      if (!emailString || !tokenString) {
+        showCustomAlert('error', 'Error', 'Invalid reset session. Please start the reset process again.');
         return;
       }
   
       setIsLoading(true);
       
       try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log('Setting new password for:', emailString);
         
-        // Success
-        Alert.alert(
-          'Success', 
-          'Account created successfully!',
-          [
-            {
-              text: 'Continue',
-              onPress: () => router.push('/dashboard')
-            }
-          ]
-        );
-      } catch (error) {
-        Alert.alert('Error', 'Failed to create account. Please try again.');
+        // Reset password with database
+        const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: emailString,
+            resetToken: tokenString,
+            newPassword: formData.password
+          })
+        });
+
+        console.log('Reset password response status:', response.status);
+        
+        const data = await safeJsonParse(response);
+        console.log('Reset password response data:', data);
+        
+        if (response.ok && (data.status === 200 || data.success)) {
+          // Success
+          showCustomAlert(
+            'success', 
+            'Password Reset Successful', 
+            'Your password has been reset successfully! You can now log in with your new password.',
+            false,
+            () => router.push('/signin')
+          );
+        } else {
+          throw new Error(data.message || 'Failed to reset password');
+        }
+      } catch (error: any) {
+        console.error('Reset password error:', error);
+        
+        let errorMessage = 'Failed to reset password. Please try again.';
+        
+        if (error instanceof Error) {
+          if (error.message.includes('HTML instead of JSON')) {
+            errorMessage = 'Server configuration error. Please contact support.';
+          } else if (error.message.includes('Empty response')) {
+            errorMessage = 'No response from server. Please check your internet connection.';
+          } else if (error.message.includes('Invalid JSON')) {
+            errorMessage = 'Server returned invalid data. Please try again or contact support.';
+          } else if (error.message.includes('expired')) {
+            errorMessage = 'Reset session has expired. Please start the reset process again.';
+          } else if (error.message.includes('invalid')) {
+            errorMessage = 'Invalid reset session. Please start the reset process again.';
+          } else {
+            errorMessage = error.message;
+          }
+        }
+        
+        showCustomAlert('error', 'Reset Failed', errorMessage);
       } finally {
         setIsLoading(false);
       }
@@ -196,10 +269,10 @@ function new_password() {
             {/* Content */}
             <View className="px-5 pt-5">
               <Text className="text-3xl font-bold text-gray-700 mb-2">
-                Create an account
+                Reset Password
               </Text>
               <Text className="text-base text-gray-500 mb-8">
-                Excited to have you on board!
+                Enter your new password below
               </Text>
 
               {/* Password Input */}
@@ -356,7 +429,7 @@ function new_password() {
                 ))}
               </View>
 
-              {/* Create Account Button */}
+              {/* Reset Password Button */}
               <TouchableOpacity
                 onPress={handleCreateAccount}
                 disabled={isLoading}
@@ -381,8 +454,17 @@ function new_password() {
           
         </KeyboardAvoidingView>
       </SafeAreaView>
+      <CustomAlert
+        visible={customAlert.visible}
+        type={customAlert.type}
+        title={customAlert.title}
+        message={customAlert.message}
+        showCancelButton={customAlert.showCancelButton}
+        onConfirm={customAlert.onConfirm}
+        onClose={hideCustomAlert}
+      />
     </LinearGradient>
   )
 }
 
-export default new_password
+export default NewPassword

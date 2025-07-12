@@ -1,20 +1,20 @@
 // app/(tabs)/dashboard.tsx
-import { View, Text, FlatList, Image, Pressable, StatusBar, Dimensions, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
+import { API_BASE_URL } from '@/utility/index';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { Bell } from 'lucide-react-native'
-import {mockAlerts } from '@/data/mockData';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { Bell } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { Dimensions, FlatList, Image, Pressable, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
 const children = [
   {
     id: '1',
-    name: 'Pramodii Peshila',
+    name: 'Pramodi Peshila',
     age: '5 years old',
-    image: require('../../assets/images/kid1.jpg'),
+    image: require('@/assets/images/kid2.jpg'),
     status: 'Active',
     gender: 'female', // Added gender field
   },
@@ -22,18 +22,35 @@ const children = [
     id: '2',
     name: 'Nimal Perera',
     age: '7 years old',
-    image: require('../../assets/images/kid1.jpg'),
+    image: require('@/assets/images/kid1.jpg'),
     status: 'Active',
     gender: 'male', // Added gender field
   },
 ];
 
 
-export default function ParentDashboard() {
-  const [alerts] = useState(mockAlerts);
-  const unreadAlerts = alerts.filter((alert: { isRead: any; }) => !alert.isRead).length;
 
+export default function ParentDashboard() {
+  const [unreadCount, setUnreadCount] = useState(0);
   const router = useRouter();
+
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/announcements/parent`);
+        if (!response.ok) throw new Error('Failed to fetch');
+        const data = await response.json();
+        // Count unread announcements (assuming isRead is false by default)
+        const count = Array.isArray(data)
+          ? data.filter((item: any) => !item.isRead).length
+          : 0;
+        setUnreadCount(count);
+      } catch (err) {
+        setUnreadCount(0);
+      }
+    };
+    fetchUnreadCount();
+  }, []);
 
   const renderChild = ({ item, index }: { item: any; index: number }) => (
     <Pressable
@@ -65,72 +82,72 @@ export default function ParentDashboard() {
           end={[1, 1]}
           className="p-6"
         >
-        <View className="flex-row items-center">
-          {/* Profile Image without Background */}
-          <View className="relative">
-            <Image
-              source={item.image}
-              className="w-20 h-20 rounded-full"
-              style={{ 
-                borderWidth: 3, 
-                borderColor: item.gender === 'female' ? '#ec4899' : '#3b82f6' // Pink for female, blue for male
-              }}
-            />
+          <View className="flex-row items-center">
+            {/* Profile Image without Background */}
+            <View className="relative">
+              <Image
+                source={item.image}
+                className="w-20 h-20 rounded-full"
+                style={{
+                  borderWidth: 3,
+                  borderColor: item.gender === 'female' ? '#ec4899' : '#3b82f6' // Pink for female, blue for male
+                }}
+              />
 
-            {/* Status Indicator */}
-            <View className="absolute -top-1 -right-1 w-6 h-6 bg-green-400 rounded-full border-2 border-white items-center justify-center ">
-              <View className="w-2 h-2 bg-green-600 rounded-full" />
-            </View>
-          </View>
-
-          {/* Child Info */}
-          <View className="flex-1 ml-4">
-            <Text className="text-xl font-bold text-gray-800 mb-2">
-              {item.name}
-            </Text>
-            <Text className="text-sm text-gray-600 mb-2">
-              {item.age}
-            </Text>
-
-            {/* Status Row */}
-            <View className="flex-row items-center">
-              <View className="flex-row items-center bg-green-100 px-3 py-1 rounded-full">
-                <Ionicons name="checkmark-circle" size={12} color="#16a34a" />
-                <Text className="text-xs text-green-700 ml-1 font-medium">
-                  {item.status}
-                </Text>
+              {/* Status Indicator */}
+              <View className="absolute -top-1 -right-1 w-6 h-6 bg-green-400 rounded-full border-2 border-white items-center justify-center ">
+                <View className="w-2 h-2 bg-green-600 rounded-full" />
               </View>
             </View>
-          </View>
 
-          {/* Arrow Icon */}
-          <Pressable
-            onPress={() =>
-              router.push({
-                pathname: '/Child_Details',
-                params: {
-                  id: item.id,
-                  name: item.name,
-                  age: item.age,
-                  status: item.status,
-                  gender: item.gender
-                },
-              })
-            }
-            className="ml-4" 
-          >
-            {/* <LinearGradient
+            {/* Child Info */}
+            <View className="flex-1 ml-4">
+              <Text className="text-xl font-bold text-gray-800 mb-2">
+                {item.name}
+              </Text>
+              <Text className="text-sm text-gray-600 mb-2">
+                {item.age}
+              </Text>
+
+              {/* Status Row */}
+              <View className="flex-row items-center">
+                <View className="flex-row items-center bg-green-100 px-3 py-1 rounded-full">
+                  <Ionicons name="checkmark-circle" size={12} color="#16a34a" />
+                  <Text className="text-xs text-green-700 ml-1 font-medium">
+                    {item.status}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Arrow Icon */}
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: '/Child_Details',
+                  params: {
+                    id: item.id,
+                    name: item.name,
+                    age: item.age,
+                    status: item.status,
+                    gender: item.gender
+                  },
+                })
+              }
+              className="ml-4"
+            >
+              {/* <LinearGradient
               colors={['#7c3aed', '#a855f7']}
               start={[0, 0]}
               end={[1, 1]}
                 className="w-12 h-12 rounded-full items-center justify-center "
               > */}
-                <View className="bg-purple-500 rounded-full w-10 h-10  items-center justify-center " >
-              <Ionicons name="chevron-forward" size={20} color="white" /></View>
-            {/* </LinearGradient> */}
-          </Pressable>
-        </View>
-              </LinearGradient>
+              <View className="bg-purple-500 rounded-full w-10 h-10  items-center justify-center " >
+                <Ionicons name="chevron-forward" size={20} color="white" /></View>
+              {/* </LinearGradient> */}
+            </Pressable>
+          </View>
+        </LinearGradient>
       </View>
     </Pressable>
   );
@@ -152,13 +169,13 @@ export default function ParentDashboard() {
               Welcome Back! 👋
             </Text>
             <Text className="text-gray-600 text-base mt-1">
-              Track your children's progress
+              Track your children&apos;s progress
             </Text>
           </View>
 
-          <TouchableOpacity className='relative p-8'>
+          <TouchableOpacity className='relative p-8' onPress={() => router.push('/announcements')}>
             <Bell size={24} color="#6B7280" />
-            {unreadAlerts > 0 && (
+            {unreadCount > 0 && (
               <View style={{
                 position: 'absolute',
                 top: 15,
@@ -174,7 +191,7 @@ export default function ParentDashboard() {
                   color: '#FFFFFF',
                   fontSize: 12,
                   fontWeight: '600'
-                }}>{unreadAlerts}</Text>
+                }}>{unreadCount}</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -242,7 +259,10 @@ export default function ParentDashboard() {
           </Pressable>
 
           {/* Profile */}
-          <Pressable className="items-center justify-center py-2">
+          <Pressable
+            className="items-center justify-center py-2"
+            onPress={() => router.push('/ParentProfile')}
+          >
             <View className="w-12 h-12 items-center justify-center">
               <Ionicons name="person" size={24} color="#9ca3af" />
             </View>
@@ -250,7 +270,10 @@ export default function ParentDashboard() {
           </Pressable>
 
           {/* More */}
-          <Pressable className="items-center justify-center py-2">
+          <Pressable 
+            className="items-center justify-center py-2"
+            onPress={() => router.push('/ParentMore')}
+          >
             <View className="w-12 h-12 items-center justify-center">
               <Ionicons name="ellipsis-horizontal" size={24} color="#9ca3af" />
             </View>

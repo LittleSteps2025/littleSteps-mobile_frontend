@@ -1,9 +1,12 @@
 // teacher/tabs/_layout.tsx
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
   return (
+    <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
+
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -19,15 +22,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: '#9ca3af',
       }}
     >
-<Tabs.Screen
-  name="../index"  // instead of "../index"
-  options={{
-    title: 'Home',
-    tabBarIcon: ({ color }) => (
-      <Ionicons name="home" size={24} color={color} />
-    ),
-  }}
-/>
+
 
 <Tabs.Screen
   name="profiles"
@@ -50,6 +45,8 @@ export default function TabLayout() {
   }}
 />
 
-    </Tabs>
+      </Tabs>
+      </ SafeAreaView >
+
   );
 }

@@ -1,17 +1,18 @@
 import { images } from '@/assets/images/images';
+import CustomAlert from '@/components/CustomAlert';
+import { useCustomAlert } from '@/hooks/useCustomAlert';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  Image,
   SafeAreaView,
   ScrollView,
+  Text,
+  TextInput,
   TouchableOpacity,
   View,
-  Image,
-  Text,
-  Alert,
-  TextInput,
 } from 'react-native';
 
 type PaymentMethod = 'card' | 'mobile' | 'bank';
@@ -25,6 +26,7 @@ interface PaymentHistory {
 }
 
 function PaymentInterface() {
+  const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('card');
   const [cardNumber, setCardNumber] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
@@ -145,12 +147,12 @@ function PaymentInterface() {
   const handlePayment = async () => {
     if (selectedPaymentMethod === 'card') {
       if (!cardNumber || !expiryDate || !cvv || !cardHolderName) {
-        Alert.alert('Missing Information', 'Please fill in all card details');
+        showCustomAlert('error', 'Missing Information', 'Please fill in all card details');
         return;
       }
     } else if (selectedPaymentMethod === 'mobile') {
       if (!mobileNumber) {
-        Alert.alert('Missing Information', 'Please enter your mobile number');
+        showCustomAlert('error', 'Missing Information', 'Please enter your mobile number');
         return;
       }
     }
@@ -161,26 +163,23 @@ function PaymentInterface() {
       // Simulate payment processing
       await new Promise((resolve) => setTimeout(resolve, 3000));
 
-      Alert.alert(
+      showCustomAlert(
+        'success',
         'Payment Successful!',
         'Your monthly daycare package has been activated. You will receive a confirmation email shortly.',
-        [
-          {
-            text: 'Continue',
-            onPress: () => {
-              setShowPaymentForm(false);
-              // Clear form
-              setCardNumber('');
-              setExpiryDate('');
-              setCvv('');
-              setCardHolderName('');
-              setMobileNumber('');
-            },
-          },
-        ]
+        false,
+        () => {
+          setShowPaymentForm(false);
+          // Clear form
+          setCardNumber('');
+          setExpiryDate('');
+          setCvv('');
+          setCardHolderName('');
+          setMobileNumber('');
+        }
       );
-    } catch (error) {
-      Alert.alert('Payment Failed', 'Something went wrong. Please try again.');
+    } catch {
+      showCustomAlert('error', 'Payment Failed', 'Something went wrong. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -445,6 +444,15 @@ function PaymentInterface() {
           )}
         </ScrollView>
       </SafeAreaView>
+      <CustomAlert
+        visible={customAlert.visible}
+        type={customAlert.type}
+        title={customAlert.title}
+        message={customAlert.message}
+        showCancelButton={customAlert.showCancelButton}
+        onConfirm={customAlert.onConfirm}
+        onClose={hideCustomAlert}
+      />
     </LinearGradient>
   );
 }

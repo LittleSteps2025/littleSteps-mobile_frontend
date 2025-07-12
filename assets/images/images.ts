@@ -12,6 +12,19 @@ import pickUp from "@/assets/images/pickUp.png";
 import report from "@/assets/images/report.png";
 import payment_child from "@/assets/images/payment_child.png";
 import baby_credit from "@/assets/images/baby_credit.png";
+import Kid1 from "@/assets/images/kid1.jpg";
+import daily_activities from "@/assets/images/daily_activity.png";
+import bye from "@/assets/images/bye.png";
+import complaint from "@/assets/images/complaint.png";
+import error from "@/assets/images/error.png";
+import event from "@/assets/images/event.png";
+import notification from "@/assets/images/notification.png";
+import privacy from "@/assets/images/privacy.png";
+import settings from "@/assets/images/setting.png";
+import support from "@/assets/images/support.png";
+import success from "@/assets/images/success.png";
+import teacher from "@/assets/images/teacher.png";
+import parents from "@/assets/images/parents.png";
 
 export const images={
     logo,
@@ -27,5 +40,18 @@ export const images={
     pickUp,
     report,
     payment_child,
-    baby_credit
+    baby_credit,
+    Kid1,
+    daily_activities,
+    bye,
+    complaint,
+    error,
+    event,
+    notification,
+    privacy,
+    settings,
+    support,
+    success,
+    teacher,
+    parents
 }

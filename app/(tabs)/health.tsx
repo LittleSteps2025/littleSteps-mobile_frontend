@@ -10,12 +10,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
   Modal
 } from 'react-native';
+import CustomAlert from '@/components/CustomAlert';
+import { useCustomAlert } from '@/hooks/useCustomAlert';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 
 interface HealthRecord {
   id: string;
@@ -27,6 +29,7 @@ interface HealthRecord {
 }
 
 export default function HealthRecords() {
+  const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
   const router = useRouter();
   
   // Health information state
@@ -64,9 +67,15 @@ export default function HealthRecords() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [showAddRecord, setShowAddRecord] = useState(false);
-  const [newRecord, setNewRecord] = useState({
+  const [newRecord, setNewRecord] = useState<{
+    date: string;
+    type: 'checkup' | 'vaccination' | 'illness' | 'medication';
+    title: string;
+    description: string;
+    doctor: string;
+  }>({
     date: '',
-    type: 'checkup' as const,
+    type: 'checkup',
     title: '',
     description: '',
     doctor: ''
@@ -84,13 +93,13 @@ export default function HealthRecords() {
   };
 
   const handleSaveHealthData = () => {
-    Alert.alert('Success', 'Health information updated successfully!');
+    showCustomAlert('success', 'Success', 'Health information updated successfully!');
     setIsEditing(false);
   };
 
   const handleAddRecord = () => {
     if (!newRecord.title || !newRecord.date) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      showCustomAlert('error', 'Error', 'Please fill in all required fields');
       return;
     }
 
@@ -108,7 +117,7 @@ export default function HealthRecords() {
       doctor: ''
     });
     setShowAddRecord(false);
-    Alert.alert('Success', 'Health record added successfully!');
+    showCustomAlert('success', 'Success', 'Health record added successfully!');
   };
 
   const getRecordIcon = (type: string) => {
@@ -185,7 +194,7 @@ export default function HealthRecords() {
       colors={['#DFC1FD','#f3e8ff', '#F5ECFE','#F5ECFE','#e9d5ff', '#DFC1FD']}
       start={[0, 0]}
       end={[1, 1]}
-      className="flex-1"
+      className="flex-1 "
     >
       <StatusBar barStyle="dark-content" backgroundColor="#DFC1FD" />
       <SafeAreaView className="flex-1">
@@ -203,16 +212,14 @@ export default function HealthRecords() {
                 <Ionicons name="chevron-back" size={24} color="#374151" />
               </TouchableOpacity>
               
-              <Text className="text-2xl font-bold text-gray-700 mt-12">
+            </View>
+            <View className="px-6 mb-4">
+              <Text className="text-2xl font-bold text-gray-800">
                 Health Records
               </Text>
-              
-              <TouchableOpacity 
-                onPress={() => setShowAddRecord(true)}
-                className="w-10 h-10 justify-center items-center mt-12"
-              >
-                <Ionicons name="add" size={24} color="#7c3aed" />
-              </TouchableOpacity>
+              <Text className="text-sm text-gray-500 mt-1">
+                Manage your health records and medical information
+              </Text>
             </View>
 
             {/* Medical Information Card */}
@@ -309,7 +316,7 @@ export default function HealthRecords() {
               {/* Edit Medical Information Button */}
               <TouchableOpacity
                 onPress={() => setIsEditing(true)}
-                className="mb-8"
+                className="mb-3"
               >
                 <LinearGradient
                   colors={['#7c3aed', '#a855f7']}
@@ -329,6 +336,32 @@ export default function HealthRecords() {
                     <Ionicons name="create" size={20} color="white" />
                     <Text className="text-white text-lg font-semibold ml-2">
                       Edit Medical Information
+                    </Text>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setShowAddRecord(true)}
+                className="mb-8"
+              >
+                <LinearGradient
+                  colors={['#7c3aed', '#a855f7']}
+                  start={[0, 0]}
+                  end={[1, 1]}
+                  className="rounded-2xl py-4 items-center"
+                  style={{
+                    shadowColor: '#7c3aed',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 8,
+                    elevation: 4,
+                    borderRadius: 16
+                  }}
+                >
+                  <View className="flex-row items-center">
+                    <Ionicons name="create" size={20} color="white" />
+                    <Text className="text-white text-lg font-semibold ml-2">
+                      Add Health Record
                     </Text>
                   </View>
                 </LinearGradient>
@@ -492,7 +525,7 @@ export default function HealthRecords() {
                 Add Health Record
               </Text>
               
-              <ScrollView showsVerticalScrollIndicator={false}>
+                <ScrollView showsVerticalScrollIndicator={false}>
                 <InputField
                   label="Date *"
                   value={newRecord.date}
@@ -507,6 +540,43 @@ export default function HealthRecords() {
                   placeholder="Enter record title"
                 />
 
+                {/* Dropdown for Type */}
+                <View className="mb-4">
+                  <Text className="text-sm font-medium text-gray-600 mb-2 ml-1">
+                  Type *
+                  </Text>
+                  <View
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: '#e5e7eb',
+                    paddingHorizontal: 10,
+                    paddingVertical: 2,
+                  }}
+                  >
+                  <Picker
+                    selectedValue={newRecord.type}
+                    onValueChange={(itemValue) =>
+                    setNewRecord(prev => ({ ...prev, type: itemValue as 'checkup' | 'vaccination' | 'illness' }))
+                    }
+                    style={{
+                    color: '#374151',
+                    fontSize: 16,
+                    fontWeight: '500',
+                    width: '100%',
+                    
+                    backgroundColor: 'transparent',
+                    }}
+                    dropdownIconColor="#7c3aed"
+                  >
+                    <Picker.Item label="Checkup" value="checkup" />
+                    <Picker.Item label="Vaccination" value="vaccination" />
+                    <Picker.Item label="Illness" value="illness" />
+                  </Picker>
+                  </View>
+                </View>
+
                 <InputField
                   label="Description"
                   value={newRecord.description}
@@ -518,30 +588,39 @@ export default function HealthRecords() {
 
                 <View className="flex-row justify-between mt-4">
                   <TouchableOpacity
-                    onPress={() => setShowAddRecord(false)}
-                    className="flex-1 mr-2 py-3 rounded-2xl bg-gray-200 items-center"
+                  onPress={() => setShowAddRecord(false)}
+                  className="flex-1 mr-2 py-3 rounded-2xl bg-gray-200 items-center"
                   >
-                    <Text className="text-gray-700 font-semibold">Cancel</Text>
+                  <Text className="text-gray-700 font-semibold">Cancel</Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity
-                    onPress={handleAddRecord}
-                    className="flex-1 ml-2"
+                  onPress={handleAddRecord}
+                  className="flex-1 ml-2"
                   >
-                    <LinearGradient
-                      colors={['#7c3aed', '#a855f7']}
-                      className="py-3 rounded-2xl items-center"
-                      style={{ borderRadius: 16 }}
-                    >
-                      <Text className="text-white font-semibold">Add Record</Text>
-                    </LinearGradient>
+                  <LinearGradient
+                    colors={['#7c3aed', '#a855f7']}
+                    className="py-3 rounded-2xl items-center"
+                    style={{ borderRadius: 16 }}
+                  >
+                    <Text className="text-white font-semibold">Add Record</Text>
+                  </LinearGradient>
                   </TouchableOpacity>
                 </View>
-              </ScrollView>
+                </ScrollView>
             </View>
           </View>
         </Modal>
       </SafeAreaView>
+      <CustomAlert
+        visible={customAlert.visible}
+        type={customAlert.type}
+        title={customAlert.title}
+        message={customAlert.message}
+        showCancelButton={customAlert.showCancelButton}
+        onConfirm={customAlert.onConfirm}
+        onClose={hideCustomAlert}
+      />
     </LinearGradient>
   );
 }

@@ -1,10 +1,11 @@
+import CustomAlert from '@/components/CustomAlert';
 import { API_BASE_URL } from '@/utility/index';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -15,7 +16,6 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 
@@ -34,6 +34,7 @@ const safeJsonParse = async (response: Response) => {
   
   try {
     return JSON.parse(text);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     console.error('Failed to parse JSON:', text);
     throw new Error('Invalid JSON response from server');
@@ -75,6 +76,37 @@ export default function CreateAccountWithValidation() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState<TouchedFields>({});
+
+  // Custom Alert State
+  const [customAlert, setCustomAlert] = useState({
+    visible: false,
+    type: 'success' as 'success' | 'error',
+    title: '',
+    message: '',
+    showCancelButton: false,
+    onConfirm: undefined as (() => void) | undefined
+  });
+
+  const showCustomAlert = (
+    type: 'success' | 'error',
+    title: string,
+    message: string,
+    showCancelButton: boolean = false,
+    onConfirm?: () => void
+  ) => {
+    setCustomAlert({
+      visible: true,
+      type,
+      title,
+      message,
+      showCancelButton,
+      onConfirm
+    });
+  };
+
+  const hideCustomAlert = () => {
+    setCustomAlert(prev => ({ ...prev, visible: false }));
+  };
 
   // Validation rules
   const validateEmail = (email: string) => {
@@ -176,7 +208,7 @@ export default function CreateAccountWithValidation() {
   // Handle form submission
   const handleCreateAccount = async () => {
     if (!validateForm()) {
-      Alert.alert('Validation Error', 'Please fix the errors below');
+      showCustomAlert('error', 'Validation Error', 'Please fix the errors below');
       return;
     }
 
@@ -186,7 +218,7 @@ export default function CreateAccountWithValidation() {
       console.log('Making request to:', `${API_BASE_URL}/users/check-email`);
       console.log('Checking email:', formData.email);
       
-      // 1. Check if email already exists in database
+      // Check if email exists in database (pre-stored by admin)
       const checkResponse = await fetch(`${API_BASE_URL}/users/check-email`, {
         method: 'POST',
         headers: {
@@ -203,46 +235,53 @@ export default function CreateAccountWithValidation() {
       const checkData = await safeJsonParse(checkResponse);
       console.log('Check email response:', checkData);
 
-      // FOR SIGNUP: If email already exists, show error
+      // If email doesn't exist in database, user can't sign up
       if (checkData.exists) {
-        Alert.alert('Error', 'This email is already registered. Please use a different email or try logging in.');
+        showCustomAlert('error', 'Error', 'Email not found in our system. Please contact the supervisor to register your email first.');
         return;
       }
 
-      // If email doesn't exist in database, temporarily save the data
-      console.log('Email is available, saving data temporarily...');
+      // If user is already verified, they should login instead
+      if (checkData.verified) {
+        showCustomAlert('error', 'Account Already Active', 'This email is already verified. Please use the login page to access your account.');
+        return;
+      }
+
+      // Email exists but not verified yet - proceed to verification
+      console.log('Email found in database, proceeding to verification...');
       
-      // Temporarily save email and password securely
-      const temporaryUserData = {
+      // Save the password for later use after verification
+      const userData = {
         email: formData.email,
         password: formData.password,
         timestamp: new Date().toISOString()
       };
 
       // Store temporarily in AsyncStorage
-      await AsyncStorage.setItem('tempUserData', JSON.stringify(temporaryUserData));
-      console.log('Data saved temporarily');
+      await AsyncStorage.setItem('tempUserData', JSON.stringify(userData));
+      console.log('Password saved temporarily for verification');
 
       // Navigate to verification page
       router.push({
         pathname: '/account_verification',
         params: { 
-          email: temporaryUserData.email,
-          password: temporaryUserData.password
+          email: userData.email
         }
       });
 
-      Alert.alert('Success', 'Please verify your email to complete registration.');
+      showCustomAlert('success', 'Success', 'Please enter your verification token to activate your account.', false, () => {
+        router.push('/account_verification');
+      });
 
     } catch (error) {
       console.error('Signup error:', error);
       if (error instanceof Error) {
-        Alert.alert('Error', error.message);
+        showCustomAlert('error', 'Error', error.message);
       } else {
-        Alert.alert('Error', 'Something went wrong. Please try again.');
+        showCustomAlert('error', 'Error', 'Something went wrong. Please try again.');
       }
     } finally {
-      setIsLoading(true);
+      setIsLoading(false);
     }
   };
 
@@ -289,7 +328,7 @@ export default function CreateAccountWithValidation() {
             {/* Content */}
             <View className="px-5 pt-5">
               <Text className="text-3xl font-bold text-gray-700 mb-2">
-                Create an account
+                Verify an account
               </Text>
               <Text className="text-base text-gray-500 mb-8">
                 Excited to have you on board!
@@ -505,7 +544,7 @@ export default function CreateAccountWithValidation() {
                 }}
               >
                 <Text className="text-white text-lg font-semibold">
-                  {isLoading ? 'Creating Account...' : 'Create an account'}
+                  {isLoading ? 'Verifying Account...' : 'Verify an account'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -526,6 +565,19 @@ export default function CreateAccountWithValidation() {
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={customAlert.visible}
+        type={customAlert.type}
+        title={customAlert.title}
+        message={customAlert.message}
+        onClose={hideCustomAlert}
+        onConfirm={customAlert.onConfirm}
+        showCancelButton={customAlert.showCancelButton}
+        confirmText={customAlert.showCancelButton ? 'Yes' : 'OK'}
+        cancelText="Cancel"
+      />
     </LinearGradient>
   );
 }
