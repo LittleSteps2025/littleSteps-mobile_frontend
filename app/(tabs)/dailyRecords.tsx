@@ -1,24 +1,26 @@
 // app/daily-meal-tracker.tsx
-import React, { useState } from 'react';
+import CustomAlert from '@/components/CustomAlert';
+import { useCustomAlert } from '@/hooks/useCustomAlert';
 import { API_BASE_URL } from '@/utility/index';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StatusBar,
-  SafeAreaView,
-  ScrollView,
-  TextInput,
-  Alert,
-} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import {
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 
 
 console.log('API_BASE_URL:', API_BASE_URL);
 export default function DailyMealTracker() {
+  const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
   const router = useRouter();
 
    //const getTodayDate = () => new Date().toISOString().slice(0, 10);
@@ -53,7 +55,7 @@ export default function DailyMealTracker() {
       !mealData.medicine &&
       !mealData.special_note
     ) {
-      Alert.alert('Missing Information', 'Please enter at least one detail for the daily record (meal, medicine, or notes).');
+      showCustomAlert('error', 'Missing Information', 'Please enter at least one detail for the daily record (meal, medicine, or notes).');
       return;
     }
 
@@ -76,7 +78,7 @@ export default function DailyMealTracker() {
     });
 
     if (response.ok) {
-      Alert.alert('Success!', 'Meal saved successfully.');
+      showCustomAlert('success', 'Success!', 'Meal saved successfully.');
       setMealData({
         breakfirst: '',
         morning_snack: '',
@@ -88,11 +90,11 @@ export default function DailyMealTracker() {
         date: new Date().toLocaleDateString()
       });
     } else {
-      Alert.alert('Error', 'Failed to save meal.');
+      showCustomAlert('error', 'Error', 'Failed to save meal.');
     }
   } catch (err) {
     console.error('Submit error:', err);
-    Alert.alert('Error', 'Network or server error.');
+    showCustomAlert('error', 'Error', 'Network or server error.');
   }
 };
 
@@ -385,6 +387,15 @@ export default function DailyMealTracker() {
           </View>
         </ScrollView>
       </SafeAreaView>
+      <CustomAlert
+        visible={customAlert.visible}
+        type={customAlert.type}
+        title={customAlert.title}
+        message={customAlert.message}
+        showCancelButton={customAlert.showCancelButton}
+        onConfirm={customAlert.onConfirm}
+        onClose={hideCustomAlert}
+      />
     </LinearGradient>
   );
 }
