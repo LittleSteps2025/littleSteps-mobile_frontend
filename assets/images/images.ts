@@ -23,6 +23,8 @@ import privacy from "@/assets/images/privacy.png";
 import settings from "@/assets/images/setting.png";
 import support from "@/assets/images/support.png";
 import success from "@/assets/images/success.png";
+import teacher from "@/assets/images/teacher.png";
+import parents from "@/assets/images/parents.png";
 
 export const images={
     logo,
@@ -49,5 +51,7 @@ export const images={
     privacy,
     settings,
     support,
-    success
+    success,
+    teacher,
+    parents
 }

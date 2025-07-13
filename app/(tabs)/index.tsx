@@ -1,8 +1,9 @@
-import {useRouter } from "expo-router";
-import { Image, View } from "react-native";
-import {images} from '@/assets/images/images'
-import {LinearGradient} from "expo-linear-gradient";
+import { images } from '@/assets/images/images';
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import { useEffect } from "react";
+import { Image, View } from "react-native";
+
 
 export default function Home() {
   const router = useRouter();
@@ -10,7 +11,7 @@ export default function Home() {
   useEffect(() => {
     const timer = setTimeout(() => {
       // Using router.push() to navigate to dashboard
-      router.replace('/teacher'); // Change this to your actual dashboard route
+      router.replace('/signin'); // Change this to your actual dashboard route
       // or use router.replace('/dashboard') if you don't want user to go back
     },500); // 5000ms = 5 seconds
 
