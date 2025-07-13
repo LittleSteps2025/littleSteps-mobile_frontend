@@ -1,7 +1,7 @@
 import { images } from '@/assets/images/images';
 import CustomAlert from '@/components/CustomAlert';
 import { useCustomAlert } from '@/hooks/useCustomAlert';
-import { API_BASE_URL } from '@/utility';
+import { API_BASE_URL } from '../../utility/config';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -328,7 +328,7 @@ export default function CreateAccountWithValidation() {
               </View>
               <View className="px-5 pb-8 items-end">
             <View className="flex-row items-center">
-              <TouchableOpacity onPress={() => router.push('/(tabs)/forgot_password')}>
+              <TouchableOpacity onPress={() => router.push('/teacher/forgot_password')}>
                 <Text className="text-base text-purple-600 font-semibold">
                   Forgot password ?
                 </Text>
