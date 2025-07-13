@@ -15,5 +15,5 @@ export const API_BASE_URL =
 
         //pramodiIp
 
-        : "http://10.47.127.74:5001"; 
+        // : "http://10.47.127.74:5001"; 
 

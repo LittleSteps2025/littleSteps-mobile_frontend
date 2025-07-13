@@ -328,7 +328,7 @@ export default function CreateAccountWithValidation() {
               </View>
               <View className="px-5 pb-8 items-end">
             <View className="flex-row items-center">
-              <TouchableOpacity onPress={() => router.push('/(tabs)/forgot_password')}>
+              <TouchableOpacity onPress={() => router.push('/teacher/forgot_password')}>
                 <Text className="text-base text-purple-600 font-semibold">
                   Forgot password ?
                 </Text>
