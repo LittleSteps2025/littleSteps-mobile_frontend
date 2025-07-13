@@ -156,7 +156,7 @@ export default function CreateAccountWithValidation() {
     
     try {
       // Call parent login API
-      const response = await fetch(`${API_BASE_URL}/teachers/teacherLogin`, {
+      const response = await fetch(`${API_BASE_URL}/api/teachers/teacherLogin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
