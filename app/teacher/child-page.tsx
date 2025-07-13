@@ -77,7 +77,7 @@ const ChildPage: React.FC = () => {
 
     setSaving(true);
     try {
-      await axios.put(`${API_BASE_URL}/api/child/${child.child_id}/notes`, {
+      await axios.put( `${API_BASE_URL}/api/child/${child.child_id}/notes`, {
         emergency_notes: emergencyNotes,
       });
       Alert.alert('Success', 'Emergency notes updated successfully.');
