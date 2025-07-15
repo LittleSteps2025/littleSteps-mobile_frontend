@@ -1,10 +1,14 @@
+import { images } from '@/assets/images/images';
 import CustomAlert from '@/components/CustomAlert';
-import { API_CONFIG, apiRequest } from '@/config/api';
+import { useUser } from '@/contexts/UserContext';
+import { useCustomAlert } from '@/hooks/useCustomAlert';
+import { API_BASE_URL } from '@/utility';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -15,6 +19,30 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+
+// Safe JSON parsing function
+const safeJsonParse = async (response: Response) => {
+  const text = await response.text();
+
+  if (!text || text.trim() === "") {
+    throw new Error("Empty response from server");
+  }
+
+  // Check if response starts with HTML
+  if (text.trim().startsWith("<")) {
+    throw new Error(
+      "Server returned HTML instead of JSON. Check if the endpoint exists."
+    );
+  }
+
+  try {
+    return JSON.parse(text);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (error) {
+    console.error("Failed to parse JSON:", text);
+    throw new Error("Invalid JSON response from server");
+  }
+};
 
 // Define types for better type safety
 type FormData = {
@@ -35,6 +63,8 @@ type TouchedFields = {
 
 export default function CreateAccountWithValidation() {
   const router = useRouter();
+  const { login } = useUser();
+  const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
   
   // Form state
   const [formData, setFormData] = useState<FormData>({
@@ -50,37 +80,6 @@ export default function CreateAccountWithValidation() {
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState<TouchedFields>({});
 
-  // Custom Alert State
-  const [customAlert, setCustomAlert] = useState({
-    visible: false,
-    type: 'success' as 'success' | 'error',
-    title: '',
-    message: '',
-    showCancelButton: false,
-    onConfirm: undefined as (() => void) | undefined
-  });
-
-  const showCustomAlert = (
-    type: 'success' | 'error',
-    title: string,
-    message: string,
-    showCancelButton: boolean = false,
-    onConfirm?: () => void
-  ) => {
-    setCustomAlert({
-      visible: true,
-      type,
-      title,
-      message,
-      showCancelButton,
-      onConfirm
-    });
-  };
-
-  const hideCustomAlert = () => {
-    setCustomAlert(prev => ({ ...prev, visible: false }));
-  };
-
   // Validation rules
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -91,11 +90,11 @@ export default function CreateAccountWithValidation() {
 
   const validatePassword = (password: string) => {
     if (!password) return 'Password is required';
-    if (password.length < 8) return 'Password must be at least 8 characters';
-    if (!/(?=.*[a-z])/.test(password)) return 'Password must contain at least one lowercase letter';
-    if (!/(?=.*[A-Z])/.test(password)) return 'Password must contain at least one uppercase letter';
-    if (!/(?=.*\d)/.test(password)) return 'Password must contain at least one number';
-    if (!/(?=.*[@$!%*?&])/.test(password)) return 'Password must contain at least one special character';
+    // if (password.length < 8) return 'Password must be at least 8 characters';
+    // if (!/(?=.*[a-z])/.test(password)) return 'Password must contain at least one lowercase letter';
+    // if (!/(?=.*[A-Z])/.test(password)) return 'Password must contain at least one uppercase letter';
+    // if (!/(?=.*\d)/.test(password)) return 'Password must contain at least one number';
+    // if (!/(?=.*[@$!%*?&])/.test(password)) return 'Password must contain at least one special character';
     return null;
   };
 
@@ -179,31 +178,145 @@ export default function CreateAccountWithValidation() {
     setIsLoading(true);
     
     try {
-      // Call parent login API
-      const response = await apiRequest(API_CONFIG.ENDPOINTS.PARENT_LOGIN, {
+      console.log('Attempting login with email:', formData.email);
+      console.log('Making request to:', `${API_BASE_URL}/parent/parent-login`);
+      
+      // Call parent login API with safe JSON parsing
+      const response = await fetch(`${API_BASE_URL}/parent/parent-login`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           email: formData.email,
           password: formData.password
         })
       });
+
+      console.log('Login response status:', response.status);
+      console.log('Login response ok:', response.ok);
       
-      // Success - store user data if needed
-      console.log('Login successful:', response);
+      // Use safe JSON parsing
+      const data = await safeJsonParse(response);
+      console.log('Login response data:', data);
       
-      showCustomAlert('success', 'Success', 'Login successful!', false, () => {
-        router.push('/ParentDashboard');
-      });
+      // Debug: Log all success conditions
+      console.log('=== SUCCESS CONDITION DEBUG ===');
+      console.log('response.ok:', response.ok);
+      console.log('response.status:', response.status);
+      console.log('data.status:', data.status);
+      console.log('data.success:', data.success);
+      console.log('data.message:', data.message);
+      
+      // Check for success - be more flexible with success conditions
+      const isSuccess = response.ok || 
+                       response.status === 200 || 
+                       data.status === 200 || 
+                       data.success === true ||
+                       data.message === 'Login successful';
+      
+      console.log('isSuccess calculated as:', isSuccess);
+      
+      if (isSuccess) {
+        // Success - store user data and token in session
+        console.log('Login successful:', data);
+        
+        // Extract user data from response - Handle nested data structure
+        const backendUser = data.data?.user || data.user || data;
+        const userData = {
+          id: backendUser?.id || backendUser?.parentId || '',
+          email: backendUser?.email || formData.email,
+          fullName: backendUser?.name || backendUser?.fullName || '',
+          phone: backendUser?.phone || '',
+          address: backendUser?.address || '',
+          profileImage: backendUser?.image || backendUser?.profileImage || '',
+          children: backendUser?.children || [],
+          role: 'parent' as const
+        };
+        
+        console.log('=== USER DATA EXTRACTION DEBUG ===');
+        console.log('Extracted userData:', userData);
+        
+        // Extract token from response - We know it's in data.data.token
+        const token = data.data?.token || 
+                     data.token || 
+                     data.authToken || 
+                     data.accessToken || 
+                     data.jwt || 
+                     data.access_token ||
+                     data.data?.authToken ||
+                     data.data?.accessToken ||
+                     data.data?.jwt ||
+                     '';
+        
+        console.log('=== TOKEN EXTRACTION DEBUG ===');
+        console.log('Token found:', token ? 'YES' : 'NO');
+        console.log('Token length:', token.length);
+        console.log('Token preview:', token.substring(0, 50) + '...');
+        
+        if (token) {
+          console.log('=== STORING SESSION DATA ===');
+          
+          // Store session data using UserContext
+          await login(userData, token);
+          
+          console.log('✅ Session stored successfully');
+          
+          showCustomAlert('success', 'Success', 'Login successful!', false, () => {
+            router.push('/ParentDashboard');
+          });
+        } else {
+          console.error('❌ NO TOKEN FOUND IN RESPONSE');
+          console.error('Available fields:', Object.keys(data));
+          if (data.data) {
+            console.error('Available data fields:', Object.keys(data.data));
+          }
+          
+          // Store user data without token (temporary solution)
+          await login(userData, 'temporary-session-' + Date.now());
+          
+          showCustomAlert('success', 'Login Successful', 'Logged in successfully! Note: Some features may be limited.', false, () => {
+            router.push('/ParentDashboard');
+          });
+        }
+        
+        return;
+      } else {
+        // Handle login failure
+        console.error('Login failed:', data);
+        throw new Error(data.message || 'Login failed');
+      }
     } catch (error: any) {
+      console.error('Login error:', error);
+      
+      // Don't show error if the message indicates success
+      if (error.message && error.message.toLowerCase().includes('login successful')) {
+        console.log('Ignoring success message thrown as error');
+        showCustomAlert('success', 'Success', 'Login successful!', false, () => {
+          router.push('/ParentDashboard');
+        });
+        return;
+      }
+      
       // Handle different error scenarios
       let errorMessage = 'Failed to login. Please try again.';
       
-      if (error.message === 'Parent not found') {
-        errorMessage = 'No account found with this email address.';
-      } else if (error.message === 'Invalid password') {
-        errorMessage = 'Incorrect password. Please try again.';
-      } else if (error.message === 'Account not verified') {
-        errorMessage = 'Please verify your email address before logging in.';
+      if (error instanceof Error) {
+        if (error.message.includes('HTML instead of JSON')) {
+          errorMessage = 'Server configuration error. The login endpoint may not exist. Please contact support.';
+        } else if (error.message.includes('Empty response')) {
+          errorMessage = 'No response from server. Please check your internet connection.';
+        } else if (error.message.includes('Invalid JSON')) {
+          errorMessage = 'Server returned invalid data. Please try again or contact support.';
+        } else if (error.message === 'Parent not found') {
+          errorMessage = 'No account found with this email address.';
+        } else if (error.message === 'Invalid password') {
+          errorMessage = 'Incorrect password. Please try again.';
+        } else if (error.message === 'Account not verified') {
+          errorMessage = 'Please verify your email address before logging in.';
+        } else {
+          errorMessage = error.message;
+        }
       }
       
       showCustomAlert('error', 'Login Error', errorMessage);
@@ -212,21 +325,63 @@ export default function CreateAccountWithValidation() {
     }
   };
 
-  // Get password strength
-  const getPasswordStrength = (password: string) => {
-    let strength = 0;
-    if (password.length >= 8) strength++;
-    if (/(?=.*[a-z])/.test(password)) strength++;
-    if (/(?=.*[A-Z])/.test(password)) strength++;
-    if (/(?=.*\d)/.test(password)) strength++;
-    if (/(?=.*[@$!%*?&])/.test(password)) strength++;
-    
-    return strength;
-  };
+  // Debug function to test API connectivity (remove in production)
+  // const testApiConnectivity = async () => {
+  //   setIsLoading(true);
+  //   try {
+  //     console.log('=== API CONNECTIVITY TEST ===');
+  //     console.log('API Base URL:', API_BASE_URL);
+  //     console.log('Testing endpoint:', `${API_BASE_URL}/api/parents/parent-login`);
+      
+  //     const response = await fetch(`${API_BASE_URL}/api/parents/parent-login`, {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({
+  //         email: 'test@test.com',
+  //         password: 'testpassword'
+  //       })
+  //     });
 
-  const passwordStrength = getPasswordStrength(formData.password);
-  const strengthColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#16a34a'];
-  const strengthLabels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
+  //     console.log('Test response status:', response.status);
+  //     console.log('Test response headers:', response.headers);
+      
+  //     const responseText = await response.text();
+  //     console.log('Raw response:', responseText);
+      
+  //     showCustomAlert(
+  //       'success',
+  //       'API Test Result',
+  //       `Status: ${response.status}\nResponse: ${responseText.substring(0, 100)}...`
+  //     );
+  //   } catch (error: any) {
+  //     console.error('API test error:', error);
+  //     showCustomAlert(
+  //       'error',
+  //       'API Test Failed',
+  //       `Error: ${error.message}`
+  //     );
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
+  // Get password strength
+  // const getPasswordStrength = (password: string) => {
+  //   let strength = 0;
+  //   if (password.length >= 8) strength++;
+  //   if (/(?=.*[a-z])/.test(password)) strength++;
+  //   if (/(?=.*[A-Z])/.test(password)) strength++;
+  //   if (/(?=.*\d)/.test(password)) strength++;
+  //   if (/(?=.*[@$!%*?&])/.test(password)) strength++;
+    
+  //   return strength;
+  // };
+
+  // const passwordStrength = getPasswordStrength(formData.password);
+  // const strengthColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#16a34a'];
+  // const strengthLabels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
 
   return (
     <LinearGradient
@@ -260,7 +415,10 @@ export default function CreateAccountWithValidation() {
               <Text className="text-base text-gray-500 mb-8">
                 Excited to have you on board!
               </Text>
-
+              <View className=' items-center justify-center'>
+                <Image source={images.parents} className='w-40 h-40' />
+              </View>
+              
               {/* Email Input */}
               <Text className="text-base text-gray-700 mb-2 font-medium">
                 Email
@@ -352,7 +510,7 @@ export default function CreateAccountWithValidation() {
           </View>
               
               {/* Password Strength Indicator */}
-              {formData.password.length > 0 && (
+              {/* {formData.password.length > 0 && (
                 <View className="mb-2">
                   <View className="flex-row items-center justify-between mb-1">
                     <Text className="text-sm text-gray-600">Password Strength</Text>
@@ -377,7 +535,7 @@ export default function CreateAccountWithValidation() {
                     ))}
                   </View>
                 </View>
-              )}
+              )} */}
               
               {errors.password && touched.password && (
                 <Text className="text-red-500 text-sm mb-4 ml-1">
@@ -387,7 +545,7 @@ export default function CreateAccountWithValidation() {
 
 
               {/* Password Requirements */}
-              <View className="mb-8 p-4 bg-white/50 rounded-xl">
+              {/* <View className="mb-8 p-4 bg-white/50 rounded-xl">
                 <Text className="text-sm font-medium text-gray-700 mb-2">
                   Password Requirements:
                 </Text>
@@ -411,13 +569,13 @@ export default function CreateAccountWithValidation() {
                     </Text>
                   </View>
                 ))}
-              </View>
+              </View> */}
 
               {/* Create Account Button */}
               <TouchableOpacity
                 onPress={handleCreateAccount}
                 disabled={isLoading}
-                className={`rounded-3xl py-4 items-center mb-8 ${
+                className={`rounded-3xl py-4 items-center mb-4 ${
                   isLoading ? 'bg-purple-400' : 'bg-purple-600'
                 }`}
                 style={{
@@ -443,7 +601,7 @@ export default function CreateAccountWithValidation() {
               </Text>
               <TouchableOpacity onPress={() => router.push('/welcome')}>
                 <Text className="text-base text-purple-600 font-semibold">
-                  Create Account
+                  Verify Account
                 </Text>
               </TouchableOpacity>
             </View>

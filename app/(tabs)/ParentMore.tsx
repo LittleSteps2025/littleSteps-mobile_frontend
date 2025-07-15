@@ -294,6 +294,7 @@ export default function ParentMore() {
   const [isSupportModalVisible, setIsSupportModalVisible] = useState(false);
   const [isPrivacyModalVisible, setIsPrivacyModalVisible] = useState(false);
         {/* Help & Support Modal */}
+        // eslint-disable-next-line no-unused-expressions
         <Modal
           visible={isSupportModalVisible}
           animationType="slide"
@@ -321,12 +322,13 @@ export default function ParentMore() {
                   <Text className="text-lg font-semibold text-purple-700">support@littlesteps.com</Text>
                 </View>
               </View>
-              <Text className="text-sm text-gray-500">We are here to help you with any questions or concerns regarding your child's care and experience at our daycare centre.</Text>
+              <Text className="text-sm text-gray-500">We are here to help you with any questions or concerns regarding your child&apos;s care and experience at our daycare centre.</Text>
             </View>
           </View>
         </Modal>
 
         {/* Privacy Policy Modal */}
+        // eslint-disable-next-line no-unused-expressions
         <Modal
           visible={isPrivacyModalVisible}
           animationType="slide"
@@ -1016,7 +1018,7 @@ export default function ParentMore() {
                   <Text className="text-lg font-semibold text-purple-700">support@littlesteps.com</Text>
                 </View>
               </View>
-              <Text className="text-sm text-gray-500">We are here to help you with any questions or concerns regarding your child's care and experience at our daycare centre.</Text>
+              <Text className="text-sm text-gray-500">We are here to help you with any questions or concerns regarding your child&apos;s care and experience at our daycare centre.</Text>
             </View>
           </View>
         </Modal>

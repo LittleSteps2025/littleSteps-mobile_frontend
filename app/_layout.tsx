@@ -1,5 +1,6 @@
+import { UserProvider } from "@/contexts/UserContext";
+import "@/global.css";
 import { Stack } from "expo-router";
-import "@/global.css"
 
 export default function RootLayout() {
   // return <Stack>
@@ -9,5 +10,9 @@ export default function RootLayout() {
   //   />
   // </Stack>
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <UserProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </UserProvider>
+  );
 }

@@ -1,9 +1,12 @@
 import { images } from "@/assets/images/images";
 import CustomAlert from "@/components/CustomAlert";
-import { API_BASE_URL } from "@/utility";
+import { auth } from "@/config/firebase";
+import { API_BASE_URL } from "../../utility/config";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { navigate } from "expo-router/build/global-state/routing";
+import { sendPasswordResetEmail } from "firebase/auth";
 import React, { useState } from "react";
 import {
   Image,
@@ -107,7 +110,7 @@ function ForgotPassword() {
 
   const checkEmailExists = async (email: string): Promise<boolean> => {
     try {
-      const checkResponse = await fetch(`${API_BASE_URL}/parents/get-verified-parent`, {
+      const checkResponse = await fetch(`${API_BASE_URL}/users/check-email`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -218,49 +221,35 @@ function ForgotPassword() {
         return;
       }
 
-      // Generate and send 4-digit code
-      console.log('Generating password reset code for:', formData.email);
+      // Send password reset email
+      await sendPasswordResetEmail(auth, formData.email);
+      showCustomAlert(
+        "success",
+        "Reset Link Sent",
+        "A password reset link has been sent to your email. Please check your inbox and follow the instructions to reset your password."
+      );
+      // Optionally, navigate to a different screen or reset the form
+      navigate("/teacher/signin")
+    } catch (firebaseError: any) {
+      console.error("Firebase password reset error:", firebaseError);
       
-      const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email
-        })
-      });
-
-      console.log('Reset code response status:', response.status);
+      let errorMessage = "Failed to send password reset email. Please try again later.";
       
-      const data = await safeJsonParse(response);
-      console.log('Reset code response data:', data);
-      
-      if (response.ok && (data.status === 200 || data.success)) {
-        showCustomAlert(
-          "success",
-          "Code Sent",
-          "A 4-digit verification code has been sent to your email. Please check your inbox.",
-          false,
-          () => router.push(`/restore_password?email=${formData.email}`)
-        );
-      } else {
-        throw new Error(data.message || 'Failed to send reset code');
-      }
-    } catch (error: any) {
-      console.error("Password reset error:", error);
-      
-      let errorMessage = "Failed to send password reset code. Please try again later.";
-      
-      if (error instanceof Error) {
-        if (error.message.includes('HTML instead of JSON')) {
-          errorMessage = 'Server configuration error. The reset endpoint may not exist. Please contact support.';
-        } else if (error.message.includes('Empty response')) {
-          errorMessage = 'No response from server. Please check your internet connection.';
-        } else if (error.message.includes('Invalid JSON')) {
-          errorMessage = 'Server returned invalid data. Please try again or contact support.';
-        } else {
-          errorMessage = error.message;
+      // Handle specific Firebase errors
+      if (firebaseError?.code) {
+        switch (firebaseError.code) {
+          case "auth/user-not-found":
+            errorMessage = "No user found with this email address.";
+            break;
+          case "auth/invalid-email":
+            errorMessage = "Invalid email address format.";
+            break;
+          case "auth/network-request-failed":
+            errorMessage = "Network error. Please check your internet connection.";
+            break;
+          case "auth/too-many-requests":
+            errorMessage = "Too many requests. Please wait a moment before trying again.";
+            break;
         }
       }
       

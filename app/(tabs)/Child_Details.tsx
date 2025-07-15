@@ -1,22 +1,22 @@
 // app/child-details.tsx
+import { images } from '@/assets/images/images';
+import { useUser } from '@/contexts/UserContext';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
+
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StatusBar,
+  ColorValue,
+  Image,
+  Modal,
   SafeAreaView,
   ScrollView,
-  Image,
-  ColorValue,
-  Modal
-
-
+  StatusBar,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { images } from '@/assets/images/images';
 
 export default function ChildDetailsForm() {
   const router = useRouter();
@@ -36,13 +36,97 @@ export default function ChildDetailsForm() {
   };
 
   // Static data for display
-  const childData = {
-    firstName: params.Name || 'Pramodi Peshila',
-    birthDate: '05/07/2001',
-    phoneNumber: '0711234567',
-    emergencyNumber: '0777654321',
-    homeAddress: '123 Main St, Colombo',
+  
+  const { user } = useUser();
+
+  // Find the specific child from session based on ID in params
+  const findChildFromSession = () => {
+    // First check if we have an ID in params
+    const childId = params.id?.toString();
+    
+    console.log("=== DETAILED DEBUGGING ===");
+    console.log("Looking for child with ID:", childId);
+    console.log("Children in session:", user?.children?.length || 0);
+    console.log("Full user data:", JSON.stringify(user, null, 2));
+    
+    // If we have children in session, let's check them
+    if (user?.children && user.children.length > 0) {
+      console.log("All children in session:");
+      user.children.forEach((child, index) => {
+        console.log(`Child ${index}:`, {
+          id: child.id,
+          name: child.name,
+          dateOfBirth: child.dateOfBirth,
+          emergencyContact: child.emergencyContact
+        });
+      });
+      
+      // If we have an ID and it's not empty, try to find the child
+      if (childId && childId !== '' && childId !== 'undefined') {
+        const foundChild = user.children.find(child => 
+          child.id?.toString() === childId
+        );
+        
+        if (foundChild) {
+          console.log("✅ Found child by ID:", foundChild.name);
+          return {
+            firstName: foundChild.name || 'N/A',
+            birthDate: foundChild.dateOfBirth ? 
+              new Date(foundChild.dateOfBirth).toLocaleDateString() : 'N/A',
+            phoneNumber: user?.phone || 'N/A',
+            emergencyNumber: foundChild.emergencyContact || 'N/A',
+            homeAddress: user?.address || 'N/A',
+            profileImage: (foundChild.profileImage && foundChild.profileImage !== 'a' && foundChild.profileImage.startsWith('http')) 
+              ? foundChild.profileImage 
+              : null
+          };
+        }
+        console.log("❌ Child not found with ID:", childId);
+      }
+      
+      // If no valid ID or child not found by ID, use first child
+      console.log("🔄 Using first child in session");
+      const firstChild = user.children[0];
+      return {
+        firstName: firstChild.name || 'N/A',
+        birthDate: firstChild.dateOfBirth ? 
+          new Date(firstChild.dateOfBirth).toLocaleDateString() : 'N/A',
+        phoneNumber: user?.phone || 'N/A',
+        emergencyNumber: firstChild.emergencyContact || user?.phone || 'N/A',
+        homeAddress: user?.address || 'N/A',
+        profileImage: (firstChild.profileImage && firstChild.profileImage !== 'a' && firstChild.profileImage.startsWith('http')) 
+          ? firstChild.profileImage 
+          : null
+      };
+    }
+    
+    // If no child found with ID, use params directly
+    if (params && Object.keys(params).length > 0) {
+      console.log("📄 Using child data from params");
+      return {
+        firstName: params.name || params.firstName || 'N/A',
+        birthDate: params.birthDate || params.dob || 'N/A',
+        phoneNumber: params.phoneNumber || 'N/A',
+        emergencyNumber: params.emergencyNumber || 'N/A',
+        homeAddress: params.homeAddress || 'N/A',
+        profileImage: undefined 
+      };
+    }
+    
+    // No data available
+    console.log("❌ No child data available - using defaults");
+    return {
+      firstName: 'No Child Data',
+      birthDate: 'Not available',
+      phoneNumber: 'Not available',
+      emergencyNumber: 'Not available',
+      homeAddress: 'Not available',
+      profileImage: undefined
+    };
   };
+  
+  // Get child details from session
+  const childData = findChildFromSession();
 
   const navigationItems = [
 
@@ -72,7 +156,7 @@ export default function ChildDetailsForm() {
       description: 'Daily activity summaries',
       icon: images.report,
       color: ['#10b981', '#06b6d4'],
-      route: '/' as const,
+      route: '/viewReport' as const,
     },
     {
       title: 'Payment Details',
@@ -83,13 +167,25 @@ export default function ChildDetailsForm() {
     },
   ] as const;
 
+  // Debug: Log session data for child details
+  React.useEffect(() => {
+    if (user) {
+      console.log("🔍 CHILD DETAILS SESSION DATA:");
+      console.log("User ID:", user.id);
+      console.log("User Name:", user.fullName);
+      console.log("Children in session:", user.children?.length || 0);
+      console.log("Current params:", params);
+      console.log("Selected child data:", childData);
+    }
+  }, [user, params, childData]);
+
   return (
     <LinearGradient
       colors={['#DFC1FD', '#f3e8ff', '#F5ECFE', '#F5ECFE', '#e9d5ff', '#DFC1FD']}
       start={[0, 0]}
       end={[1, 1]}
       className="flex-1 "
-    >
+    > 
       <StatusBar barStyle="dark-content" backgroundColor="#DFC1FD" />
       <SafeAreaView className="flex-1">
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -124,7 +220,10 @@ export default function ChildDetailsForm() {
                   }}
                 >
                   <Image
-                    source={require('@/assets/images/kid2.jpg')} // Replace with your image source
+                    source={childData.profileImage ? 
+                      { uri: childData.profileImage } : 
+                      images.Kid1
+                    }
                     className="w-full h-full"
                     style={{ borderRadius: 64, borderWidth: 4, borderColor: '#7c3aed' }}
                   />
@@ -260,7 +359,10 @@ export default function ChildDetailsForm() {
                   }}
                 >
                   <Image
-                    source={images.Kid1} // Replace with your image source
+                    source={childData.profileImage ? 
+                      { uri: childData.profileImage } : 
+                      images.Kid1
+                    }
                     className="w-full h-full"
                     style={{ borderRadius: 40, borderWidth: 2, borderColor: '#7c3aed' }}
                   />
