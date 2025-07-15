@@ -130,7 +130,7 @@ export default function CustomAlert({
             )}
 
             <TouchableOpacity
-onPress={() => {
+              onPress={() => {
   onClose();    // Always close the alert first
   if (onConfirm) onConfirm();  // Then call confirm action if exists
 }}
