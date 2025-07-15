@@ -16,6 +16,13 @@ import axios from 'axios';
 import { API_BASE_URL } from '../../utility/config';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
+  import { auth } from '../../config/firebase'; // adjust import path
+import { getIdToken } from 'firebase/auth';
+
+
+
+
+
 interface EmergencyContact {
   name: string;
   relationship: string;
@@ -27,9 +34,9 @@ interface Child {
   name: string;
   age: number;
   group_name: string;
-  contact_no: string;
+  parent_phone: string;
   gender: 'male' | 'female';
-  birthday: string;
+  dob: string;
   address: string;
   emergency_notes: string;
   emergency_contact: EmergencyContact;
@@ -45,9 +52,9 @@ const ChildPage: React.FC = () => {
 
   const getColorScheme = (gender: string) => {
     switch (gender) {
-      case 'male':
-        return { ring: '#60A5FA', accent: '#2563EB' };
       case 'female':
+        return { ring: '#60A5FA', accent: '#2563EB' };
+      case 'male':
         return { ring: '#F472B6', accent: '#DB2777' };
       default:
         return { ring: '#C084FC', accent: '#9333EA' };
@@ -65,32 +72,129 @@ const ChildPage: React.FC = () => {
       setLoading(false);
     }
   };
+useEffect(() => {
+  if (childId) {
+    fetchChild();
+  }
+}, [childId]);
+
+useEffect(() => {
+  const user = auth.currentUser;
+  if (user) {
+    console.log('Current user at mount:', user.uid);
+  } else {
+    console.log('No current user at mount');
+  }
+}, []);
 
   useEffect(() => {
-    if (childId) {
-      fetchChild();
+  const unsubscribe = auth.onAuthStateChanged((user) => {
+    if (user) {
+      console.log('User signed in:', user.uid);
+    } else {
+      console.log('User not signed in');
     }
-  }, [childId]);
+  });
 
-  const handleSave = async () => {
-    if (!child) return;
+  return unsubscribe; // Cleanup on unmount
+}, []);
 
-    setSaving(true);
+
+
+
+  
+  // const handleSave = async () => {
+  //   if (!child) return;
+
+  //   setSaving(true);
+  //   try {
+  //     await axios.post( `${API_BASE_URL}/api/child/${child.child_id}/notes`, {
+  //       emergency_notes: emergencyNotes,
+  //     });
+  //     Alert.alert('Success', 'Emergency notes updated successfully.');
+  //     setChild({ ...child, emergency_notes: emergencyNotes });
+  //   } catch (error) {
+  //     Alert.alert('Error', 'Failed to update emergency notes.');
+  //   } finally {
+  //     setSaving(false);
+  //   }
+  // };
+
+
+
+
+
+
+
+
+
+const handleSave = async () => {
+  console.log('asa');
+  if (!child) {
+    console.log('No child found, returning');
+    return;
+  }
+
+  console.log('Child exists:', child.child_id);
+
+  const user = auth.currentUser;
+  if (!user) {
+    console.log('No user found');
+    Alert.alert('Error', 'User not authenticated');
+    return;
+  }
+  console.log('User found:', user.uid);
+
+  setSaving(true);
+  console.log('Saving set to true');
+
+  try {
+    let token;
     try {
-      await axios.put( `${API_BASE_URL}/api/child/${child.child_id}/notes`, {
-        emergency_notes: emergencyNotes,
-      });
-      Alert.alert('Success', 'Emergency notes updated successfully.');
-      setChild({ ...child, emergency_notes: emergencyNotes });
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update emergency notes.');
-    } finally {
+      token = await getIdToken(user);
+      console.log('Firebase Token:', token);
+      Alert.alert('handleSave called');
+    } catch (tokenError) {
+      console.error('Error getting token:', tokenError);
+      Alert.alert('Error', 'Failed to get auth token.');
       setSaving(false);
+      return;  // stop further execution
     }
-  };
+
+    console.log('Child IDdddddd');
+
+    await axios.post(
+      `${API_BASE_URL}/api/child/${child.child_id}/notes`,
+      { emergency_notes: emergencyNotes },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    console.log('aaaaaaaaaa:');
+    Alert.alert('Success', 'Emergency notes updated successfully.');
+    setChild({ ...child, emergency_notes: emergencyNotes });
+  } catch (error) {
+    console.error('Error saving emergency note:', error);
+    Alert.alert('Error', 'Failed to update emergency notes.');
+  } finally {
+    setSaving(false);
+    console.log('Saving set to false');
+  }
+};
+
+
+
+
+
+
+
+
+
 
   const handleCallContact = () => {
-    Linking.openURL(`tel:${child?.contact_no}`);
+    Linking.openURL(`tel:${child?.parent_phone}`);
   };
 
   if (loading || !child) {
