@@ -1,7 +1,7 @@
 import { images } from "@/assets/images/images";
 import CustomAlert from "@/components/CustomAlert";
 import { auth } from "@/config/firebase";
-import { API_BASE_URL } from "@/utility";
+import { API_BASE_URL } from "../../utility/config";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
