@@ -130,7 +130,10 @@ export default function CustomAlert({
             )}
 
             <TouchableOpacity
-              onPress={onConfirm || onClose}
+onPress={() => {
+  onClose();    // Always close the alert first
+  if (onConfirm) onConfirm();  // Then call confirm action if exists
+}}
               className={`py-3 rounded-xl ${showCancelButton ? 'flex-1' : 'w-full'}`}
               style={{
                 backgroundColor: config.buttonColor,
