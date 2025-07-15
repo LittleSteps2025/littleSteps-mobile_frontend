@@ -72,7 +72,7 @@ export default function ChildDetailsForm() {
       description: 'Daily activity summaries',
       icon: images.report,
       color: ['#10b981', '#06b6d4'],
-      route: '/' as const,
+      route: '/viewReport' as const,
     },
     {
       title: 'Payment Details',
