@@ -11,18 +11,19 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
+import { Slot } from 'expo-router';
 
 import { API_BASE_URL } from "../../utility/config"; // Adjust the import path as necessary
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function Layout() {
-  return (
-    <SafeAreaProvider>
-      <Slot />
-    </SafeAreaProvider>
-  );
-}
+// export default function Layout() {
+//   return (
+//     <SafeAreaProvider>
+//       <Slot/>
+//     </SafeAreaProvider>
+//   );
+// }
 
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
@@ -41,6 +42,11 @@ import {
   LogOut,
   Users,
 } from "lucide-react-native";
+import { auth } from '../../config/firebase'; // your firebase config
+
+
+
+
 
 interface ReportField {
   id: string;
@@ -268,7 +274,7 @@ export default function DailyReportForm() {
 
   //meka weda
 const saveProgress = async () => {
-    const statusUpdates = {};
+const statusUpdates: { [key: string]: number | string } = {};
 
     reportFields.forEach((field) => {
       statusUpdates[field.id] = field.completed ? 1 : 0;
@@ -311,6 +317,55 @@ const saveProgress = async () => {
 
 
 
+//   const handleSubmit = async () => {
+//     // Validate required fields
+//     if (!validateForm()) return;
+
+//     // ✅ Check for checkout details
+//     if (!checkoutPerson || !checkoutTime) {
+//       Alert.alert(
+//         "Incomplete Checkout Details",
+//         "Please fill out both checkout person and checkout time."
+//       );
+//       return;
+//     }
+
+// const statusUpdates: { [key: string]: number } = {};
+//     reportFields.forEach((field) => {
+//       statusUpdates[field.id] = field.completed ? 1 : 0;
+//     });
+
+//     const payload = {
+//       statusUpdates,
+//       checkoutPerson,
+//       checkoutTime,
+//       progress: Math.round(progressPercentage),
+//       dailySummary,
+//       report_id,
+//     };
+
+//     try {
+//       const response = await fetch(
+//         `${API_BASE_URL}/api/reports/${report_id}/submit`,
+//         {
+//           method: "PUT",
+//           headers: { "Content-Type": "application/json" },
+//           body: JSON.stringify(payload),
+//         }
+//       );
+
+//       if (response.ok) {
+//         Alert.alert("Progress Saved", "Report submitted");
+//         setIsSubmitted(true);
+//         router.back();
+//       } else {
+//         throw new Error("Failed to submit report");
+//       }
+//     } catch (error) {
+//       console.error("Submit error:", error);
+//       Alert.alert("Error", "Failed to submit report.");
+//     }
+//   };
 
 
 
@@ -319,20 +374,46 @@ const saveProgress = async () => {
 
 
 
-  const handleSubmit = async () => {
-    // Validate required fields
-    if (!validateForm()) return;
 
-    // ✅ Check for checkout details
-    if (!checkoutPerson || !checkoutTime) {
-      Alert.alert(
-        "Incomplete Checkout Details",
-        "Please fill out both checkout person and checkout time."
-      );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const handleSubmit = async () => {
+  console.log('llll');
+
+  if (!checkoutPerson || !checkoutTime) {
+    Alert.alert("Incomplete Checkout Details", "Please fill out both checkout person and checkout time.");
+    console.log('Incomplete Checkout Details');
+    return;
+  }
+
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      console.log('User not found');
+      Alert.alert("Error", "You must be logged in to submit the report.");
       return;
     }
 
-    const statusUpdates = {};
+    const idToken = await user.getIdToken();
+
+const statusUpdates: { [key: string]: number } = {};
     reportFields.forEach((field) => {
       statusUpdates[field.id] = field.completed ? 1 : 0;
     });
@@ -346,28 +427,43 @@ const saveProgress = async () => {
       report_id,
     };
 
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/reports/${report_id}/submit`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
+    const response = await fetch(`${API_BASE_URL}/api/reports/${report_id}/submit`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`,
+      },
+      body: JSON.stringify(payload),
+    });
 
-      if (response.ok) {
-        Alert.alert("Progress Saved", "Report submitted");
-        setIsSubmitted(true);
-        router.back();
-      } else {
-        throw new Error("Failed to submit report");
-      }
-    } catch (error) {
-      console.error("Submit error:", error);
-      Alert.alert("Error", "Failed to submit report.");
+    if (response.ok) {
+      Alert.alert("Progress Saved", "Report submitted");
+      setIsSubmitted(true);
+      router.back();
+    } else {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to submit report");
     }
-  };
+  } catch (error) {
+  console.error("Submit error:", error);
+
+  let errorMessage = "Failed to submit report.";
+
+  if (error instanceof Error) {
+    errorMessage = error.message;
+  }
+
+  Alert.alert("Error", errorMessage);
+}
+};
+
+
+
+
+
+  
+
+  
 
   const validateForm = () => {
     const incompleteRequired = reportFields.filter(

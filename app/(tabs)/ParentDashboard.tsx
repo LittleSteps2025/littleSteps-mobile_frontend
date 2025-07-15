@@ -1,5 +1,3 @@
-// app/(tabs)/dashboard.tsx
-
 import { AuthGuard } from "@/components/AuthGuard";
 import { useUser } from "@/contexts/UserContext";
 import { mockAlerts } from "@/data/mockData";

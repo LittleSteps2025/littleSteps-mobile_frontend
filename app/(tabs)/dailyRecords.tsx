@@ -67,6 +67,7 @@ export default function DailyMealTracker() {
       medicine: mealData.medicine,
       special_note: mealData.special_note,
       date: new Date().toISOString().slice(0, 10),
+      create_date: new Date().toISOString(),
       child_id: 1
   };
 
