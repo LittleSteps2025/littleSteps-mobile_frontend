@@ -1,181 +1,108 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   StatusBar,
   SafeAreaView,
-  StyleSheet,
   ScrollView,
+  StyleSheet,
   Image,
   Modal,
+  Pressable,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Filter, ChevronDown } from "lucide-react-native";
-
-const childrenData = [
-  {
-    id: 1,
-    name: "Emma Johnson",
-    age: 8,
-    gender: "girl",
-    profileImage:
-      "https://images.pexels.com/photos/1462637/pexels-photo-1462637.jpeg",
-    grade: "3rd Grade",
-    school: "Sunshine Elementary",
-    group: "sunshine",
-    package: "weekdays",
-    presentToday: true,
-  },
-  {
-    id: 2,
-    name: "Lucas Martinez",
-    age: 10,
-    gender: "boy",
-    profileImage:
-      "https://images.pexels.com/photos/1416736/pexels-photo-1416736.jpeg",
-    grade: "5th Grade",
-    school: "Riverside Elementary",
-    group: "mood",
-    package: "weekend",
-    presentToday: false,
-  },
-  {
-    id: 3,
-    name: "Sophia Chen",
-    age: 6,
-    gender: "girl",
-    profileImage:
-      "https://images.pexels.com/photos/1462630/pexels-photo-1462630.jpeg",
-    grade: "1st Grade",
-    school: "Meadowbrook Elementary",
-    group: "diamond",
-    package: "weekdays",
-    presentToday: true,
-  },
-];
-
-const packageOptions = [
-  { label: "All Packages", value: "all" },
-  { label: "Weekdays Only", value: "weekdays" },
-  { label: "Weekend Only", value: "weekend" }
-];
-
-const groupOptions = [
-  { label: "All Groups", value: "all" },
-  { label: "Sunshine", value: "sunshine" },
-  { label: "Mood", value: "mood" },
-  { label: "Diamond", value: "diamond" }
-];
-
-type Option = {
-  label: string;
-  value: string;
-};
-
-interface CustomDropdownProps {
-  label: string;
-  options: Option[];
-  selectedValue: string;
-  onValueChange: (value: string) => void;
-  modalVisible: boolean;
-  setModalVisible: (visible: boolean) => void;
-}
-
-const CustomDropdown: React.FC<CustomDropdownProps> = ({
-  label,
-  options,
-  selectedValue,
-  onValueChange,
-  modalVisible,
-  setModalVisible
-}) => {
-  const getSelectedLabel = (options: Option[], value: string): string => {
-    return options.find(option => option.value === value)?.label || "Select";
-  };
-
-
-  return (
-    <View style={styles.filterItem}>
-      <Text style={styles.filterLabel}>{label}</Text>
-      <TouchableOpacity 
-        style={styles.customDropdown}
-onPress={() => setModalVisible(!modalVisible)}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.dropdownText} numberOfLines={1}>
-          {getSelectedLabel(options, selectedValue)}
-        </Text>
-        <ChevronDown size={20} color="#FFFFFF" />
-      </TouchableOpacity>
-      
-     {modalVisible && (
-  <View style={styles.dropdownPopover}>
-    <ScrollView style={styles.optionsList}>
-      {options.map((option) => (
-        <TouchableOpacity
-          key={option.value}
-          style={[
-            styles.optionItem,
-            selectedValue === option.value && styles.selectedOption,
-          ]}
-          onPress={() => {
-            onValueChange(option.value);
-            setModalVisible(false);
-          }}
-        >
-          <Text
-            style={[
-              styles.optionText,
-              selectedValue === option.value && styles.selectedOptionText,
-            ]}
-          >
-            {option.label}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-  </View>
-)}
-
-    </View>
-  );
-};
+import { API_BASE_URL } from "../../../utility/config";
 
 export default function ChildProfiles() {
   const router = useRouter();
+  const [childrenData, setChildrenData] = useState([]);
   const [selectedPackage, setSelectedPackage] = useState("all");
   const [selectedGroup, setSelectedGroup] = useState("all");
-  const [showTodayOnly, setShowTodayOnly] = useState(false);
+  const [packageOptions, setPackageOptions] = useState([
+    { label: "All Packages", value: "all" },
+  ]);
+  const [groupOptions, setGroupOptions] = useState([
+    { label: "All Groups", value: "all" },
+  ]);
   const [packageModalVisible, setPackageModalVisible] = useState(false);
   const [groupModalVisible, setGroupModalVisible] = useState(false);
 
-  const getGenderColors = (gender:String) => {
-    return gender === "girl"
+  useEffect(() => {
+    const fetchFilters = async () => {
+      try {
+        const [pkgRes, grpRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/child/filter/packages`),
+          fetch(`${API_BASE_URL}/api/child/filter/groups`),
+        ]);
+
+        const [pkgData, grpData] = await Promise.all([
+          pkgRes.json(),
+          grpRes.json(),
+        ]);
+
+        setPackageOptions([
+          { label: "All Packages", value: "all" },
+          ...pkgData.map((p: { name: string }) => ({
+            label: p.name,
+            value: p.name,
+          })),
+        ]);
+
+        setGroupOptions([
+          { label: "All Groups", value: "all" },
+          ...grpData.map((g: { name: string }) => ({
+            label: g.name,
+            value: g.name,
+          })),
+        ]);
+      } catch (error) {
+        console.error("Failed to fetch package or group filters", error);
+      }
+    };
+    fetchFilters();
+  }, []);
+
+  useEffect(() => {
+    const fetchChildren = async () => {
+      try {
+        const month = new Date().getMonth() + 1;
+        const query = `group=${selectedGroup}&pkg=${selectedPackage}&month=${month}`;
+
+        const res = await fetch(`${API_BASE_URL}/api/child?${query}`);
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setChildrenData(data);
+        } else {
+          console.error("Invalid data format: expected an array", data);
+          setChildrenData([]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch children", err);
+        setChildrenData([]);
+      }
+    };
+    fetchChildren();
+  }, [selectedGroup, selectedPackage]);
+
+  const getGenderColors = (gender: string) => {
+    return gender === "female"
       ? { primary: "#ec4899", secondary: "#fce7f3", accent: "#be185d" }
       : { primary: "#3b82f6", secondary: "#dbeafe", accent: "#1d4ed8" };
   };
 
-  const handleChildPress = () => {
-    router.push("/teacher/child-page");
+  const handleChildPress = (childId: string) => {
+    router.push(`/teacher/child-page?childId=${childId}`);
   };
-
-  const filteredChildren = childrenData.filter((child) => {
-    const packageMatch =
-      selectedPackage === "all" || child.package === selectedPackage;
-    const groupMatch = selectedGroup === "all" || child.group === selectedGroup;
-    const todayMatch = !showTodayOnly || child.presentToday;
-    return packageMatch && groupMatch && todayMatch;
-  });
 
   const resetFilters = () => {
     setSelectedPackage("all");
     setSelectedGroup("all");
-    setShowTodayOnly(false);
   };
 
-  const hasActiveFilters = selectedPackage !== "all" || selectedGroup !== "all" || showTodayOnly;
+  const hasActiveFilters = selectedPackage !== "all" || selectedGroup !== "all";
 
   return (
     <LinearGradient
@@ -187,192 +114,341 @@ export default function ChildProfiles() {
         "#e9d5ff",
         "#DFC1FD",
       ]}
-      style={styles.container}
+      style={{ flex: 1 }}
     >
       <StatusBar
         barStyle="dark-content"
         backgroundColor="transparent"
         translucent
       />
-      <SafeAreaView style={styles.safeArea}>
-        {/* Header */}
-        <View style={styles.header}>
+      <SafeAreaView style={{ flex: 1, marginTop: 28 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingHorizontal: 20,
+            paddingTop: 8,
+            paddingBottom: 20,
+          }}
+        >
           <TouchableOpacity
             onPress={() => router.back()}
-            style={styles.backButton}
+            style={{
+              width: 40,
+              height: 40,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
           >
             <ArrowLeft size={24} color="#374151" />
           </TouchableOpacity>
-          <Text style={styles.title}>All Children</Text>
-          <View style={styles.headerRight}>
-            <Text style={styles.resultCount}>
-              {filteredChildren.length} children
+          <Text
+            style={{
+              fontSize: 24,
+              fontWeight: "bold",
+              color: "#374151",
+              flex: 1,
+              textAlign: "center",
+            }}
+          >
+            All Children
+          </Text>
+          <View style={{ width: 40, alignItems: "flex-end" }}>
+            <Text style={{ fontSize: 12, color: "#6B7280", fontWeight: "500" }}>
+              {childrenData.length} children
             </Text>
           </View>
         </View>
 
         {/* Filter Section */}
-        <View style={{ position: 'relative', zIndex: 999 }}>
-        <View style={styles.filterContainer}>
-          <View style={styles.filterHeader}>
-            <View style={styles.filterTitleContainer}>
+        <View
+          style={{
+            marginHorizontal: 20,
+            marginBottom: 20,
+            backgroundColor: "#fff",
+            borderRadius: 16,
+            padding: 16,
+            elevation: 3,
+          }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 16,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
               <Filter size={20} color="#8B5CF6" />
-              <Text style={styles.filterTitle}>Filters</Text>
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: "600",
+                  color: "#374151",
+                  marginLeft: 8,
+                }}
+              >
+                Filters
+              </Text>
             </View>
             {hasActiveFilters && (
-              <TouchableOpacity onPress={resetFilters} style={styles.resetButton}>
-                <Text style={styles.resetButtonText}>Reset</Text>
+              <TouchableOpacity
+                onPress={resetFilters}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: "#8B5CF6",
+                }}
+              >
+                <Text
+                  style={{ color: "#8B5CF6", fontSize: 14, fontWeight: "500" }}
+                >
+                  Reset
+                </Text>
               </TouchableOpacity>
             )}
           </View>
 
-          <View style={styles.filtersRow}>
-            {/* Package Filter */}
-            <CustomDropdown
-              label="Package"
-              options={packageOptions}
-              selectedValue={selectedPackage}
-              onValueChange={setSelectedPackage}
-              modalVisible={packageModalVisible}
-              setModalVisible={setPackageModalVisible}
-            />
-
-            {/* Group Filter */}
-            <CustomDropdown
-              label="Group"
-              options={groupOptions}
-              selectedValue={selectedGroup}
-              onValueChange={setSelectedGroup}
-              modalVisible={groupModalVisible}
-              setModalVisible={setGroupModalVisible}
-            />
-          </View>
-
-          {/* Today Only Toggle */}
-          <TouchableOpacity
-            style={[
-              styles.toggleButton,
-              showTodayOnly ? styles.toggleButtonActive : styles.toggleButtonInactive
-            ]}
-            onPress={() => setShowTodayOnly((prev) => !prev)}
-            activeOpacity={0.8}
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              marginBottom: 16,
+            }}
           >
-            <View style={styles.toggleContent}>
+            {/* Package Dropdown */}
+            <View style={{ flex: 1, marginHorizontal: 4 }}>
               <Text
-                style={[
-                  styles.toggleButtonText,
-                  showTodayOnly ? styles.toggleButtonTextActive : styles.toggleButtonTextInactive
-                ]}
+                style={{
+                  fontSize: 14,
+                  fontWeight: "600",
+                  color: "#374151",
+                  marginBottom: 8,
+                }}
               >
-                Present Today Only
+                Package
               </Text>
-              <View style={[
-                styles.toggleIndicator,
-                showTodayOnly ? styles.toggleIndicatorActive : styles.toggleIndicatorInactive
-              ]}>
-                <View style={[
-                  styles.toggleCircle,
-                  showTodayOnly ? styles.toggleCircleActive : styles.toggleCircleInactive
-                ]} />
-              </View>
+              <TouchableOpacity
+                onPress={() => setPackageModalVisible(true)}
+                style={{
+                  backgroundColor: "#8B5CF6",
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "#fff" }}>
+                  {
+                    packageOptions.find((p) => p.value === selectedPackage)
+                      ?.label
+                  }
+                </Text>
+                <ChevronDown size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+              <Modal
+                transparent
+                visible={packageModalVisible}
+                animationType="fade"
+                onRequestClose={() => setPackageModalVisible(false)}
+              >
+                <Pressable
+                  style={{
+                    flex: 1,
+                    backgroundColor: "rgba(0,0,0,0.3)",
+                    justifyContent: "center",
+                    padding: 20,
+                  }}
+                  onPress={() => setPackageModalVisible(false)}
+                >
+                  <View
+                    style={{
+                      backgroundColor: "#fff",
+                      borderRadius: 12,
+                      padding: 16,
+                    }}
+                  >
+                    {packageOptions.map((option) => (
+                      <TouchableOpacity
+                        key={option.value}
+                        onPress={() => {
+                          setSelectedPackage(option.value);
+                          setPackageModalVisible(false);
+                        }}
+                        style={{ paddingVertical: 10 }}
+                      >
+                        <Text style={{ fontSize: 16 }}>{option.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </Pressable>
+              </Modal>
             </View>
-          </TouchableOpacity>
-        </View></View>
 
-        {/* Children List */}
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {filteredChildren.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No children match your filters</Text>
-              <TouchableOpacity onPress={resetFilters} style={styles.emptyStateButton}>
-                <Text style={styles.emptyStateButtonText}>Clear Filters</Text>
+            {/* Group Dropdown */}
+            <View style={{ flex: 1, marginHorizontal: 4 }}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: "600",
+                  color: "#374151",
+                  marginBottom: 8,
+                }}
+              >
+                Group
+              </Text>
+              <TouchableOpacity
+                onPress={() => setGroupModalVisible(true)}
+                style={{
+                  backgroundColor: "#8B5CF6",
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "#fff" }}>
+                  {groupOptions.find((g) => g.value === selectedGroup)?.label}
+                </Text>
+                <ChevronDown size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+              <Modal
+                transparent
+                visible={groupModalVisible}
+                animationType="fade"
+                onRequestClose={() => setGroupModalVisible(false)}
+              >
+                <Pressable
+                  style={{
+                    flex: 1,
+                    backgroundColor: "rgba(0,0,0,0.3)",
+                    justifyContent: "center",
+                    padding: 20,
+                  }}
+                  onPress={() => setGroupModalVisible(false)}
+                >
+                  <View
+                    style={{
+                      backgroundColor: "#fff",
+                      borderRadius: 12,
+                      padding: 16,
+                    }}
+                  >
+                    {groupOptions.map((option) => (
+                      <TouchableOpacity
+                        key={option.value}
+                        onPress={() => {
+                          setSelectedGroup(option.value);
+                          setGroupModalVisible(false);
+                        }}
+                        style={{ paddingVertical: 10 }}
+                      >
+                        <Text style={{ fontSize: 16 }}>{option.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </Pressable>
+              </Modal>
+            </View>
+          </View>
+        </View>
+
+        <ScrollView style={{ paddingHorizontal: 20 }}>
+          {childrenData.length === 0 ? (
+            <View style={{ alignItems: "center", paddingVertical: 40 }}>
+              <Text
+                style={{ fontSize: 16, color: "#6B7280", marginBottom: 16 }}
+              >
+                No children match your filters
+              </Text>
+              <TouchableOpacity
+                onPress={resetFilters}
+                style={{
+                  backgroundColor: "#8B5CF6",
+                  paddingHorizontal: 20,
+                  paddingVertical: 10,
+                  borderRadius: 8,
+                }}
+              >
+                <Text style={{ color: "#fff", fontWeight: "600" }}>
+                  Clear Filters
+                </Text>
               </TouchableOpacity>
             </View>
           ) : (
-            filteredChildren.map((child) => {
+            childrenData.map((child) => {
               const colors = getGenderColors(child.gender);
               return (
                 <TouchableOpacity
-                  key={child.id}
-                  style={styles.childCard}
-                  onPress={handleChildPress}
-                  activeOpacity={0.8}
+                  key={child.child_id}
+                  onPress={() => handleChildPress(child.id)}
+                  style={{
+                    backgroundColor: "#fff",
+                    borderRadius: 20,
+                    marginBottom: 16,
+                    padding: 20,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 12,
+                    elevation: 5,
+                  }}
                 >
-                  <View style={styles.cardContent}>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
                     <View
-                      style={[
-                        styles.imageContainer,
-                        { borderColor: colors.primary },
-                      ]}
+                      style={{
+                        borderRadius: 35,
+                        borderWidth: 3,
+                        borderColor: colors.primary,
+                        padding: 3,
+                      }}
                     >
                       <Image
-                        source={{ uri: child.profileImage }}
-                        style={styles.profileImage}
+                        source={
+                          child.profileImage
+                            ? { uri: child.profileImage }
+                            : require("../../../assets/images/default_profile.webp")
+                        }
+                        style={{ width: 60, height: 60, borderRadius: 30 }}
                       />
-                      <View
-                        style={[
-                          styles.genderIndicator,
-                          { backgroundColor: colors.primary },
-                        ]}
-                      >
-                        <Text style={styles.genderText}>
-                          {child.gender === "girl" ? "♀" : "♂"}
-                        </Text>
-                      </View>
                     </View>
-                    <View style={styles.childInfo}>
-                      <View style={styles.childNameRow}>
-                        <Text style={styles.childName}>{child.name}</Text>
-                        {child.presentToday && (
-                          <View style={styles.presentBadge}>
-                            <Text style={styles.presentBadgeText}>Present</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text style={styles.childAge}>Age {child.age}</Text>
-                      <View style={styles.tagsContainer}>
-                        <View
-                          style={[
-                            styles.gradeTag,
-                            { backgroundColor: colors.secondary },
-                          ]}
-                        >
-                          <Text
-                            style={[styles.gradeText, { color: colors.accent }]}
-                          >
-                            {child.grade}
-                          </Text>
-                        </View>
-                        <View style={styles.groupTag}>
-                          <Text style={styles.groupText}>{child.group}</Text>
-                        </View>
-                      </View>
-                      <Text style={styles.schoolName}>{child.school}</Text>
+                    <View style={{ flex: 1, marginLeft: 16 }}>
+                      <Text
+                        style={{
+                          fontSize: 18,
+                          fontWeight: "600",
+                          color: "#1f2937",
+                        }}
+                      >
+                        {child.name}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          color: "#6b7280",
+                          marginBottom: 8,
+                        }}
+                      >
+                        Age {child.age}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: "#9ca3af" }}>
+                        {child.school}
+                      </Text>
                     </View>
                   </View>
-                  <View
-                    style={[
-                      styles.bottomBorder,
-                      { backgroundColor: colors.primary },
-                    ]}
-                  />
                 </TouchableOpacity>
               );
             })
           )}
-
-
-
-
-          
         </ScrollView>
-
-        
-
       </SafeAreaView>
     </LinearGradient>
   );
@@ -381,7 +457,7 @@ export default function ChildProfiles() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1, marginTop: 28 },
-  
+
   // Header Styles
   header: {
     flexDirection: "row",
@@ -698,22 +774,21 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginRight: 6,
   },
-dropdownPopover: {
-  position: 'absolute',
-  top: 60, // adjust if needed
-  left: 0,
-  right: 0,
-  backgroundColor: '#fff',
-  borderRadius: 12,
-  paddingVertical: 8,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.1,
-  shadowRadius: 8,
-  elevation: 20, // increase for Android
-  zIndex: 9999,  // ensure it’s above all content
-},
-
+  dropdownPopover: {
+    position: "absolute",
+    top: 60, // adjust if needed
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingVertical: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 20, // increase for Android
+    zIndex: 9999, // ensure it’s above all content
+  },
 
   gradeText: { fontSize: 12, fontWeight: "600" },
   groupTag: {

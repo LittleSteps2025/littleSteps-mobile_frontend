@@ -22,6 +22,8 @@ import {
   Dumbbell,
   X,
 } from 'lucide-react-native';
+
+import { LinearGradient } from 'expo-linear-gradient';  // <-- Import LinearGradient
 import { API_BASE_URL } from "../../utility/config"; // Adjust import path as necessary
 
 export default function EventListAndDetail() {
@@ -30,7 +32,6 @@ export default function EventListAndDetail() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
-  // Helper function to check if event date is today or later
   const isDateUpcoming = (eventDateStr) => {
     const eventDate = new Date(eventDateStr);
     const today = new Date();
@@ -50,7 +51,7 @@ export default function EventListAndDetail() {
           date: e.date,
           time: e.time,
           location: e.venue,
-          type: 'meeting', // Customize as needed
+          type: 'meeting',
           status: isDateUpcoming(e.date) ? 'upcoming' : 'completed',
         }));
         setEvents(mappedEvents);
@@ -104,7 +105,7 @@ export default function EventListAndDetail() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <SafeAreaView style={{ flex: 6, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#7c3aed" />
       </SafeAreaView>
     );
@@ -113,11 +114,14 @@ export default function EventListAndDetail() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
+        {/* Header with LinearGradient */}
+        <LinearGradient
+          colors={["#DFC1FD", "#f3e8ff", "#F5ECFE", "#F5ECFE", "#e9d5ff", "#DFC1FD"]}
+          style={styles.header}
+        >
           <Text style={styles.title}>Daycare Events</Text>
           <Text style={styles.subtitle}>Stay updated with upcoming activities</Text>
-        </View>
+        </LinearGradient>
 
         {/* Events List */}
         <ScrollView contentContainerStyle={styles.listContainer}>
@@ -176,7 +180,6 @@ export default function EventListAndDetail() {
         >
           <View style={styles.modalBackdrop}>
             <View style={styles.modalContainer}>
-              {/* Modal Header */}
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Event Details</Text>
                 <Pressable onPress={closeModal} style={styles.modalCloseBtn}>
@@ -184,7 +187,6 @@ export default function EventListAndDetail() {
                 </Pressable>
               </View>
 
-              {/* Modal Content Scroll */}
               <ScrollView contentContainerStyle={styles.modalContent}>
                 {selectedEvent && (
                   <>
@@ -255,13 +257,16 @@ export default function EventListAndDetail() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff',paddingTop: 20 },
+  container: { flex: 1, backgroundColor: '#fff', paddingTop: 20 },
   header: {
     paddingVertical: 30,
     paddingHorizontal: 20,
-    backgroundColor: '#DFC1FD',
+    marginTop: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   title: {
+    marginTop: 10, 
     fontSize: 24,
     fontWeight: 'bold',
     color: '#6b21a8',

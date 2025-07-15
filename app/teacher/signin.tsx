@@ -1,7 +1,7 @@
 import { images } from '@/assets/images/images';
 import CustomAlert from '@/components/CustomAlert';
 import { useCustomAlert } from '@/hooks/useCustomAlert';
-import { API_BASE_URL } from '@/utility';
+import { API_BASE_URL } from '../../utility/config';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -18,6 +18,9 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../../config/firebase'; // adjust if needed
+
 
 
 // Define types for better type safety
@@ -156,7 +159,7 @@ export default function CreateAccountWithValidation() {
     
     try {
       // Call parent login API
-      const response = await fetch(`${API_BASE_URL}/teachers/teacherLogin`, {
+      const response = await fetch(`${API_BASE_URL}/api/teachers/teacherLogin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -195,6 +198,34 @@ export default function CreateAccountWithValidation() {
     } finally {
       setIsLoading(false);
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    await signInWithEmailAndPassword(auth, formData.email, formData.password);
+console.log('Signed in to Firebase:', auth.currentUser?.uid);
   };
 
   // Get password strength
