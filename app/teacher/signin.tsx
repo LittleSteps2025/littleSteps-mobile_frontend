@@ -18,6 +18,9 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../../config/firebase'; // adjust if needed
+
 
 
 // Define types for better type safety
@@ -195,6 +198,34 @@ export default function CreateAccountWithValidation() {
     } finally {
       setIsLoading(false);
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    await signInWithEmailAndPassword(auth, formData.email, formData.password);
+console.log('Signed in to Firebase:', auth.currentUser?.uid);
   };
 
   // Get password strength
