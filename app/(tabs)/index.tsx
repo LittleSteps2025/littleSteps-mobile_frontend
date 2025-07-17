@@ -11,7 +11,7 @@ export default function Home() {
   useEffect(() => {
     const timer = setTimeout(() => {
       // Using router.push() to navigate to dashboard
-      router.replace('/teacher/signin'); // Change this to your actual dashboard route
+      router.replace('/signin'); // Change this to your actual dashboard route
       // or use router.replace('/dashboard') if you don't want user to go back
     },500); // 5000ms = 5 seconds
 
