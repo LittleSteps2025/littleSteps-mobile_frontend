@@ -317,64 +317,6 @@ const statusUpdates: { [key: string]: number | string } = {};
 
 
 
-//   const handleSubmit = async () => {
-//     // Validate required fields
-//     if (!validateForm()) return;
-
-//     // ✅ Check for checkout details
-//     if (!checkoutPerson || !checkoutTime) {
-//       Alert.alert(
-//         "Incomplete Checkout Details",
-//         "Please fill out both checkout person and checkout time."
-//       );
-//       return;
-//     }
-
-// const statusUpdates: { [key: string]: number } = {};
-//     reportFields.forEach((field) => {
-//       statusUpdates[field.id] = field.completed ? 1 : 0;
-//     });
-
-//     const payload = {
-//       statusUpdates,
-//       checkoutPerson,
-//       checkoutTime,
-//       progress: Math.round(progressPercentage),
-//       dailySummary,
-//       report_id,
-//     };
-
-//     try {
-//       const response = await fetch(
-//         `${API_BASE_URL}/api/reports/${report_id}/submit`,
-//         {
-//           method: "PUT",
-//           headers: { "Content-Type": "application/json" },
-//           body: JSON.stringify(payload),
-//         }
-//       );
-
-//       if (response.ok) {
-//         Alert.alert("Progress Saved", "Report submitted");
-//         setIsSubmitted(true);
-//         router.back();
-//       } else {
-//         throw new Error("Failed to submit report");
-//       }
-//     } catch (error) {
-//       console.error("Submit error:", error);
-//       Alert.alert("Error", "Failed to submit report.");
-//     }
-//   };
-
-
-
-
-
-
-
-
-
 
 
 

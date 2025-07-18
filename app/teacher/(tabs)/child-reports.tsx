@@ -35,11 +35,7 @@ export default function Children() {
   }, []);
 
   return (
-    <ScrollView
-      style={{ flex: 1 }}
-      contentContainerStyle={{ paddingBottom: 24 }}
-      showsVerticalScrollIndicator={false}
-    >
+    
       <LinearGradient
         colors={[
           "#DFC1FD",
@@ -49,7 +45,13 @@ export default function Children() {
           "#e9d5ff",
           "#DFC1FD",
         ]}
-      >
+        style={{ flex: 1 }}   
+    >
+      <ScrollView
+      // style={{ flex: 1 }}
+      contentContainerStyle={{ paddingBottom: 24 }}
+      showsVerticalScrollIndicator={false}
+    >
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <TouchableOpacity
@@ -82,7 +84,8 @@ export default function Children() {
                     <View style={styles.childInfo}>
                       <Text style={styles.childName}>{child.child_name}</Text>
                       <Text style={styles.childDetails}>
-                        {child.child_age} years old • {child.child_group} Group
+                        {child.child_age} years old • 
+                        {child.child_group} Group
                       </Text>
                     </View>
                     <View style={styles.progressContainer}>
@@ -125,8 +128,9 @@ export default function Children() {
             </View>
           )}
         </View>
-      </LinearGradient>{" "}
-    </ScrollView>
+         </ScrollView>
+      </LinearGradient>
+   
   );
 }
 
