@@ -1,6 +1,6 @@
 import { AuthGuard } from "@/components/AuthGuard";
 import { useUser } from "@/contexts/UserContext";
-import { mockAlerts } from "@/data/mockData";
+// import { mockAlerts } from "@/data/mockData";
 import { API_BASE_URL } from "@/utility";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -20,7 +20,7 @@ import {
 
 export default function ParentDashboard() {
   const { user, updateChildren } = useUser();
-  const [alerts] = useState(mockAlerts);
+  // const [alerts] = useState(mockAlerts);
   const [childrenData, setChildrenData] = useState<any[]>([]);
   const [isLoadingChildren, setIsLoadingChildren] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -131,6 +131,7 @@ export default function ParentDashboard() {
     try {
       return await AsyncStorage.getItem("authToken");
     } catch (error) {
+      console.error("Error getting auth token:", error);
       return null;
     }
   };
@@ -156,6 +157,7 @@ export default function ParentDashboard() {
           : 0;
         setUnreadCount(count);
       } catch (err) {
+        console.error("Error fetching unread announcements:", err);
         setUnreadCount(0);
       }
     };
