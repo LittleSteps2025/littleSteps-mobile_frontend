@@ -45,7 +45,7 @@ export default function ChildProfiles() {
 
         setPackageOptions([
           { label: "All Packages", value: "all" },
-          ...pkgData.map((p: { name: string }) => ({
+          ...pkgData.map((p /*: { name: string }*/) => ({
             label: p.name,
             value: p.name,
           })),
@@ -53,7 +53,7 @@ export default function ChildProfiles() {
 
         setGroupOptions([
           { label: "All Groups", value: "all" },
-          ...grpData.map((g: { name: string }) => ({
+          ...grpData.map((g /*: { name: string }*/) => ({
             label: g.name,
             value: g.name,
           })),
@@ -87,13 +87,13 @@ export default function ChildProfiles() {
     fetchChildren();
   }, [selectedGroup, selectedPackage]);
 
-  const getGenderColors = (gender: string) => {
+  const getGenderColors = (gender) => {
     return gender === "female"
       ? { primary: "#ec4899", secondary: "#fce7f3", accent: "#be185d" }
       : { primary: "#3b82f6", secondary: "#dbeafe", accent: "#1d4ed8" };
   };
 
-  const handleChildPress = (childId: string) => {
+  const handleChildPress = (childId) => {
     router.push(`/teacher/child-page?childId=${childId}`);
   };
 
@@ -388,7 +388,7 @@ export default function ChildProfiles() {
               const colors = getGenderColors(child.gender);
               return (
                 <TouchableOpacity
-                  key={child.child_id}
+                  key={child.id} // Use child.id if unique
                   onPress={() => handleChildPress(child.id)}
                   style={{
                     backgroundColor: "#fff",
@@ -453,6 +453,9 @@ export default function ChildProfiles() {
     </LinearGradient>
   );
 }
+
+
+
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
