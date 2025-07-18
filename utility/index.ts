@@ -9,5 +9,5 @@
 
 //pramodi url
 
-// export const API_BASE_URL = 'http://10.47.127.74:5001/api'
+ export const API_BASE_URL = 'http://10.47.127.74:5001/api'
 
