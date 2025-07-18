@@ -1,326 +1,439 @@
-// ChildPage.tsx (React Native version with Expo + Tailwind via nativewind)
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
-  Image,
-  ScrollView,
-  Modal,
   StyleSheet,
+  TextInput,
+  ScrollView,
   Linking,
+  SafeAreaView,
+  ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
-  Platform
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import {
-  Phone,
-  Calendar,
-  FileText,
-  Send,
-  X,
-  Clock,
-  Heart,
-  Utensils,
-  Moon,
-  Smile,
-  Users,
-  ArrowLeft
-} from 'lucide-react-native';
+import { ArrowLeft, Phone, Calendar, MapPin, User, Eye } from 'lucide-react-native';
+import axios from 'axios';
+import { API_BASE_URL } from '../../utility/config';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
-const childData = {
-  name: 'Ishadi Thashmika',
-  age: '2 years old',
-  gender: 'girl',
-  group: 'Rainbow Group',
-  phone: '077-1231423',
-  photo: 'https://images.pexels.com/photos/1104007/pexels-photo-1104007.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop'
-};
+  import { auth } from '../../config/firebase'; // adjust import path
+import { getIdToken } from 'firebase/auth';
 
-const todayReports = [
-  {
-    id: 1,
-    time: '9:00 AM',
-    activity: 'Arrival',
-    description: 'Arrived happy and ready to play',
-    icon: Smile,
-    type: 'arrival'
-  },
-  {
-    id: 2,
-    time: '10:30 AM',
-    activity: 'Snack Time',
-    description: 'Enjoyed apple slices and crackers',
-    icon: Utensils,
-    type: 'meal'
-  },
-  {
-    id: 3,
-    time: '12:00 PM',
-    activity: 'Nap Time',
-    description: 'Slept peacefully for 1.5 hours',
-    icon: Moon,
-    type: 'sleep'
-  },
-  {
-    id: 4,
-    time: '2:30 PM',
-    activity: 'Play Activity',
-    description: 'Participated in arts and crafts - made a beautiful painting',
-    icon: Heart,
-    type: 'activity'
-  }
-];
 
-export default function ChildPage() {
-  const [showReports, setShowReports] = useState(false);
-  const [emergencyNote, setEmergencyNote] = useState('');
-  const router = useRouter();
 
-  const isGirl = childData.gender === 'girl';
-  const themeColor = isGirl ? '#ec4899' : '#3b82f6';
 
-  const handleCall = () => {
-    const phoneNumber = childData.phone.replace(/[^0-9]/g, ''); // Remove any formatting
-    const phoneUrl = `tel:${phoneNumber}`;
-    
-    Linking.canOpenURL(phoneUrl)
-      .then((supported) => {
-        if (supported) {
-          return Linking.openURL(phoneUrl);
-        } else {
-          Alert.alert('Error', 'Phone calls are not supported on this device');
-        }
-      })
-      .catch((err) => {
-        Alert.alert('Error', 'Failed to make phone call');
-        console.error('Phone call error:', err);
-      });
-  };
 
-  const handleSendEmergencyNote = () => {
-    if (emergencyNote.trim()) {
-      Alert.alert(
-        'Emergency Note Sent',
-        `Emergency note sent to parents: ${emergencyNote}`,
-        [
-          {
-            text: 'OK',
-            onPress: () => setEmergencyNote('')
-          }
-        ]
-      );
-    }
-  };
-
-  const getActivityColor = (type: string) => {
-    switch (type) {
-      case 'arrival': return ['#bbf7d0', '#166534'];
-      case 'meal': return ['#fed7aa', '#c2410c'];
-      case 'sleep': return ['#ddd6fe', '#5b21b6'];
-      case 'activity': return ['#fbcfe8', '#9d174d'];
-      default: return ['#e5e7eb', '#374151'];
-    }
-  };
-
-  return (
-    <KeyboardAvoidingView 
-      className="flex-1" 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
-      <ScrollView 
-        className="p-4 bg-gray-100 flex-1"
-        contentContainerStyle={{ paddingBottom: 100 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Header with Back Button */}
-        <View className="flex-row items-center mb-4 pt-2">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            className="bg-white rounded-full p-3 shadow-sm mr-4"
-          >
-            <ArrowLeft size={20} color="#374151" />
-          </TouchableOpacity>
-          <Text className="text-xl font-bold text-gray-900 flex-1">Child Details</Text>
-        </View>
-
-        {/* Profile Card */}
-        <View className="bg-white rounded-3xl p-6 mb-6 shadow-sm">
-          <View className="flex-row items-center space-x-4">
-            <Image source={{ uri: childData.photo }} style={styles.avatar} />
-            <View className="flex-1">
-              <Text className="text-xl font-bold text-gray-900">{childData.name}</Text>
-              <Text className="text-sm text-gray-600 mb-1">{childData.age}</Text>
-              
-              {/* Group Information */}
-              <View className="flex-row items-center mb-2">
-                <Users size={14} color="gray" />
-                <Text className="ml-1 text-sm text-gray-700">{childData.group}</Text>
-              </View>
-              
-              {/* Clickable Phone Number */}
-              <TouchableOpacity 
-                onPress={handleCall}
-                className="flex-row items-center"
-              >
-                <Phone size={14} color={themeColor} />
-                <Text className="ml-1 text-sm font-medium" style={{ color: themeColor }}>
-                  {childData.phone}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          
-          {/* View Profile Button */}
-          <TouchableOpacity
-            className="mt-4 w-full rounded-xl py-3"
-            style={{ backgroundColor: themeColor }}
-            onPress={() => router.push('/teacher/child-profile')}
-          >
-            <Text className="text-white text-center font-semibold">View Profile</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Today's Reports Section */}
-        <View className="bg-white rounded-3xl p-6 mb-6 shadow-sm">
-          <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-lg font-bold text-gray-800">Today's Reports</Text>
-            <View className="flex-row items-center">
-              <Calendar size={16} color="gray" />
-              <Text className="ml-1 text-sm text-gray-600">{new Date().toLocaleDateString()}</Text>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            onPress={() => setShowReports(true)}
-            className="bg-gray-50 rounded-2xl p-4 border border-gray-100"
-          >
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center">
-                <FileText size={24} color={themeColor} />
-                <View className="ml-3">
-                  <Text className="font-semibold text-gray-700">View Today's Activity Details</Text>
-                  <Text className="text-gray-500 text-sm">Tap to view complete reports</Text>
-                </View>
-              </View>
-              <View className="bg-gray-200 rounded-full px-3 py-1">
-                <Text className="text-xs font-medium text-gray-600">{todayReports.length} activities</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* Emergency Notes Section */}
-        <View className="bg-white rounded-3xl p-6 mb-6 shadow-sm">
-          <Text className="text-lg font-bold text-gray-800 mb-4">Emergency Notes</Text>
-          <Text className="text-sm text-gray-600 mb-3">Send urgent notifications to parents</Text>
-          
-          <TextInput
-            value={emergencyNote}
-            onChangeText={setEmergencyNote}
-            multiline
-            placeholder="Type your emergency note here..."
-            placeholderTextColor="#9ca3af"
-            className="border border-gray-300 rounded-xl p-4 h-32 text-gray-700 bg-gray-50"
-            textAlignVertical="top"
-          />
-          
-          <TouchableOpacity
-            disabled={!emergencyNote.trim()}
-            onPress={handleSendEmergencyNote}
-            className="mt-4 py-3 rounded-xl"
-            style={{ 
-              backgroundColor: emergencyNote.trim() ? '#ef4444' : '#d1d5db'
-            }}
-          >
-            <View className="flex-row justify-center items-center">
-              <Text className={`font-semibold ${emergencyNote.trim() ? 'text-white' : 'text-gray-500'}`}>
-                Send Emergency Note
-              </Text>
-              <Send 
-                size={16} 
-                color={emergencyNote.trim() ? 'white' : '#6b7280'} 
-                style={{ marginLeft: 8 }} 
-              />
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* Reports Modal */}
-        <Modal
-          visible={showReports}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowReports(false)}
-        >
-          <View className="flex-1 justify-end bg-black/50">
-            <View className="bg-white rounded-t-3xl p-6 max-h-[80%]">
-              <View className="flex-row justify-between items-center mb-4">
-                <Text className="text-xl font-bold text-gray-800">Today's Activity Reports</Text>
-                <TouchableOpacity onPress={() => setShowReports(false)}>
-                  <X size={24} color="#6b7280" />
-                </TouchableOpacity>
-              </View>
-              
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {todayReports.map((report) => {
-                  const Icon = report.icon;
-                  const [bgColor, textColor] = getActivityColor(report.type);
-                  return (
-                    <View
-                      key={report.id}
-                      className="flex-row items-start space-x-4 bg-gray-50 p-4 mb-3 rounded-2xl"
-                    >
-                      <View style={{ backgroundColor: bgColor }} className="p-3 rounded-xl">
-                        <Icon size={18} color={textColor} />
-                      </View>
-                      <View className="flex-1">
-                        <View className="flex-row justify-between items-start mb-2">
-                          <Text className="font-semibold text-gray-800 text-base">{report.activity}</Text>
-                          <View className="flex-row items-center bg-white px-2 py-1 rounded-lg">
-                            <Clock size={12} color="gray" />
-                            <Text className="ml-1 text-xs text-gray-500 font-medium">{report.time}</Text>
-                          </View>
-                        </View>
-                        <Text className="text-sm text-gray-600 leading-5">{report.description}</Text>
-                      </View>
-                    </View>
-                  );
-                })}
-              </ScrollView>
-              
-              <TouchableOpacity
-                onPress={() => setShowReports(false)}
-                className="mt-4 py-3 rounded-xl"
-                style={{ backgroundColor: themeColor }}
-              >
-                <Text className="text-white text-center font-semibold">Close Reports</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
+interface EmergencyContact {
+  name: string;
+  relationship: string;
+  phone: string;
 }
 
+interface Child {
+  child_id: string;
+  name: string;
+  age: number;
+  group_name: string;
+  parent_phone: string;
+  gender: 'male' | 'female';
+  dob: string;
+  address: string;
+  emergency_notes: string;
+  emergency_contact: EmergencyContact;
+}
+
+const ChildPage: React.FC = () => {
+  const { childId } = useLocalSearchParams();
+  const router = useRouter();
+  const [child, setChild] = useState<Child | null>(null);
+  const [emergencyNotes, setEmergencyNotes] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const getColorScheme = (gender: string) => {
+    switch (gender) {
+      case 'female':
+        return { ring: '#60A5FA', accent: '#2563EB' };
+      case 'male':
+        return { ring: '#F472B6', accent: '#DB2777' };
+      default:
+        return { ring: '#C084FC', accent: '#9333EA' };
+    }
+  };
+
+  const fetchChild = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/child/${childId}`);
+      setChild(res.data);
+      setEmergencyNotes(res.data.emergency_notes || '');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to fetch child data');
+    } finally {
+      setLoading(false);
+    }
+  };
+useEffect(() => {
+  if (childId) {
+    fetchChild();
+  }
+}, [childId]);
+
+useEffect(() => {
+  const user = auth.currentUser;
+  if (user) {
+    console.log('Current user at mount:', user.uid);
+  } else {
+    console.log('No current user at mount');
+  }
+}, []);
+
+  useEffect(() => {
+  const unsubscribe = auth.onAuthStateChanged((user) => {
+    if (user) {
+      console.log('User signed in:', user.uid);
+    } else {
+      console.log('User not signed in');
+    }
+  });
+
+  return unsubscribe; // Cleanup on unmount
+}, []);
+
+
+
+
+  
+  // const handleSave = async () => {
+  //   if (!child) return;
+
+  //   setSaving(true);
+  //   try {
+  //     await axios.post( `${API_BASE_URL}/api/child/${child.child_id}/notes`, {
+  //       emergency_notes: emergencyNotes,
+  //     });
+  //     Alert.alert('Success', 'Emergency notes updated successfully.');
+  //     setChild({ ...child, emergency_notes: emergencyNotes });
+  //   } catch (error) {
+  //     Alert.alert('Error', 'Failed to update emergency notes.');
+  //   } finally {
+  //     setSaving(false);
+  //   }
+  // };
+
+
+
+
+
+
+
+
+
+const handleSave = async () => {
+  console.log('asa');
+  if (!child) {
+    console.log('No child found, returning');
+    return;
+  }
+
+  console.log('Child exists:', child.child_id);
+
+  const user = auth.currentUser;
+  if (!user) {
+    console.log('No user found');
+    Alert.alert('Error', 'User not authenticated');
+    return;
+  }
+  console.log('User found:', user.uid);
+
+  setSaving(true);
+  console.log('Saving set to true');
+
+  try {
+    let token;
+    try {
+      token = await getIdToken(user);
+      console.log('Firebase Token:', token);
+      Alert.alert('handleSave called');
+    } catch (tokenError) {
+      console.error('Error getting token:', tokenError);
+      Alert.alert('Error', 'Failed to get auth token.');
+      setSaving(false);
+      return;  // stop further execution
+    }
+
+    console.log('Child IDdddddd');
+
+    await axios.post(
+      `${API_BASE_URL}/api/child/${child.child_id}/notes`,
+      { emergency_notes: emergencyNotes },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    console.log('aaaaaaaaaa:');
+    Alert.alert('Success', 'Emergency notes updated successfully.');
+    setChild({ ...child, emergency_notes: emergencyNotes });
+  } catch (error) {
+    console.error('Error saving emergency note:', error);
+    Alert.alert('Error', 'Failed to update emergency notes.');
+  } finally {
+    setSaving(false);
+    console.log('Saving set to false');
+  }
+};
+
+
+
+
+
+
+
+
+
+
+  const handleCallContact = () => {
+    Linking.openURL(`tel:${child?.parent_phone}`);
+  };
+
+  if (loading || !child) {
+    return (
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#9333EA" />
+      </SafeAreaView>
+    );
+  }
+
+  const colorScheme = getColorScheme(child.gender);
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F5ECFE' }}>
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft color="#444" size={20} />
+          </TouchableOpacity>
+          <Text style={styles.headerText}></Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        <View style={styles.profileSection}>
+          <View style={[styles.avatarRing, { borderColor: colorScheme.ring }]}>
+            <View style={styles.avatar}>
+              <User color="#AAA" size={40} />
+            </View>
+          </View>
+          <Text style={styles.name}>{child.name}</Text>
+          <Text style={styles.age}>Age {child.age}</Text>
+          <Text style={[styles.group, { color: colorScheme.accent }]}>{child.group_name}</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Phone color="#9333EA" size={18} />
+          <View style={styles.cardContent}>
+            <Text style={styles.cardLabel}>Contact Number</Text>
+            <TouchableOpacity onPress={handleCallContact}>
+              <Text style={styles.cardValue}>{child.parent_phone}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Calendar color="#DB2777" size={18} />
+          <View style={styles.cardContent}>
+            <Text style={styles.cardLabel}>Birthday</Text>
+            <Text style={styles.cardValue}>{child.dob}</Text>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <MapPin color="#9333EA" size={18} />
+          <View style={styles.cardContent}>
+            <Text style={styles.cardLabel}>Address</Text>
+            <Text style={styles.cardValue}>{child.address}</Text>
+          </View>
+        </View>
+
+        <View style={styles.notesCard}>
+          <Text style={styles.notesTitle}>Emergency Notes</Text>
+          <TextInput
+            value={emergencyNotes}
+            onChangeText={setEmergencyNotes}
+            multiline
+            placeholder="Enter emergency notes..."
+            style={styles.notesInput}
+          />
+          <View style={styles.notesButtons}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setEmergencyNotes(child.emergency_notes)}
+              disabled={saving}
+            >
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.saveButton, saving && { opacity: 0.7 }]}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              <Text style={styles.saveText}>{saving ? 'Saving...' : 'Save'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.viewMoreButton}>
+          <Eye color="#fff" size={18} />
+          <Text style={styles.viewMoreText}>View More Details</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.footerNote}>
+          This contains sensitive data. Once you click yes, parent will be notified.
+        </Text>
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+export default ChildPage;
+
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5ECFE',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  backButton: {
+    padding: 10,
+    backgroundColor: '#EEE',
+    borderRadius: 999,
+  },
+  headerText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  profileSection: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  avatarRing: {
+    borderWidth: 4,
+    padding: 4,
+    borderRadius: 999,
+    marginBottom: 10,
+  },
   avatar: {
+    backgroundColor: '#E5E7EB',
     width: 80,
     height: 80,
     borderRadius: 40,
-    borderWidth: 3,
-    borderColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  }
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  name: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#222',
+  },
+  age: {
+    color: '#666',
+    marginVertical: 2,
+  },
+  group: {
+    fontWeight: '600',
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFF',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  cardContent: {
+    marginLeft: 10,
+  },
+  cardLabel: {
+    fontSize: 12,
+    color: '#888',
+  },
+  cardValue: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+  },
+  notesCard: {
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 16,
+    marginTop: 10,
+  },
+  notesTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  notesInput: {
+    backgroundColor: '#F3F4F6',
+    padding: 10,
+    borderRadius: 10,
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  notesButtons: {
+    flexDirection: 'row',
+    marginTop: 10,
+    gap: 10,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#EEE',
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  cancelText: {
+    color: '#333',
+    fontWeight: '500',
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: '#9333EA',
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  saveText: {
+    color: '#FFF',
+    fontWeight: '600',
+  },
+  viewMoreButton: {
+    flexDirection: 'row',
+    backgroundColor: '#DB2777',
+    padding: 14,
+    marginTop: 20,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  viewMoreText: {
+    color: '#FFF',
+    fontWeight: '600',
+  },
+  footerNote: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 10,
+    marginBottom: 30,
+  },
 });

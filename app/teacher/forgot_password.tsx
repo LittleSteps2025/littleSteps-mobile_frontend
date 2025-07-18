@@ -1,7 +1,7 @@
 import { images } from "@/assets/images/images";
 import CustomAlert from "@/components/CustomAlert";
 import { auth } from "@/config/firebase";
-import { API_BASE_URL } from "@/utility";
+import { API_BASE_URL } from "../../utility/config";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -110,7 +110,7 @@ function ForgotPassword() {
 
   const checkEmailExists = async (email: string): Promise<boolean> => {
     try {
-      const checkResponse = await fetch(`${API_BASE_URL}/users/check-email`, {
+      const checkResponse = await fetch(`${API_BASE_URL}/api/users/check-email`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -210,7 +210,7 @@ function ForgotPassword() {
     try {
       // Check if email exists in the system
       const emailExists = await checkEmailExists(formData.email);
-      
+      console.log("Email exists:", emailExists);
       if (!emailExists) {
         showCustomAlert(
           "error",

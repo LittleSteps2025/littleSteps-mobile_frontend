@@ -1,9 +1,11 @@
 import CustomAlert from '@/components/CustomAlert';
+import { useUser } from '@/contexts/UserContext';
+import { apiService } from '@/services/apiService';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Image,
   Modal,
@@ -19,17 +21,31 @@ import {
 
 export default function ParentProfile() {
   const router = useRouter();
+  const { user, logout, updateProfile } = useUser();
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [profileImage, setProfileImage] = useState<string | null>(user?.profileImage || null);
   
-  // Edit form state
+  // Edit form state - initialize with user data
   const [editForm, setEditForm] = useState({
-    name: 'Amali Perera',
-    email: 'amali@gmail.com',
-    phoneNumber: '+94 77 123 4567',
-    address: '45 Flower Road, Colombo 07, Sri Lanka'
+    name: user?.fullName || '',
+    email: user?.email || '',
+    phoneNumber: user?.phone || '',
+    address: user?.address || ''
   });
+
+  // Update form when user data changes
+  useEffect(() => {
+    if (user) {
+      setEditForm({
+        name: user.fullName || '',
+        email: user.email || '',
+        phoneNumber: user.phone || '',
+        address: user.address || ''
+      });
+      setProfileImage(user.profileImage || null);
+    }
+  }, [user]);
 
   // Password form state
   const [passwordForm, setPasswordForm] = useState({
@@ -110,10 +126,28 @@ export default function ParentProfile() {
     });
   };
 
-  const handleSaveProfile = () => {
-    // Here you would typically save to backend
-    showCustomAlert('success', 'Success', 'Profile updated successfully!');
-    closeEditModal();
+  const handleSaveProfile = async () => {
+    try {
+      // Update profile on backend
+      const updatedData = {
+        fullName: editForm.name,
+        email: editForm.email,
+        phone: editForm.phoneNumber,
+        address: editForm.address,
+        ...(profileImage && { profileImage })
+      };
+      
+      await apiService.updateUserProfile(updatedData);
+      
+      // Update local session data
+      await updateProfile(updatedData);
+      
+      showCustomAlert('success', 'Success', 'Profile updated successfully!');
+      closeEditModal();
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      showCustomAlert('error', 'Error', error.message || 'Failed to update profile. Please try again.');
+    }
   };
 
   const handlePasswordChange = () => {
@@ -136,6 +170,18 @@ export default function ParentProfile() {
     // Here you would typically validate current password and save new password to backend
     showCustomAlert('success', 'Success', 'Password changed successfully!');
     closePasswordModal();
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      showCustomAlert('success', 'Success', 'Logged out successfully!', false, () => {
+        router.replace('/signin');
+      });
+    } catch (error: any) {
+      console.error('Error during logout:', error);
+      showCustomAlert('error', 'Error', 'Failed to logout. Please try again.');
+    }
   };
 
   const handleInputChange = (field: keyof typeof editForm, value: string) => {
@@ -425,7 +471,7 @@ export default function ParentProfile() {
               >
                 <TouchableOpacity
                   onPress={openPasswordModal}
-                  className="flex-row items-center py-4"
+                  className="flex-row items-center py-4 border-b border-gray-100"
                 >
                   <View 
                     className="w-12 h-12 rounded-full items-center justify-center mr-4"
@@ -439,6 +485,27 @@ export default function ParentProfile() {
                     </Text>
                     <Text className="text-base font-semibold text-gray-800">
                       Change Password
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  onPress={handleLogout}
+                  className="flex-row items-center py-4"
+                >
+                  <View 
+                    className="w-12 h-12 rounded-full items-center justify-center mr-4"
+                    style={{ backgroundColor: '#ef444415' }}
+                  >
+                    <Ionicons name="log-out-outline" size={20} color="#ef4444" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-sm font-medium text-gray-500 mb-1">
+                      Account
+                    </Text>
+                    <Text className="text-base font-semibold text-gray-800">
+                      Logout
                     </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color="#9ca3af" />

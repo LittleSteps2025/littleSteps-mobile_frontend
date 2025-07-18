@@ -299,7 +299,7 @@ function RestorePassword() {
             </View>
 
             {/* Timer and Resend */}
-            {/* <View className="flex-row justify-center items-center mt-8">
+            <View className="flex-row justify-center items-center mt-8">
               {timeLeft > 0 ? (
                 <Text className="text-gray-600 text-center">
                   This OTP will be available during {formatTime(timeLeft)}
@@ -311,7 +311,7 @@ function RestorePassword() {
                   </Text>
                 </TouchableOpacity>
               )}
-            </View> */}
+            </View>
 
             {/* Verify Button */}
             <View className="mx-7 mt-10">
