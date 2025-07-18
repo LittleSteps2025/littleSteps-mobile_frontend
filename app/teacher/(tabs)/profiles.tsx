@@ -154,7 +154,7 @@ export default function ChildProfiles() {
           >
             All Children
           </Text>
-          <View style={{ width: 40, alignItems: "flex-end" }}>
+          <View style={{ width: 80, alignItems: "flex-end" }}>
             <Text style={{ fontSize: 12, color: "#6B7280", fontWeight: "500" }}>
               {childrenData.length} children
             </Text>

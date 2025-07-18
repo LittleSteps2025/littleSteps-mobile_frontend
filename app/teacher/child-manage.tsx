@@ -127,6 +127,15 @@ export default function Dashboard() {
             <Text style={styles.navText}>Reports</Text>
           </TouchableOpacity>
 
+          
+
+
+
+
+
+
+
+
           {/* More */}
         
         </View>

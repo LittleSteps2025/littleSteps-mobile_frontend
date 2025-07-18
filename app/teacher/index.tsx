@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Profiler } from 'react';
 import {
   View,
   Text,
@@ -37,6 +37,14 @@ export default function Dashboard() {
       subtitle: 'Upcoming activities',
       icon: Calendar,
       route: 'teacher/events',
+      color: '#9333ea'
+    },
+     {
+      id: 3,
+      title: 'Profile',
+      subtitle: 'Manage your profile',
+      icon: Profiler,
+      route: 'teacher/teacher-profile',
       color: '#9333ea'
     }
   ];
