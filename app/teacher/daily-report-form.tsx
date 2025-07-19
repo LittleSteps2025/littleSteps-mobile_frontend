@@ -88,84 +88,90 @@ export default function DailyReportForm() {
     totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
   useEffect(() => {
-    const fetchReport = async () => {
-      try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/reports/${report_id}`
-        );
-        const report = await response.json();
-        setChildId(report.child_id); // Save child_id from report
-        console.log("Report ID:", report_id);
+ const fetchReport = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/reports/${report_id}`);
+    const report = await response.json();
+    setChildId(report.child_id);
+    console.log("Report ID:", report_id);
 
-        setReportFields([
-          {
-            id: "breakfirst",
-            title: "Breakfirst",
-            icon: Coffee,
-            time: "",
-            description: report.breakfirst || "No breakfast details recorded",
-            completed: !!report.breakfirst_status,
-            required: true,
-            color: "#F59E0B",
-          },
-          {
-            id: "morning_snack",
-            title: "Morning snack",
-            icon: Coffee,
-            time: "",
-            description: report.morning_snack || "No tea time details recorded",
-            completed: !!report.morning_snack_status,
-            required: false,
-            color: "#D97706",
-          },
-          {
-            id: "lunch",
-            title: "Lunch",
-            icon: Utensils,
-            time: "",
-            description: report.lunch || "No lunch details recorded",
-            completed: !!report.lunch_status,
-            required: true,
-            color: "#EF4444",
-          },
-          {
-            id: "evening_snack",
-            title: "Evening Snack",
-            icon: Coffee,
-            time: "",
-            description:
-              report.evening_snack || "No snack time details recorded",
-            completed: !!report.evening_snack_status,
-            required: false,
-            color: "#06B6D4",
-          },
-          {
-            id: "medicine",
-            title: "Medicine",
-            icon: Pill,
-            time: "",
-            description:
-              report.medicine === "true"
-                ? "Medicine needs to be given today."
-                : "No medicine for today",
-            completed: !!report.medicine_status,
-            required: false,
-            color: "#F97316",
-          },
-        ]);
+    const formattedArrivalTime = report.arrived_time
+      ? new Date(report.arrived_time).toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        })
+      : "";
 
-        setSpecialNotes(report.special_note || "");
-        setDailySummary(report.day_summery || "");
-        setCheckoutPerson(report.checkout_person || "");
-        setCheckoutTime(report.checkout_time || "");
-        setArrivalTime(report.arrived_time || "");
-        setArrivalCompleted(!!report.arrived_time);
-      } catch (err) {
-        console.error("Failed to fetch report:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    setReportFields([
+      {
+        id: "breakfirst",
+        title: "Breakfirst",
+        icon: Coffee,
+        time: "",
+        description: report.breakfirst || "No breakfast details recorded",
+        completed: !!report.breakfirst_status,
+        required: true,
+        color: "#F59E0B",
+      },
+      {
+        id: "morning_snack",
+        title: "Morning snack",
+        icon: Coffee,
+        time: "",
+        description: report.morning_snack || "No tea time details recorded",
+        completed: !!report.morning_snack_status,
+        required: false,
+        color: "#D97706",
+      },
+      {
+        id: "lunch",
+        title: "Lunch",
+        icon: Utensils,
+        time: "",
+        description: report.lunch || "No lunch details recorded",
+        completed: !!report.lunch_status,
+        required: true,
+        color: "#EF4444",
+      },
+      {
+        id: "evening_snack",
+        title: "Evening Snack",
+        icon: Coffee,
+        time: "",
+        description: report.evening_snack || "No snack time details recorded",
+        completed: !!report.evening_snack_status,
+        required: false,
+        color: "#06B6D4",
+      },
+      {
+        id: "medicine",
+        title: "Medicine",
+        icon: Pill,
+        time: "",
+        description:
+          report.medicine === "true"
+            ? "Medicine needs to be given today."
+            : "No medicine for today",
+        completed: !!report.medicine_status,
+        required: false,
+        color: "#F97316",
+      },
+    ]);
+
+    setSpecialNotes(report.special_note || "");
+    setDailySummary(report.day_summery || "");
+    setCheckoutPerson(report.checkout_person || "");
+    setCheckoutTime(report.checkout_time || "");
+    setArrivalTime(formattedArrivalTime);
+    setArrivalCompleted(!!report.arrived_time);
+  } catch (err) {
+    console.error("Failed to fetch report:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
     if (report_id) fetchReport();
   }, [report_id]);
@@ -202,35 +208,7 @@ export default function DailyReportForm() {
     fetchGuardians();
   }, [child_id]);
 
-  // const saveArrivalTime = async () => {
-  //  const now = new Date().toISOString(); // e.g., "2025-07-06T09:43:00.000Z"
-
-  //   setArrivalTime(now);
-  //   setArrivalCompleted(true);
-
-  //   try {
-  //     const response = await fetch(
-  //       `${API_BASE_URL}/api/reports/${report_id}/arrival`,
-  //       {
-  //         method: "PUT",
-  //         headers: {
-  //           "Content-Type": "application/json",
-  //         },
-  //         body: JSON.stringify({ arrived_time: now }),
-  //       }
-  //     );
-
-  //     if (response.ok) {
-  //       Alert.alert("Arrival time saved", `Arrival time set to ${now}`);
-  //     } else {
-  //       throw new Error("Failed to update arrival time");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error saving arrival time:", error);
-  //     Alert.alert("Error", "Failed to save arrival time to the server.");
-  //   }
-  // };
-
+  
   const saveArrivalTime = async () => {
     const now = new Date();
 
@@ -1078,16 +1056,20 @@ const styles = StyleSheet.create({
   pickerWrapper: {
     marginTop: 4,
   },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 6,
-    overflow: "hidden",
-  },
-  picker: {
-    height: 44,
-    color: "#1F2937",
-  },
+pickerContainer: {
+  borderWidth: 1,
+  borderColor: '#D1D5DB',
+  borderRadius: 8,
+  overflow: 'hidden',
+  height: 50,       // Increased height (was likely too small)
+  justifyContent: 'center',
+},
+
+picker: {
+  height: 50,       // Match container height
+  fontSize: 16,
+},
+
   selectedPersonIndicator: {
     flexDirection: "row",
     alignItems: "center",
