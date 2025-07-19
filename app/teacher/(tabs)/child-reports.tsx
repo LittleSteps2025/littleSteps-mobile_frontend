@@ -35,23 +35,21 @@ export default function Children() {
   }, []);
 
   return (
-    
-      <LinearGradient
-        colors={[
-          "#DFC1FD",
-          "#f3e8ff",
-          "#F5ECFE",
-          "#F5ECFE",
-          "#e9d5ff",
-          "#DFC1FD",
-        ]}
-        style={{ flex: 1 }}   
+    <LinearGradient
+      colors={[
+        "#DFC1FD",
+        "#f3e8ff",
+        "#F5ECFE",
+        "#F5ECFE",
+        "#e9d5ff",
+        "#DFC1FD",
+      ]}
+      style={{ flex: 1 }}   
     >
       <ScrollView
-      // style={{ flex: 1 }}
-      contentContainerStyle={{ paddingBottom: 24 }}
-      showsVerticalScrollIndicator={false}
-    >
+        contentContainerStyle={{ paddingBottom: 20 }}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <TouchableOpacity
@@ -71,40 +69,37 @@ export default function Children() {
             />
           ) : (
             <View style={styles.content}>
-            {Array.isArray(children) &&
-  children.map((child: any) => (
-                <View key={child.child_id} style={styles.childCard}>
-                  <View style={styles.childHeader}>
-                    <Image
-                      source={{
-                        uri: child.avatar || "https://via.placeholder.com/60",
-                      }}
-                      style={styles.avatar}
-                    />
-                    <View style={styles.childInfo}>
-                      <Text style={styles.childName}>{child.child_name}</Text>
-                      <Text style={styles.childDetails}>
-                        {child.child_age} years old • 
-                        {child.child_group} Group
-                      </Text>
-                    </View>
-                    <View style={styles.progressContainer}>
-                      <Text style={styles.progressText}>{child.progress}%</Text>
-                      <View style={styles.progressBar}>
-                        <View
-                          style={[
-                            styles.progressFill,
-                            { width: `${child.progress || 0}%` },
-                          ]}
-                        />
+              {Array.isArray(children) &&
+                children.map((child) => (
+                  <View key={child.child_id} style={styles.childCard}>
+                    <View style={styles.childHeader}>
+                      <Image
+                        source={{
+                          uri: child.avatar || "https://via.placeholder.com/50",
+                        }}
+                        style={styles.avatar}
+                      />
+                      <View style={styles.childInfo}>
+                        <Text style={styles.childName}>{child.child_name}</Text>
+                        <Text style={styles.childDetails}>
+                          {child.child_age} years • {child.child_group} Group
+                        </Text>
+                      </View>
+                      <View style={styles.progressContainer}>
+                        <Text style={styles.progressText}>{child.progress}%</Text>
+                        <View style={styles.progressBar}>
+                          <View
+                            style={[
+                              styles.progressFill,
+                              { width: `${child.progress || 0}%` },
+                            ]}
+                          />
+                        </View>
                       </View>
                     </View>
-                  </View>
 
-                  <View style={styles.todaySection}>
-                    <Text style={styles.todaySectionTitle}>Today's Record</Text>
                     <TouchableOpacity
-                      style={styles.todayDetailsButton}
+                      style={styles.reportButton}
                       onPress={() =>
                         router.push(
                           `/teacher/daily-report-form?report_id=${child.report_id}`
@@ -112,34 +107,24 @@ export default function Children() {
                       }
                       activeOpacity={0.8}
                     >
-                      <FileText size={20} color="#8B5CF6" strokeWidth={2} />
-                      <View style={styles.todayDetailsText}>
-                        <Text style={styles.todayDetailsTitle}>
-                          View Today's Details
-                        </Text>
-                        <Text style={styles.todayDetailsSubtitle}>
-                          Check progress and activities
-                        </Text>
-                      </View>
+                      <FileText size={16} color="#8B5CF6" strokeWidth={2} />
+                      <Text style={styles.reportButtonText}>View Report</Text>
                     </TouchableOpacity>
                   </View>
-                </View>
-              ))}
+                ))}
             </View>
           )}
         </View>
-         </ScrollView>
-      </LinearGradient>
-   
+      </ScrollView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f3e8ff" },
   header: {
-    paddingTop: 40,
-    paddingBottom: 32,
-    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 12,
   },
   headerRow: {
     flexDirection: "row",
@@ -147,46 +132,62 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 27,
     fontWeight: "700",
     color: "#000000",
   },
-  content: { flex: 1, paddingHorizontal: 24, marginTop: 20 },
+  content: { 
+    flex: 1, 
+    paddingHorizontal: 12, 
+    marginTop: 56 
+  },
   childCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   childHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  avatar: { width: 60, height: 60, borderRadius: 30, marginRight: 16 },
-  childInfo: { flex: 1 },
+  avatar: { 
+    width: 50, 
+    height: 50, 
+    borderRadius: 25, 
+    marginRight: 12 
+  },
+  childInfo: { 
+    flex: 1 
+  },
   childName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
     color: "#1F2937",
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  childDetails: { fontSize: 14, color: "#6B7280" },
-  progressContainer: { alignItems: "flex-end" },
+  childDetails: { 
+    fontSize: 13, 
+    color: "#6B7280" 
+  },
+  progressContainer: { 
+    alignItems: "flex-end" 
+  },
   progressText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
     color: "#8B5CF6",
     marginBottom: 4,
   },
   progressBar: {
-    width: 60,
-    height: 4,
+    width: 50,
+    height: 3,
     backgroundColor: "#E5E7EB",
     borderRadius: 2,
   },
@@ -195,35 +196,22 @@ const styles = StyleSheet.create({
     backgroundColor: "#8B5CF6",
     borderRadius: 2,
   },
-  todaySection: {
-    paddingTop: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-  },
-  todaySectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1F2937",
-    marginBottom: 12,
-  },
-  todayDetailsButton: {
+  reportButton: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "#F8FAFC",
-    padding: 16,
-    borderRadius: 12,
+    padding: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#E2E8F0",
+    gap: 8,
   },
-  todayDetailsText: { flex: 1, marginLeft: 12 },
-  todayDetailsTitle: {
-    fontSize: 16,
+  reportButtonText: {
+    fontSize: 14,
     fontWeight: "500",
     color: "#1F2937",
-    marginBottom: 2,
   },
-  todayDetailsSubtitle: { fontSize: 14, color: "#6B7280" },
   backButton: {
     width: 40,
     height: 40,
