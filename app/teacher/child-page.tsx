@@ -102,27 +102,6 @@ useEffect(() => {
 
 
 
-  
-  // const handleSave = async () => {
-  //   if (!child) return;
-
-  //   setSaving(true);
-  //   try {
-  //     await axios.post( `${API_BASE_URL}/api/child/${child.child_id}/notes`, {
-  //       emergency_notes: emergencyNotes,
-  //     });
-  //     Alert.alert('Success', 'Emergency notes updated successfully.');
-  //     setChild({ ...child, emergency_notes: emergencyNotes });
-  //   } catch (error) {
-  //     Alert.alert('Error', 'Failed to update emergency notes.');
-  //   } finally {
-  //     setSaving(false);
-  //   }
-  // };
-
-
-
-
 
 
 
