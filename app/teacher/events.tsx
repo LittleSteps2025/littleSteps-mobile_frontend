@@ -1,32 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
+  ActivityIndicator,
   Modal,
-  ScrollView,
   Pressable,
   SafeAreaView,
-  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import {
+  ArrowLeft,
   Calendar,
-  Clock,
-  MapPin,
-  CheckCircle,
-  Users,
-  Palette,
   Car,
+  CheckCircle,
+  Clock,
   Dumbbell,
+  MapPin,
+  Palette,
+  Users,
   X,
 } from 'lucide-react-native';
 
-import { LinearGradient } from 'expo-linear-gradient';  // <-- Import LinearGradient
-import { API_BASE_URL } from "../../utility/config"; // Adjust import path as necessary
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { API_BASE_URL } from "../../utility/config";
 
 export default function EventListAndDetail() {
+  const router = useRouter();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -105,25 +108,30 @@ export default function EventListAndDetail() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 6, justifyContent: 'center', alignItems: 'center' }}>
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#7c3aed" />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <View style={styles.container}>
-        {/* Header with LinearGradient */}
-        <LinearGradient
-          colors={["#DFC1FD", "#f3e8ff", "#F5ECFE", "#F5ECFE", "#e9d5ff", "#DFC1FD"]}
-          style={styles.header}
-        >
-          <Text style={styles.title}>Daycare Events</Text>
-          <Text style={styles.subtitle}>Stay updated with upcoming activities</Text>
-        </LinearGradient>
+    <LinearGradient colors={[ "#DFC1FD",
+        "#f3e8ff",
+        "#F5ECFE",
+        "#F5ECFE",
+        "#e9d5ff",
+        "#DFC1FD",]} style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={styles.headerContainer}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft color="#000" size={24} />
+          </TouchableOpacity>
+          <View style={styles.titleContainer}>
+            <Text style={styles.title}>Daycare Events</Text>
+            <Text style={styles.subtitle}>Stay updated with upcoming activities</Text>
+          </View>
+        </View>
 
-        {/* Events List */}
         <ScrollView contentContainerStyle={styles.listContainer}>
           {events.map((item) => {
             const eventColor = getEventColor(item.type);
@@ -132,7 +140,7 @@ export default function EventListAndDetail() {
                 key={item.id}
                 onPress={() => openEventDetails(item)}
                 activeOpacity={0.7}
-                style={[styles.eventCard, { backgroundColor: '#f9fafb' }]}
+                style={styles.eventCard}
               >
                 <View style={styles.eventIconContainer}>
                   <View style={[styles.iconCircle, { backgroundColor: eventColor + '15' }]}>
@@ -172,12 +180,7 @@ export default function EventListAndDetail() {
         </ScrollView>
 
         {/* Event Details Modal */}
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={isModalVisible}
-          onRequestClose={closeModal}
-        >
+        <Modal animationType="slide" transparent={true} visible={isModalVisible} onRequestClose={closeModal}>
           <View style={styles.modalBackdrop}>
             <View style={styles.modalContainer}>
               <View style={styles.modalHeader}>
@@ -251,34 +254,41 @@ export default function EventListAndDetail() {
             </View>
           </View>
         </Modal>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', paddingTop: 20 },
-  header: {
-    paddingVertical: 30,
-    paddingHorizontal: 20,
-    marginTop: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginTop: 20
+  },
+  backButton: {
+    paddingRight: 12,
+  },
+  titleContainer: {
+    flex: 1,
+    alignItems: 'center',
   },
   title: {
-    marginTop: 10, 
-    fontSize: 24,
+    fontSize: 29,
     fontWeight: 'bold',
-    color: '#6b21a8',
+    color: '#000',
+   
   },
   subtitle: {
-    color: '#7c3aed',
-    marginTop: 5,
+    color: '#000',
+    fontSize: 14,
   },
   listContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     paddingBottom: 48,
+    marginTop:30
   },
   eventCard: {
     flexDirection: 'row',
