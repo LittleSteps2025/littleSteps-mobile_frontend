@@ -276,7 +276,7 @@ export default function ParentProfile() {
     address: editForm.address,
     profileImage: profileImage ? { uri: profileImage } : require('@/assets/images/mother.jpg'), // Use selected image or default
     joinDate: 'January 2024',
-    children: ['Pramodi Peshila', 'Nimal Perera'] // List of children
+    // children: ['Pramodi Peshila', 'Nimal Perera'] // List of children
   };
 
   const profileSections = [
@@ -309,23 +309,23 @@ export default function ParentProfile() {
         }
       ]
     },
-    {
-      title: 'Account Information',
-      items: [
-        {
-          label: 'Member Since',
-          value: parentData.joinDate,
-          icon: 'calendar-outline',
-          color: '#ef4444'
-        },
-        {
-          label: 'Children Enrolled',
-          value: parentData.children.join(', '),
-          icon: 'people-outline',
-          color: '#8b5cf6'
-        }
-      ]
-    }
+    // {
+    //   title: 'Account Information',
+    //   items: [
+    //     {
+    //       label: 'Member Since',
+    //       value: parentData.joinDate,
+    //       icon: 'calendar-outline',
+    //       color: '#ef4444'
+    //     },
+    //     {
+    //       label: 'Children Enrolled',
+    //       value: parentData.children.join(', '),
+    //       icon: 'people-outline',
+    //       color: '#8b5cf6'
+    //     }
+    //   ]
+    // }
   ];
 
   return (
@@ -347,16 +347,20 @@ export default function ParentProfile() {
               <Ionicons name="chevron-back" size={24} color="#374151" />
             </TouchableOpacity>
             
-            <Text className="text-2xl font-bold text-gray-700 mt-4">
-              Parent Profile
-            </Text>
+            
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
               onPress={openEditModal}
               className="w-10 h-10 justify-center items-center"
             >
               <Ionicons name="create-outline" size={24} color="#7c3aed" />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
+          </View>
+
+          <View className="px-6 pt-1 pb-2 flex-row items-center justify-center ">
+              <Text className="text-2xl font-bold text-gray-700  ">
+              Parent Profile
+            </Text>
           </View>
 
           {/* Profile Image and Basic Info */}

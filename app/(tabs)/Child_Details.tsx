@@ -76,7 +76,7 @@ export default function ChildDetailsForm() {
             phoneNumber: user?.phone || 'N/A',
             emergencyNumber: foundChild.emergencyContact || 'N/A',
             homeAddress: user?.address || 'N/A',
-            profileImage: (foundChild.profileImage && foundChild.profileImage !== 'a' && foundChild.profileImage.startsWith('http')) 
+            profileImage: (foundChild.profileImage && typeof foundChild.profileImage === 'string' && foundChild.profileImage !== 'a' && foundChild.profileImage.startsWith('http')) 
               ? foundChild.profileImage 
               : null
           };
@@ -94,7 +94,7 @@ export default function ChildDetailsForm() {
         phoneNumber: user?.phone || 'N/A',
         emergencyNumber: firstChild.emergencyContact || user?.phone || 'N/A',
         homeAddress: user?.address || 'N/A',
-        profileImage: (firstChild.profileImage && firstChild.profileImage !== 'a' && firstChild.profileImage.startsWith('http')) 
+        profileImage: (firstChild.profileImage && typeof firstChild.profileImage === 'string' && firstChild.profileImage !== 'a' && firstChild.profileImage.startsWith('http')) 
           ? firstChild.profileImage 
           : null
       };
@@ -270,6 +270,7 @@ export default function ChildDetailsForm() {
                       end={[1, 1]}
                       className="rounded-2xl p-5 mb-4"
                       style={{
+                        borderRadius: 13,
                         shadowColor: item.color[0],
                         shadowOffset: { width: 0, height: 4 },
                         shadowOpacity: 0.25,

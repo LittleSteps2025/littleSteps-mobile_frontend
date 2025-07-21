@@ -411,7 +411,9 @@ export default function ParentMore() {
                     shadowOffset: { width: 0, height: 4 },
                     shadowOpacity: 0.25,
                     shadowRadius: 8,
-                    elevation: 6
+                    elevation: 6,
+                    borderRadius: 13
+
                   }}
                 >
                   <View className="flex-row items-center">
@@ -434,7 +436,7 @@ export default function ParentMore() {
           </View>
 
           {/* Logout Button */}
-          <View className="px-6 mt-4 mb-8 pb-40">
+          {/* <View className="px-6 mt-4 mb-8 pb-40">
             <TouchableOpacity
               onPress={() => {
                 showCustomAlert(
@@ -464,7 +466,7 @@ export default function ParentMore() {
                 </Text>
               </View>
             </TouchableOpacity>
-          </View>
+          </View> */}
         </ScrollView>
 
 
