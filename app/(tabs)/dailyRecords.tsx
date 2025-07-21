@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  Modal,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -30,10 +31,12 @@ export default function DailyMealTracker() {
     morning_snack: '',
     lunch: '',
     evening_snack: '',
-    medicine: '',
     special_note: '',
     date: new Date().toLocaleDateString()
   });
+
+  const [hasMedication, setHasMedication] = useState<string>('');
+  const [showMedicationDropdown, setShowMedicationDropdown] = useState(false);
 
   const handleBack = () => {
     router.back();
@@ -51,8 +54,8 @@ export default function DailyMealTracker() {
       !mealData.breakfirst &&
       !mealData.lunch &&
       !mealData.morning_snack &&
-      !mealData.evening_snack && // Added snack_time to validation
-      !mealData.medicine &&
+      !mealData.evening_snack &&
+      !hasMedication &&
       !mealData.special_note
     ) {
       showCustomAlert('error', 'Missing Information', 'Please enter at least one detail for the daily record (meal, medicine, or notes).');
@@ -64,7 +67,7 @@ export default function DailyMealTracker() {
      morning_snack: mealData.morning_snack,
      lunch: mealData.lunch,
       evening_snack: mealData.evening_snack,
-      medicine: mealData.medicine,
+      medicine: hasMedication === 'Yes',
       special_note: mealData.special_note,
       date: new Date().toISOString().slice(0, 10),
       create_date: new Date().toISOString(),
@@ -79,19 +82,19 @@ export default function DailyMealTracker() {
     });
 
     if (response.ok) {
-      showCustomAlert('success', 'Success!', 'Meal saved successfully.');
+      showCustomAlert('success', 'Success!', 'Daily record saved successfully.');
       setMealData({
         breakfirst: '',
         morning_snack: '',
           lunch: '',
           
           evening_snack: '',
-          medicine: '',
           special_note: '',
         date: new Date().toLocaleDateString()
       });
+      setHasMedication('');
     } else {
-      showCustomAlert('error', 'Error', 'Failed to save meal.');
+      showCustomAlert('error', 'Error', 'Failed to save daily record.');
     }
   } catch (err) {
     console.error('Submit error:', err);
@@ -251,33 +254,121 @@ export default function DailyMealTracker() {
                 {/* Section Header */}
                 <View className="flex-row items-center mb-4">
                   <View className="w-12 h-12 rounded-full bg-amber-50 items-center justify-center mr-4">
-                    <Ionicons name="medical-outline" size={24} color="#f59e0b" />
+                    <Ionicons name="medical-outline" size={24} color="#f59e0b"  />
                   </View>
                   <Text className="text-xl font-bold text-gray-800">
-                    Medical Instructionss
+                    Medical Instructions
                   </Text>
                 </View>
 
-                {/* Input Field */}
-                <TextInput
-                  value={mealData.medicine}
-                  onChangeText={(text) => handleInputChange('medicine', text)}
-                  placeholder="Any medication details or dosage instructions..."
-                  multiline
-                  numberOfLines={3}
-                  className="text-base text-gray-700 p-4 rounded-xl"
-                  style={{
-                    backgroundColor: 'rgba(248, 250, 252, 0.8)',
-                    borderWidth: 1,
-                    borderColor: 'rgba(124, 58, 237, 0.3)',
-                    minHeight: 80,
-                    textAlignVertical: 'top'
-                  }}
-                placeholderTextColor="#9ca3af"
-                                  
-                />
+                {/* Dropdown for Yes/No */}
+                <View className="mb-4">
+                  <Text className="text-sm font-medium text-gray-600 mb-2">
+                    Does your child need medication today?
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setShowMedicationDropdown(true)}
+                    className="p-4 rounded-xl flex-row items-center justify-between"
+                    style={{
+                      backgroundColor: 'rgba(248, 250, 252, 0.8)',
+                      borderWidth: 1,
+                      borderColor: '#f59e0b30',
+                    }}
+                  >
+                    <Text className={`text-base ${hasMedication ? 'text-gray-700' : 'text-gray-400'}`}>
+                      {hasMedication || 'Select an option'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={20} color="#f59e0b" />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
+
+            {/* Medication Dropdown Modal */}
+            <Modal
+              visible={showMedicationDropdown}
+              transparent={true}
+              animationType="fade"
+              onRequestClose={() => setShowMedicationDropdown(false)}
+            >
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+                activeOpacity={1}
+                onPress={() => setShowMedicationDropdown(false)}
+              >
+                <View
+                  style={{
+                    backgroundColor: 'white',
+                    borderRadius: 16,
+                    padding: 20,
+                    width: '80%',
+                    maxWidth: 300,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 8,
+                    elevation: 8,
+                  }}
+                >
+                  <Text className="text-lg font-bold text-gray-800 mb-4 text-center">
+                    Medication Required?
+                  </Text>
+                  
+                  {['Yes', 'No'].map((option) => (
+                    <TouchableOpacity
+                      key={option}
+                      onPress={() => {
+                        setHasMedication(option);
+                        setShowMedicationDropdown(false);
+                      }}
+                      className="p-4 rounded-xl mb-2 flex-row items-center"
+                      style={{
+                        backgroundColor: hasMedication === option ? '#f59e0b20' : '#f8fafc',
+                        borderWidth: 1,
+                        borderColor: hasMedication === option ? '#f59e0b' : '#e2e8f0',
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: 10,
+                          borderWidth: 2,
+                          borderColor: hasMedication === option ? '#f59e0b' : '#9ca3af',
+                          backgroundColor: hasMedication === option ? '#f59e0b' : 'transparent',
+                          marginRight: 12,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {hasMedication === option && (
+                          <View
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: 4,
+                              backgroundColor: 'white',
+                            }}
+                          />
+                        )}
+                      </View>
+                      <Text
+                        className={`text-base font-medium ${
+                          hasMedication === option ? 'text-amber-600' : 'text-gray-700'
+                        }`}
+                      >
+                        {option}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </TouchableOpacity>
+            </Modal>
 
             {/* Special Instructions */}
             <View className="mb-8">
@@ -300,7 +391,7 @@ export default function DailyMealTracker() {
                     <Ionicons name="document-text-outline" size={24} color="#7c3aed" />
                   </View>
                   <Text className="text-xl font-bold text-gray-800">
-                    Special Instructions
+                    Special Instruction
                   </Text>
                 </View>
 
