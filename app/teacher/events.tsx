@@ -76,6 +76,14 @@ export default function EventListAndDetail() {
     setSelectedEvent(null);
   };
 
+
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+};
+
+
+
   const getEventIcon = (type, size = 24, color = '#000') => {
     switch (type) {
       case 'sports':
@@ -151,7 +159,7 @@ export default function EventListAndDetail() {
                 <View style={styles.eventContent}>
                   <Text style={styles.eventTitle}>{item.title}</Text>
                   <Text style={styles.eventDateTime}>
-                    {item.date} • {item.time}
+                    {formatDate(item.date)} • {item.time}
                   </Text>
                   <Text style={styles.eventLocation}>{item.location}</Text>
                 </View>
