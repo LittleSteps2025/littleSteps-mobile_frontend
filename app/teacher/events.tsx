@@ -215,7 +215,7 @@ const formatDate = (dateString) => {
                       <Calendar size={24} color="#6b7280" />
                       <View style={styles.detailText}>
                         <Text style={styles.detailLabel}>Date</Text>
-                        <Text style={styles.detailValue}>{selectedEvent.date}</Text>
+<Text style={styles.detailValue}>{formatDate(selectedEvent.date)}</Text>
                       </View>
                     </View>
 
