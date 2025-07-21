@@ -44,7 +44,7 @@ export default function Children() {
         "#e9d5ff",
         "#DFC1FD",
       ]}
-      style={{ flex: 1 }}   
+      style={{ flex: 1 }}
     >
       <ScrollView
         contentContainerStyle={{ paddingBottom: 20 }}
@@ -75,18 +75,23 @@ export default function Children() {
                     <View style={styles.childHeader}>
                       <Image
                         source={{
-                          uri: child.avatar || "https://via.placeholder.com/50",
+                          uri:
+                            child.avatar || "https://via.placeholder.com/50",
                         }}
                         style={styles.avatar}
                       />
                       <View style={styles.childInfo}>
-                        <Text style={styles.childName}>{child.child_name}</Text>
+                        <Text style={styles.childName}>
+                          {child.child_name}
+                        </Text>
                         <Text style={styles.childDetails}>
                           {child.child_age} years • {child.child_group} Group
                         </Text>
                       </View>
                       <View style={styles.progressContainer}>
-                        <Text style={styles.progressText}>{child.progress}%</Text>
+                        <Text style={styles.progressText}>
+                          {child.progress}%
+                        </Text>
                         <View style={styles.progressBar}>
                           <View
                             style={[
@@ -112,6 +117,19 @@ export default function Children() {
                     </TouchableOpacity>
                   </View>
                 ))}
+
+              {Array.isArray(children) && children.length === 0 && (
+                <Text
+                  style={{
+                    textAlign: "center",
+                    color: "#6B7280",
+                    fontSize: 16,
+                    marginTop: 40,
+                  }}
+                >
+                  No reports for today
+                </Text>
+              )}
             </View>
           )}
         </View>
@@ -136,10 +154,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#000000",
   },
-  content: { 
-    flex: 1, 
-    paddingHorizontal: 12, 
-    marginTop: 56 
+  content: {
+    flex: 1,
+    paddingHorizontal: 12,
+    marginTop: 56,
   },
   childCard: {
     backgroundColor: "#FFFFFF",
@@ -157,14 +175,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
   },
-  avatar: { 
-    width: 50, 
-    height: 50, 
-    borderRadius: 25, 
-    marginRight: 12 
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 12,
   },
-  childInfo: { 
-    flex: 1 
+  childInfo: {
+    flex: 1,
   },
   childName: {
     fontSize: 16,
@@ -172,12 +190,12 @@ const styles = StyleSheet.create({
     color: "#1F2937",
     marginBottom: 2,
   },
-  childDetails: { 
-    fontSize: 13, 
-    color: "#6B7280" 
+  childDetails: {
+    fontSize: 13,
+    color: "#6B7280",
   },
-  progressContainer: { 
-    alignItems: "flex-end" 
+  progressContainer: {
+    alignItems: "flex-end",
   },
   progressText: {
     fontSize: 14,

@@ -531,7 +531,7 @@ const statusUpdates: { [key: string]: number } = {};
                 <View>
                   <Text style={styles.taskTitle}>{field.title}</Text>
                   <Text style={styles.taskSubtitle}>
-                    {field.required ? "Required" : "Optional"}
+                    {field.required ? "" : ""}
                   </Text>
                 </View>
               </View>
