@@ -35,7 +35,7 @@ export default function HealthRecords() {
   // Health information state
   const [healthData, setHealthData] = useState({
     allergies: 'Prawns',
-    medications: 'Piriton 10mg',
+    // medications: 'Piriton 10mg',
     bloodType: 'O+',
     emergencyMedicalInfo: 'No special instructions'
   });
@@ -282,7 +282,7 @@ export default function HealthRecords() {
                   </View>
 
                   {/* Current Medications */}
-                  <View className="flex-row items-center py-3 border-b border-gray-100">
+                  {/* <View className="flex-row items-center py-3 border-b border-gray-100">
                     <View className="w-10 h-10 rounded-full bg-green-50 items-center justify-center mr-4">
                       <Ionicons name="medical-outline" size={18} color="#10b981" />
                     </View>
@@ -294,7 +294,7 @@ export default function HealthRecords() {
                         {healthData.medications}
                       </Text>
                     </View>
-                  </View>
+                  </View> */}
 
                   {/* Emergency Medical Info */}
                   <View className="flex-row items-center py-3">
@@ -429,7 +429,7 @@ export default function HealthRecords() {
           animationType="slide"
           onRequestClose={() => setIsEditing(false)}
         >
-          <View className="flex-1 justify-end bg-black bg-opacity-50">
+          <View className="flex-1 justify-end bg-black/50 bg-opacity-50">
             <View 
               className="bg-white rounded-t-3xl p-6"
               style={{ 
@@ -460,14 +460,14 @@ export default function HealthRecords() {
                   numberOfLines={3}
                 />
 
-                <InputField
+                {/* <InputField
                   label="Current Medications"
                   value={healthData.medications}
                   onChangeText={(value: string) => handleHealthDataChange('medications', value)}
                   placeholder="List current medications (or 'None')"
                   multiline={true}
                   numberOfLines={3}
-                />
+                /> */}
 
                 <InputField
                   label="Emergency Medical Information"
@@ -511,7 +511,7 @@ export default function HealthRecords() {
           animationType="slide"
           onRequestClose={() => setShowAddRecord(false)}
         >
-          <View className="flex-1 justify-end bg-black bg-opacity-50">
+          <View className="flex-1 justify-end bg-black/50 bg-opacity-50">
             <View 
               className="bg-white rounded-t-3xl p-6"
               style={{ 
