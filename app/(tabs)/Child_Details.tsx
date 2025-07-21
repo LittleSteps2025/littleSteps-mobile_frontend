@@ -270,6 +270,7 @@ export default function ChildDetailsForm() {
                       end={[1, 1]}
                       className="rounded-2xl p-5 mb-4"
                       style={{
+                        borderRadius: 13,
                         shadowColor: item.color[0],
                         shadowOffset: { width: 0, height: 4 },
                         shadowOpacity: 0.25,
