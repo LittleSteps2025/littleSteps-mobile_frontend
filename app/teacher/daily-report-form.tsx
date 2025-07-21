@@ -149,10 +149,9 @@ export default function DailyReportForm() {
         title: "Medicine",
         icon: Pill,
         time: "",
-        description:
-          report.medicine === "true"
-            ? "Medicine needs to be given today."
-            : "No medicine for today",
+       description: report.medicine
+  ? "Medicine needs to be given today."
+  : "No medicine for today",
         completed: !!report.medicine_status,
         required: false,
         color: "#F97316",
@@ -440,7 +439,7 @@ const statusUpdates: { [key: string]: number } = {};
               <Text style={styles.headerTitle}>Daily Report</Text>
               <View style={styles.headerInfo}>
                 <View style={styles.headerInfoItem}>
-                  <User color="#fff" size={16} />
+                  {/* <User color="#fff" size={16} /> */}
                   <Text style={styles.headerInfoText}>{childName}</Text>
                 </View>
                 <View style={styles.headerInfoItem}>

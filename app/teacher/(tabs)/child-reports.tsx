@@ -73,19 +73,18 @@ export default function Children() {
                 children.map((child) => (
                   <View key={child.child_id} style={styles.childCard}>
                     <View style={styles.childHeader}>
-                      <Image
-                        source={{
-                          uri:
-                            child.avatar || "https://via.placeholder.com/50",
-                        }}
-                        style={styles.avatar}
-                      />
+                    <Image
+  source={{
+    uri: child.avatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+  }}
+  style={styles.avatar}
+/>
                       <View style={styles.childInfo}>
                         <Text style={styles.childName}>
                           {child.child_name}
                         </Text>
                         <Text style={styles.childDetails}>
-                          {child.child_age} years • {child.child_group} Group
+                          {child.child_age} years • {child.group_name} Group
                         </Text>
                       </View>
                       <View style={styles.progressContainer}>
