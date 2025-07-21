@@ -52,7 +52,7 @@ export default function PickupDetailsPage() {
   const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([
     {
       id: '1',
-      name: 'Malani Fernando',
+      name: 'Amali Perera',
       relationship: 'Mother',
       phoneNumber: '+94 77 123 4567',
       photo:require('@/assets/images/mother.jpg') ,
@@ -72,7 +72,7 @@ export default function PickupDetailsPage() {
     },
     {
       id: '3',
-      name: 'Mary Perera',
+      name: 'Mary Alwis',
       relationship: 'Grandmother',
       phoneNumber: '+94 11 234 5678',
       photo: require('@/assets/images/grandMother.jpg'),
@@ -82,7 +82,7 @@ export default function PickupDetailsPage() {
     },
     {
       id: '4',
-      name: 'Kamal Alwis',
+      name: 'Meena Premadasa',
       relationship: 'Family Friend',
       phoneNumber: '+94 76 555 1234',
       photo: require('@/assets/images/friend.jpg'),
@@ -465,7 +465,7 @@ export default function PickupDetailsPage() {
           animationType="slide"
           onRequestClose={() => setShowAddContactModal(false)}
         >
-          <View className="flex-1 justify-end bg-black bg-opacity-50">
+          <View className="flex-1 justify-end bg-black/50 bg-opacity-50">
             <View 
               className="bg-white rounded-t-3xl p-6"
               style={{ 
@@ -608,7 +608,7 @@ export default function PickupDetailsPage() {
           animationType="fade"
           onRequestClose={() => setShowContactDetails(null)}
         >
-          <View className="flex-1 justify-center items-center bg-black bg-opacity-50 px-6">
+          <View className="flex-1 justify-center items-center bg-black/50 bg-opacity-50 px-6">
             {showContactDetails && (
               <View 
                 className="bg-white rounded-3xl p-6 w-full max-w-sm"
