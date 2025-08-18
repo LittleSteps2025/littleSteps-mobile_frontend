@@ -27,11 +27,11 @@ export default function UpdateChildDetails() {
   
   // Form state with existing data
   const [formData, setFormData] = useState({
-    firstName: 'Pramodi Peshila',
+    firstName: 'Pathum Silva',
     birthDate: '05/07/2001',
     guardianPhone: '0711234567',
     emergencyContact: '0777654321',
-    address: '123 Main Street, Colombo',
+    address: 'No 123,flowe street',
     allergies: 'None',
     medicalConditions: 'None',
     notes: 'Loves drawing and playing with blocks'

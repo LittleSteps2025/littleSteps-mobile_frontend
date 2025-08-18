@@ -149,10 +149,9 @@ export default function DailyReportForm() {
         title: "Medicine",
         icon: Pill,
         time: "",
-        description:
-          report.medicine === "true"
-            ? "Medicine needs to be given today."
-            : "No medicine for today",
+       description: report.medicine
+  ? "Medicine needs to be given today."
+  : "No medicine for today",
         completed: !!report.medicine_status,
         required: false,
         color: "#F97316",
