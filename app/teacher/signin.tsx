@@ -158,74 +158,40 @@ export default function CreateAccountWithValidation() {
     setIsLoading(true);
     
     try {
-      // Call parent login API
-      const response = await fetch(`${API_BASE_URL}/api/teachers/teacherLogin`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to login');
-      }
-
-      // Success - store user data if needed
-      const responseData = await response.json();
-      console.log('Login successful:', responseData);
+      console.log('Attempting teacher login with email:', formData.email);
+      console.log('Using API Base URL:', API_BASE_URL);
+      
+      // Try Firebase authentication for teachers
+      const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      console.log('Firebase login successful:', userCredential.user.uid);
 
       showCustomAlert('success', 'Success', 'Login successful!', false, () => {
         router.push('/teacher');
       });
+      
     } catch (error: any) {
-      // Handle different error scenarios
+      console.error('Login error:', error);
       let errorMessage = 'Failed to login. Please try again.';
       
-      if (error.message === 'Parent not found') {
-        errorMessage = 'No account found with this email address.';
-      } else if (error.message === 'Invalid password') {
+      // Handle Firebase-specific errors
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No teacher account found with this email address.';
+      } else if (error.code === 'auth/wrong-password') {
         errorMessage = 'Incorrect password. Please try again.';
-      } else if (error.message === 'Account not verified') {
-        errorMessage = 'Please verify your email address before logging in.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Please enter a valid email address.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many failed attempts. Please try again later.';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error. Please check your internet connection.';
+      } else if (error.message && error.message.includes('Network request failed')) {
+        errorMessage = 'Cannot connect to server. Please check your internet connection.';
       }
       
       showCustomAlert('error', 'Login Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    await signInWithEmailAndPassword(auth, formData.email, formData.password);
-console.log('Signed in to Firebase:', auth.currentUser?.uid);
   };
 
   // Get password strength
