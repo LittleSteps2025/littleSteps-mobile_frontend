@@ -156,7 +156,7 @@ export default function ParentMore() {
       // optional UI feedback: close modal while request runs
       setIsComplaintModalVisible(false);
 
-      const resp = await fetch(`${API_BASE_URL}/parent/complaints`, {
+      const resp = await fetch(`${API_BASE_URL}/parent/complaint/complaints`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -303,7 +303,7 @@ export default function ParentMore() {
     };
 
     try {
-      const resp = await fetch(`${API_BASE_URL}/parent/meeting`, {
+      const resp = await fetch(`${API_BASE_URL}/parent/meeting/meeting`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

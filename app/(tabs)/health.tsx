@@ -178,7 +178,7 @@ export default function HealthRecords() {
     };
 
     const method = editingRecord ? 'PUT' : 'POST';
-    const url = `${API_BASE_URL}/parent/medical-records`;
+    const url = `${API_BASE_URL}/parent/health/medical-records`;
 
     setSaving(true);
     try {
