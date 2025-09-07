@@ -1,79 +1,56 @@
-// app/health.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
-  StatusBar,
-  SafeAreaView,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Modal
+  View
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Picker } from '@react-native-picker/picker';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import CustomAlert from '@/components/CustomAlert';
 import { useCustomAlert } from '@/hooks/useCustomAlert';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
+import { useUser } from '@/contexts/UserContext';
+import { API_BASE_URL } from '@/utility';
 
 interface HealthRecord {
-  id: string;
-  date: string;
-  type: 'checkup' | 'vaccination' | 'illness' | 'medication';
-  title: string;
-  description: string;
+  child_id?: number;
+  record_date?: string;
+  type?: string;
+  title?: string;
+  description?: string;
   doctor?: string;
 }
 
 export default function HealthRecords() {
-  const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
   const router = useRouter();
-  
-  // Health information state
+  const params = useLocalSearchParams() as { childId?: string; id?: string };
+  const { user } = useUser();
+  const token = (user as any)?.token ?? '';
+  const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
+
   const [healthData, setHealthData] = useState({
-    allergies: 'Prawns',
-    // medications: 'Piriton 10mg',
-    bloodType: 'O+',
-    emergencyMedicalInfo: 'No special instructions'
+    bloodType: 'N/A',
+    allergies: 'N/A',
+    emergencyMedicalInfo: 'N/A'
   });
+  const [healthRecords, setHealthRecords] = useState<HealthRecord[]>([]);
+  const [loadingRecords, setLoadingRecords] = useState(false);
 
-  // Sample health records
-  const [healthRecords, setHealthRecords] = useState<HealthRecord[]>([
-    {
-      id: '1',
-      date: '2024-01-15',
-      type: 'checkup',
-      title: 'Annual Physical Checkup',
-      description: 'Routine physical examination. All vitals normal.',
-    },
-    {
-      id: '2',
-      date: '2024-02-20',
-      type: 'vaccination',
-      title: 'MMR Vaccine',
-      description: 'Second dose of MMR vaccine administered.',
-    },
-    {
-      id: '3',
-      date: '2024-03-10',
-      type: 'illness',
-      title: 'Common Cold',
-      description: 'Mild cold symptoms. Prescribed rest and fluids.',
-    }
-  ]);
+  const [isEditing, setIsEditing] = useState(false); // edit medical info
+  const [showAddRecord, setShowAddRecord] = useState(false); // add/edit record modal
+  const [editingRecord, setEditingRecord] = useState<HealthRecord | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [showAddRecord, setShowAddRecord] = useState(false);
-  const [newRecord, setNewRecord] = useState<{
-    date: string;
-    type: 'checkup' | 'vaccination' | 'illness' | 'medication';
-    title: string;
-    description: string;
-    doctor: string;
-  }>({
+  const [newRecord, setNewRecord] = useState({
     date: '',
     type: 'checkup',
     title: '',
@@ -81,56 +58,193 @@ export default function HealthRecords() {
     doctor: ''
   });
 
-  const handleBack = () => {
-    router.back();
+  const resolveChildId = (): number | null => {
+    const rawParam = params?.childId ?? params?.id;
+    if (rawParam && !Number.isNaN(Number(rawParam))) return Number(rawParam);
+
+    if ((user as any)?.selectedChildId && !Number.isNaN(Number((user as any).selectedChildId))) {
+      return Number((user as any).selectedChildId);
+    }
+
+    if (user?.children && Array.isArray(user.children) && user.children.length > 0) {
+      const first = user.children[0] as any;
+      const idFromSession = first?.child_id ?? first?.id ?? first?.childId;
+      if (idFromSession && !Number.isNaN(Number(idFromSession))) return Number(idFromSession);
+    }
+
+    return null;
   };
 
-  const handleHealthDataChange = (field: string, value: string) => {
-    setHealthData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleSaveHealthData = () => {
-    showCustomAlert('success', 'Success', 'Health information updated successfully!');
-    setIsEditing(false);
-  };
-
-  const handleAddRecord = () => {
-    if (!newRecord.title || !newRecord.date) {
-      showCustomAlert('error', 'Error', 'Please fill in all required fields');
+  const fetchRecords = async () => {
+    setLoadingRecords(true);
+    const childId = resolveChildId();
+    if (!childId) {
+      showCustomAlert('error', 'No child selected', 'Select a child before viewing health records.');
+      setLoadingRecords(false);
       return;
     }
 
-    const record: HealthRecord = {
-      id: Date.now().toString(),
-      ...newRecord
-    };
+    const url = `${API_BASE_URL}/parent/public/medical-records/${childId}`;
+    try {
+      const resp = await fetch(url);
+      const contentType = resp.headers.get('content-type') || '';
+      const text = await resp.text();
 
-    setHealthRecords(prev => [record, ...prev]);
-    setNewRecord({
-      date: '',
-      type: 'checkup',
-      title: '',
-      description: '',
-      doctor: ''
-    });
-    setShowAddRecord(false);
-    showCustomAlert('success', 'Success', 'Health record added successfully!');
+      if (!contentType.includes('application/json')) {
+        console.error('Server returned non-JSON:', resp.status, text);
+        showCustomAlert('error', 'Server Error', `Server returned non-JSON response (${resp.status}).`);
+        setLoadingRecords(false);
+        return;
+      }
+
+      const json = JSON.parse(text);
+      if (!resp.ok || !json.success) {
+        console.error('API error', json);
+        showCustomAlert('error', 'Error', json?.message || 'Unable to load medical records.');
+        setLoadingRecords(false);
+        return;
+      }
+
+      const { medicalInfo, records } = json.data || {};
+
+      setHealthData({
+        bloodType: medicalInfo?.blood_type || 'N/A',
+        allergies: medicalInfo?.allergies || 'N/A',
+        emergencyMedicalInfo: medicalInfo?.medical_info || 'N/A'
+      });
+
+      setHealthRecords((records || []).map((r: any) => ({
+        child_id: r.child_id,
+        record_date: r.record_date,
+        type: r.type,
+        title: r.title,
+        description: r.description,
+        doctor: r.doctor
+      })));
+    } catch (err) {
+      console.error('Fetch error', err);
+      showCustomAlert('error', 'Network Error', 'Unable to reach the server.');
+    } finally {
+      setLoadingRecords(false);
+    }
   };
 
-  const getRecordIcon = (type: string) => {
+  useEffect(() => {
+    fetchRecords();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(user as any)?.selectedChildId, user?.children, params?.childId, params?.id]);
+
+  const handleBack = () => router.back();
+  const handleHealthDataChange = (field: string, value: string) => setHealthData(prev => ({ ...prev, [field]: value }));
+  const handleSaveHealthData = () => { showCustomAlert('success', 'Success', 'Health information updated successfully!'); setIsEditing(false); };
+
+  const openAddRecordModal = () => {
+    setEditingRecord(null);
+    setNewRecord({ date: '', type: 'checkup', title: '', description: '', doctor: '' });
+    setShowAddRecord(true);
+  };
+
+  const openEditRecord = (record: HealthRecord) => {
+    setEditingRecord(record);
+    setNewRecord({
+      date: record.record_date ?? '',
+      type: record.type ?? 'checkup',
+      title: record.title ?? '',
+      description: record.description ?? '',
+      doctor: record.doctor ?? ''
+    });
+    setShowAddRecord(true);
+  };
+
+  const submitRecord = async () => {
+    const childId = resolveChildId();
+    if (!childId) {
+      showCustomAlert('error', 'No child selected', 'Select a child before saving a record.');
+      return;
+    }
+    if (!newRecord.title || !newRecord.date) {
+      showCustomAlert('error', 'Validation', 'Date and title are required.');
+      return;
+    }
+
+    const recordDate = newRecord.date.split('T')[0];
+
+    const payload = {
+      child_id: Number(childId),
+      record_date: newRecord.date,
+      type: newRecord.type,
+      title: newRecord.title,
+      description: newRecord.description ?? ''
+    };
+
+    const method = editingRecord ? 'PUT' : 'POST';
+    const url = `${API_BASE_URL}/parent/medical-records`;
+
+    setSaving(true);
+    try {
+      const headers: any = { 'Content-Type': 'application/json' };
+      // token is not required — endpoints are public — but including it if available is harmless
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const resp = await fetch(url, {
+        method,
+        headers,
+        body: JSON.stringify(payload)
+      });
+
+      // try to parse JSON safely
+      let json;
+      try {
+        json = await resp.json();
+      } catch (parseErr) {
+        console.error('Invalid JSON response', parseErr);
+        showCustomAlert('error', 'Server Error', 'Invalid response from server.');
+        setSaving(false);
+        return;
+      }
+
+      if (!resp.ok || !json.success) {
+        console.error('API error', json);
+        showCustomAlert('error', 'Error', json?.message || 'Failed to save record');
+        setSaving(false);
+        return;
+      }
+
+      const saved: HealthRecord = json.data;
+
+      if (editingRecord) {
+        setHealthRecords(prev => prev.map(r =>
+          (r.child_id === saved.child_id && r.record_date === saved.record_date) ? { ...r, ...saved } : r
+        ));
+        showCustomAlert('success', 'Updated', 'Health record updated');
+      } else {
+        // place new record at top
+        setHealthRecords(prev => [{ ...saved }, ...prev]);
+        showCustomAlert('success', 'Created', 'Health record added');
+      }
+
+      setShowAddRecord(false);
+      setEditingRecord(null);
+      setNewRecord({ date: '', type: 'checkup', title: '', description: '' });
+    } catch (err) {
+      console.error('Network error', err);
+      showCustomAlert('error', 'Network Error', 'Unable to reach the server.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getRecordIcon = (type: string | undefined) => {
     switch (type) {
       case 'checkup': return 'medical';
       case 'vaccination': return 'shield-checkmark';
       case 'illness': return 'thermometer';
-      case 'medication': return 'medical';
+      case 'medication': return 'bandage';
       default: return 'document-text';
     }
   };
 
-  const getRecordColor = (type: string): [string, string] => {
+  const getRecordColor = (type: string | undefined): [string, string] => {
     switch (type) {
       case 'checkup': return ['#10b981', '#059669'];
       case 'vaccination': return ['#3b82f6', '#2563eb'];
@@ -140,27 +254,16 @@ export default function HealthRecords() {
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Unknown date';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    if (isNaN(date.getTime())) return dateString;
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-  const InputField = ({ 
-    label, 
-    value, 
-    onChangeText, 
-    placeholder, 
-    multiline = false,
-    numberOfLines = 1
-  }: any) => (
-    <View className="mb-4">
-      <Text className="text-sm font-medium text-gray-600 mb-2 ml-1">
-        {label}
-      </Text>
+  const InputField = ({ label, value, onChangeText, placeholder, multiline = false, numberOfLines = 1 }: any) => (
+    <View style={{ marginBottom: 12 }}>
+      <Text style={{ fontSize: 13, fontWeight: '500', color: '#6b7280', marginBottom: 6 }}>{label}</Text>
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -169,333 +272,155 @@ export default function HealthRecords() {
         multiline={multiline}
         numberOfLines={numberOfLines}
         style={{
-          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          backgroundColor: 'rgba(255,255,255,0.9)',
           borderRadius: 16,
           paddingHorizontal: 20,
-          paddingVertical: multiline ? 16 : 18,
+          paddingVertical: multiline ? 16 : 12,
           fontSize: 16,
-          fontWeight: '500',
           color: '#374151',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-          elevation: 2,
           borderWidth: 1,
-          borderColor: '#e5e7eb',
-          textAlignVertical: multiline ? 'top' : 'center'
+          borderColor: '#e5e7eb'
         }}
       />
     </View>
   );
 
   return (
-    <LinearGradient
-      colors={['#DFC1FD','#f3e8ff', '#F5ECFE','#F5ECFE','#e9d5ff', '#DFC1FD']}
-      start={[0, 0]}
-      end={[1, 1]}
-      className="flex-1 "
-    >
+    <LinearGradient colors={['#DFC1FD','#f3e8ff','#F5ECFE','#F5ECFE','#e9d5ff','#DFC1FD']} start={[0,0]} end={[1,1]} style={{ flex: 1 }}>
       <StatusBar barStyle="dark-content" backgroundColor="#DFC1FD" />
-      <SafeAreaView className="flex-1">
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="flex-1"
-        >
-          <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-            {/* Header */}
-            <View className="px-6 pt-4 pb-2 flex-row items-center justify-between">
-              <TouchableOpacity 
-                onPress={handleBack}
-                className="w-10 h-10 justify-center items-center"
-              >
+      <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+            <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <TouchableOpacity onPress={handleBack} style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}>
                 <Ionicons name="chevron-back" size={24} color="#374151" />
               </TouchableOpacity>
-              
-            </View>
-            <View className="px-6 mb-4">
-              <Text className="text-2xl font-bold text-gray-800">
-                Health Records
-              </Text>
-              <Text className="text-sm text-gray-500 mt-1">
-                Manage your health records and medical information
-              </Text>
             </View>
 
-            {/* Medical Information Card */}
-            <View className="px-6 mt-4">
-              <View
-                className="mb-8"
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                  borderRadius: 20,
-                  padding: 24,
-                  shadowColor: '#7c3aed',
-                  shadowOffset: { width: 0, height: 6 },
-                  shadowOpacity: 0.15,
-                  shadowRadius: 10,
-                  elevation: 8,
-                  borderWidth: 1,
-                  borderColor: 'rgba(124, 58, 237, 0.1)'
-                }}
-              >
-                {/* Card Header */}
-                <View className="flex-row items-center justify-between mb-6">
-                  <Text className="text-xl font-bold text-gray-800">
-                    Medical Information
-                  </Text>
-                  <View className="w-8 h-8 rounded-full bg-purple-100 items-center justify-center">
+            <View style={{ paddingHorizontal: 24, marginBottom: 12 }}>
+              <Text style={{ fontSize: 28, fontWeight: '700', color: '#1f2937' }}>Health Records</Text>
+              <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>Manage your child's medical information</Text>
+            </View>
+
+            <View style={{ paddingHorizontal: 24, marginTop: 12 }}>
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 20, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(124,58,237,0.08)' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: '#1f2937' }}>Medical Information</Text>
+                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#f3e8ff', alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name="medical" size={18} color="#7c3aed" />
                   </View>
                 </View>
 
-                {/* Details Grid */}
-                <View className="space-y-4">
-                  {/* Blood Type */}
-                  <View className="flex-row items-center py-3 border-b border-gray-100">
-                    <View className="w-10 h-10 rounded-full bg-red-50 items-center justify-center mr-4">
+                <View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderColor: '#f3f4f6' }}>
+                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff1f2', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
                       <Ionicons name="water-outline" size={18} color="#ef4444" />
                     </View>
-                    <View className="flex-1">
-                      <Text className="text-sm font-medium text-gray-500 mb-1">
-                        Blood Type
-                      </Text>
-                      <Text className="text-base font-semibold text-gray-800">
-                        {healthData.bloodType}
-                      </Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12, color: '#6b7280' }}>Blood Type</Text>
+                      <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>{healthData.bloodType}</Text>
                     </View>
                   </View>
 
-                  {/* Allergies */}
-                  <View className="flex-row items-center py-3 border-b border-gray-100">
-                    <View className="w-10 h-10 rounded-full bg-orange-50 items-center justify-center mr-4">
+                  <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderColor: '#f3f4f6' }}>
+                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff7ed', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
                       <Ionicons name="warning-outline" size={18} color="#f97316" />
                     </View>
-                    <View className="flex-1">
-                      <Text className="text-sm font-medium text-gray-500 mb-1">
-                        Allergies
-                      </Text>
-                      <Text className="text-base font-semibold text-gray-800">
-                        {healthData.allergies}
-                      </Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12, color: '#6b7280' }}>Allergies</Text>
+                      <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>{healthData.allergies}</Text>
                     </View>
                   </View>
 
-                  {/* Current Medications */}
-                  {/* <View className="flex-row items-center py-3 border-b border-gray-100">
-                    <View className="w-10 h-10 rounded-full bg-green-50 items-center justify-center mr-4">
-                      <Ionicons name="medical-outline" size={18} color="#10b981" />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-sm font-medium text-gray-500 mb-1">
-                        Current Medications
-                      </Text>
-                      <Text className="text-base font-semibold text-gray-800">
-                        {healthData.medications}
-                      </Text>
-                    </View>
-                  </View> */}
-
-                  {/* Emergency Medical Info */}
-                  <View className="flex-row items-center py-3">
-                    <View className="w-10 h-10 rounded-full bg-blue-50 items-center justify-center mr-4">
+                  <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10 }}>
+                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#eff6ff', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
                       <Ionicons name="alert-circle-outline" size={18} color="#3b82f6" />
                     </View>
-                    <View className="flex-1">
-                      <Text className="text-sm font-medium text-gray-500 mb-1">
-                        Emergency Medical Info
-                      </Text>
-                      <Text className="text-base font-semibold text-gray-800">
-                        {healthData.emergencyMedicalInfo}
-                      </Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12, color: '#6b7280' }}>Emergency Medical Info</Text>
+                      <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>{healthData.emergencyMedicalInfo}</Text>
                     </View>
                   </View>
                 </View>
               </View>
 
-              {/* Edit Medical Information Button */}
-              <TouchableOpacity
-                onPress={() => setIsEditing(true)}
-                className="mb-3"
-              >
-                <LinearGradient
-                  colors={['#7c3aed', '#a855f7']}
-                  start={[0, 0]}
-                  end={[1, 1]}
-                  className="rounded-2xl py-4 items-center"
-                  style={{
-                    shadowColor: '#7c3aed',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 8,
-                    elevation: 4,
-                    borderRadius: 16
-                  }}
-                >
-                  <View className="flex-row items-center">
-                    <Ionicons name="create" size={20} color="white" />
-                    <Text className="text-white text-lg font-semibold ml-2">
-                      Edit Medical Information
-                    </Text>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setShowAddRecord(true)}
-                className="mb-8"
-              >
-                <LinearGradient
-                  colors={['#7c3aed', '#a855f7']}
-                  start={[0, 0]}
-                  end={[1, 1]}
-                  className="rounded-2xl py-4 items-center"
-                  style={{
-                    shadowColor: '#7c3aed',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 8,
-                    elevation: 4,
-                    borderRadius: 16
-                  }}
-                >
-                  <View className="flex-row items-center">
-                    <Ionicons name="create" size={20} color="white" />
-                    <Text className="text-white text-lg font-semibold ml-2">
-                      Add Health Record
-                    </Text>
+              <TouchableOpacity onPress={() => setIsEditing(true)} style={{ marginBottom: 12 }}>
+                <LinearGradient colors={['#7c3aed','#a855f7']} start={[0,0]} end={[1,1]} style={{ borderRadius: 16, paddingVertical: 14, alignItems: 'center' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="create" size={18} color="white" />
+                    <Text style={{ color: 'white', fontSize: 16, fontWeight: '700', marginLeft: 8 }}>Edit Medical Information</Text>
                   </View>
                 </LinearGradient>
               </TouchableOpacity>
 
-              {/* Health Records Section */}
-              <View className="mb-8">
-                <Text className="text-xl font-bold text-gray-700 mb-6">
-                  Health Records History
-                </Text>
+              <TouchableOpacity onPress={openAddRecordModal} style={{ marginBottom: 20 }}>
+                <LinearGradient colors={['#7c3aed','#a855f7']} start={[0,0]} end={[1,1]} style={{ borderRadius: 16, paddingVertical: 14, alignItems: 'center' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="create" size={18} color="white" />
+                    <Text style={{ color: 'white', fontSize: 16, fontWeight: '700', marginLeft: 8 }}>Add Health Record</Text>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
 
-                {healthRecords.map((record) => (
-                  <View
-                    key={record.id}
-                    className="mb-4 p-4 rounded-2xl"
-                    style={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.1,
-                      shadowRadius: 6,
-                      elevation: 3
-                    }}
-                  >
-                    <View className="flex-row items-start">
-                      <LinearGradient
-                        colors={getRecordColor(record.type)}
-                        className="w-12 h-12 rounded-full items-center justify-center mr-4"
-                      >
-                        <Ionicons 
-                          name={getRecordIcon(record.type) as keyof typeof Ionicons.glyphMap} 
-                          size={24} 
-                          color="white" 
-                        />
-                      </LinearGradient>
-                      
-                      <View className="flex-1">
-                        <Text className="text-lg font-semibold text-gray-800 mb-1">
-                          {record.title}
-                        </Text>
-                        <Text className="text-sm text-gray-600 mb-2">
-                          {formatDate(record.date)}
-                        </Text>
-                        <Text className="text-gray-700 mb-2">
-                          {record.description}
-                        </Text>
-                        {record.doctor && (
-                          <Text className="text-sm text-purple-600 font-medium">
-                            {record.doctor}
-                          </Text>
-                        )}
+              
+
+              <View style={{ marginBottom: 24 }}>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: '#374151', marginBottom: 12 }}>Health Records History</Text>
+
+                {loadingRecords ? (
+                  <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+                    <ActivityIndicator size="large" color="#7c3aed" />
+                    <Text style={{ marginTop: 8, color: '#6b7280' }}>Loading records...</Text>
+                  </View>
+                ) : (
+                  healthRecords.map((record) => (
+                    <View key={`${record.child_id}-${record.record_date}-${record.title}`} style={{ marginBottom: 12, padding: 12, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.9)' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                        <LinearGradient colors={getRecordColor(record.type)} start={[0,0]} end={[1,1]} style={{ width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                          <Ionicons name={getRecordIcon(record.type) as any} size={20} color="white" />
+                        </LinearGradient>
+
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>{record.title}</Text>
+                              <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 6 }}>{formatDate(record.record_date)}</Text>
+                            </View>
+
+                            <TouchableOpacity onPress={() => openEditRecord(record)} style={{ marginLeft: 8, padding: 6 }}>
+                              <Ionicons name="create" size={18} color="#7c3aed" />
+                            </TouchableOpacity>
+                          </View>
+
+                          <Text style={{ marginTop: 8, color: '#374151' }}>{record.description}</Text>
+                          {record.doctor && <Text style={{ marginTop: 6, color: '#7c3aed', fontWeight: '600' }}>{record.doctor}</Text>}
+                        </View>
                       </View>
                     </View>
-                  </View>
-                ))}
+                  ))
+                )}
               </View>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
 
-        {/* Edit Medical Information Modal */}
-        <Modal
-          visible={isEditing}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setIsEditing(false)}
-        >
-          <View className="flex-1 justify-end bg-black/50 bg-opacity-50">
-            <View 
-              className="bg-white rounded-t-3xl p-6"
-              style={{ 
-                paddingBottom: Platform.OS === 'ios' ? 34 : 24,
-                maxHeight: '80%'
-              }}
-            >
-              <View className="w-12 h-1 bg-gray-300 rounded-full self-center mb-6" />
-              
-              <Text className="text-xl font-bold text-gray-800 mb-6 text-center">
-                Edit Medical Information
-              </Text>
-              
+        {/* Edit Medical Info Modal */}
+        <Modal visible={isEditing} transparent animationType="slide" onRequestClose={() => setIsEditing(false)}>
+          <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <View style={{ backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 18, maxHeight: '80%' }}>
+              <View style={{ width: 48, height: 4, backgroundColor: '#e5e7eb', borderRadius: 12, alignSelf: 'center', marginBottom: 12 }} />
+              <Text style={{ fontSize: 18, fontWeight: '700', textAlign: 'center', marginBottom: 12 }}>Edit Medical Information</Text>
               <ScrollView showsVerticalScrollIndicator={false}>
-                <InputField
-                  label="Blood Type"
-                  value={healthData.bloodType}
-                  onChangeText={(value: string) => handleHealthDataChange('bloodType', value)}
-                  placeholder="Enter blood type"
-                />
-
-                <InputField
-                  label="Allergies"
-                  value={healthData.allergies}
-                  onChangeText={(value: string) => handleHealthDataChange('allergies', value)}
-                  placeholder="List any allergies (or 'None')"
-                  multiline={true}
-                  numberOfLines={3}
-                />
-
-                {/* <InputField
-                  label="Current Medications"
-                  value={healthData.medications}
-                  onChangeText={(value: string) => handleHealthDataChange('medications', value)}
-                  placeholder="List current medications (or 'None')"
-                  multiline={true}
-                  numberOfLines={3}
-                /> */}
-
-                <InputField
-                  label="Emergency Medical Information"
-                  value={healthData.emergencyMedicalInfo}
-                  onChangeText={(value: string) => handleHealthDataChange('emergencyMedicalInfo', value)}
-                  placeholder="Special instructions for emergencies"
-                  multiline={true}
-                  numberOfLines={3}
-                />
-
-                <View className="flex-row justify-between mt-4">
-                  <TouchableOpacity
-                    onPress={() => setIsEditing(false)}
-                    className="flex-1 mr-2 py-3 rounded-2xl bg-gray-200 items-center"
-                  >
-                    <Text className="text-gray-700 font-semibold">Cancel</Text>
+                <InputField label="Blood Type" value={healthData.bloodType} onChangeText={(v: string) => handleHealthDataChange('bloodType', v)} placeholder="Enter blood type" />
+                <InputField label="Allergies" value={healthData.allergies} onChangeText={(v: string) => handleHealthDataChange('allergies', v)} placeholder="List any allergies" multiline numberOfLines={3} />
+                <InputField label="Emergency Medical Information" value={healthData.emergencyMedicalInfo} onChangeText={(v: string) => handleHealthDataChange('emergencyMedicalInfo', v)} placeholder="Special instructions" multiline numberOfLines={3} />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+                  <TouchableOpacity onPress={() => setIsEditing(false)} style={{ flex: 1, marginRight: 8, paddingVertical: 12, borderRadius: 12, backgroundColor: '#f3f4f6', alignItems: 'center' }}>
+                    <Text style={{ color: '#374151', fontWeight: '600' }}>Cancel</Text>
                   </TouchableOpacity>
-                  
-                  <TouchableOpacity
-                    onPress={handleSaveHealthData}
-                    className="flex-1 ml-2"
-                  >
-                    <LinearGradient
-                      colors={['#7c3aed', '#a855f7']}
-                      className="py-3 rounded-2xl items-center"
-                      style={{ borderRadius: 16 }}
-                    >
-                      <Text className="text-white font-semibold rounded-xl">Save Changes</Text>
+                  <TouchableOpacity onPress={handleSaveHealthData} style={{ flex: 1, marginLeft: 8 }}>
+                    <LinearGradient colors={['#7c3aed', '#a855f7']} style={{ paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}>
+                      <Text style={{ color: 'white', fontWeight: '700' }}>Save Changes</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 </View>
@@ -504,114 +429,46 @@ export default function HealthRecords() {
           </View>
         </Modal>
 
-        {/* Add Record Modal */}
-        <Modal
-          visible={showAddRecord}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setShowAddRecord(false)}
-        >
-          <View className="flex-1 justify-end bg-black/50 bg-opacity-50">
-            <View 
-              className="bg-white rounded-t-3xl p-6"
-              style={{ 
-                paddingBottom: Platform.OS === 'ios' ? 34 : 24,
-                maxHeight: '80%'
-              }}
-            >
-              <View className="w-12 h-1 bg-gray-300 rounded-full self-center mb-6" />
-              
-              <Text className="text-xl font-bold text-gray-800 mb-6 text-center">
-                Add Health Record
-              </Text>
-              
-                <ScrollView showsVerticalScrollIndicator={false}>
-                <InputField
-                  label="Date *"
-                  value={newRecord.date}
-                  onChangeText={(value: string) => setNewRecord(prev => ({ ...prev, date: value }))}
-                  placeholder="YYYY-MM-DD"
-                />
-
-                <InputField
-                  label="Title *"
-                  value={newRecord.title}
-                  onChangeText={(value: string) => setNewRecord(prev => ({ ...prev, title: value }))}
-                  placeholder="Enter record title"
-                />
-
-                {/* Dropdown for Type */}
-                <View className="mb-4">
-                  <Text className="text-sm font-medium text-gray-600 mb-2 ml-1">
-                  Type *
-                  </Text>
-                  <View
-                  style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                    borderRadius: 16,
-                    borderWidth: 1,
-                    borderColor: '#e5e7eb',
-                    paddingHorizontal: 10,
-                    paddingVertical: 2,
-                  }}
-                  >
-                  <Picker
-                    selectedValue={newRecord.type}
-                    onValueChange={(itemValue) =>
-                    setNewRecord(prev => ({ ...prev, type: itemValue as 'checkup' | 'vaccination' | 'illness' }))
-                    }
-                    style={{
-                    color: '#374151',
-                    fontSize: 16,
-                    fontWeight: '500',
-                    width: '100%',
-                    
-                    backgroundColor: 'transparent',
-                    }}
-                    dropdownIconColor="#7c3aed"
-                  >
-                    <Picker.Item label="Checkup" value="checkup" />
-                    <Picker.Item label="Vaccination" value="vaccination" />
-                    <Picker.Item label="Illness" value="illness" />
-                  </Picker>
+        {/* Add/Edit Record Modal */}
+        <Modal visible={showAddRecord} transparent animationType="slide" onRequestClose={() => { setShowAddRecord(false); setEditingRecord(null); }}>
+          <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <View style={{ backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 18, maxHeight: '80%' }}>
+              <View style={{ width: 48, height: 4, backgroundColor: '#e5e7eb', borderRadius: 12, alignSelf: 'center', marginBottom: 12 }} />
+              <Text style={{ fontSize: 18, fontWeight: '700', textAlign: 'center', marginBottom: 12 }}>{editingRecord ? 'Edit Health Record' : 'Add Health Record'}</Text>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <InputField label="Date *" value={newRecord.date} onChangeText={(v: string) => setNewRecord(prev => ({ ...prev, date: v }))} placeholder="YYYY-MM-DD" />
+                <InputField label="Title *" value={newRecord.title} onChangeText={(v: string) => setNewRecord(prev => ({ ...prev, title: v }))} placeholder="Enter record title" />
+                <View style={{ marginBottom: 12 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '500', color: '#6b7280', marginBottom: 6 }}>Type *</Text>
+                  <View style={{ backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb' }}>
+                    <Picker selectedValue={newRecord.type} onValueChange={(itemValue) => setNewRecord(prev => ({ ...prev, type: itemValue as any }))} dropdownIconColor="#7c3aed">
+                      <Picker.Item label="Checkup" value="checkup" />
+                      <Picker.Item label="Vaccination" value="vaccination" />
+                      <Picker.Item label="Illness" value="illness" />
+                      <Picker.Item label="Medication" value="medication" />
+                    </Picker>
                   </View>
                 </View>
 
-                <InputField
-                  label="Description"
-                  value={newRecord.description}
-                  onChangeText={(value: string) => setNewRecord(prev => ({ ...prev, description: value }))}
-                  placeholder="Enter description"
-                  multiline={true}
-                  numberOfLines={3}
-                />
+                <InputField label="Description" value={newRecord.description} onChangeText={(v: string) => setNewRecord(prev => ({ ...prev, description: v }))} placeholder="Enter description" multiline numberOfLines={3} />
 
-                <View className="flex-row justify-between mt-4">
-                  <TouchableOpacity
-                  onPress={() => setShowAddRecord(false)}
-                  className="flex-1 mr-2 py-3 rounded-2xl bg-gray-200 items-center"
-                  >
-                  <Text className="text-gray-700 font-semibold">Cancel</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+                  <TouchableOpacity onPress={() => { setShowAddRecord(false); setEditingRecord(null); }} style={{ flex: 1, marginRight: 8, paddingVertical: 12, borderRadius: 12, backgroundColor: '#f3f4f6', alignItems: 'center' }}>
+                    <Text style={{ color: '#374151', fontWeight: '600' }}>Cancel</Text>
                   </TouchableOpacity>
-                  
-                  <TouchableOpacity
-                  onPress={handleAddRecord}
-                  className="flex-1 ml-2"
-                  >
-                  <LinearGradient
-                    colors={['#7c3aed', '#a855f7']}
-                    className="py-3 rounded-2xl items-center"
-                    style={{ borderRadius: 16 }}
-                  >
-                    <Text className="text-white font-semibold">Add Record</Text>
-                  </LinearGradient>
+
+                  <TouchableOpacity onPress={submitRecord} disabled={saving} style={{ flex: 1, marginLeft: 8 }}>
+                    <LinearGradient colors={['#7c3aed', '#a855f7']} style={{ paddingVertical: 12, borderRadius: 12, alignItems: 'center', opacity: saving ? 0.7 : 1 }}>
+                      {saving ? <ActivityIndicator color="white" /> : <Text style={{ color: 'white', fontWeight: '700' }}>{editingRecord ? 'Update Record' : 'Add Record'}</Text>}
+                    </LinearGradient>
                   </TouchableOpacity>
                 </View>
-                </ScrollView>
+              </ScrollView>
             </View>
           </View>
         </Modal>
       </SafeAreaView>
+
       <CustomAlert
         visible={customAlert.visible}
         type={customAlert.type}
