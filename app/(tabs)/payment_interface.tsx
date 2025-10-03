@@ -1,10 +1,12 @@
 import { images } from "@/assets/images/images";
 import CustomAlert from "@/components/CustomAlert";
 import { useCustomAlert } from "@/hooks/useCustomAlert";
+import { useChildId } from "@/hooks/useChildId";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useState, useEffect } from "react";
+import { API_BASE_URL } from "@/utility";
 import {
   Image,
   SafeAreaView,
@@ -27,35 +29,130 @@ interface PaymentHistory {
   paid_at: string | null;
 }
 
+interface PackageData {
+  package_id: number;
+  name: string;
+  description: string;
+  price: number;
+  duration: string;
+  services?: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 function PaymentInterface() {
   const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
+  const { childId, hasChild, childrenCount } = useChildId();
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [packageData, setPackageData] = useState<PackageData | null>(null);
+  const [packageLoading, setPackageLoading] = useState(false);
 
-  // You should get this from user context or props
-  const child_id = 2; // Replace with actual child ID from context
+  // Log child ID for debugging and fetch package details
+  useEffect(() => {
+    if (childId) {
+      console.log("Child ID from session:", childId);
+      console.log("Total children:", childrenCount);
+      fetchPackageDetails();
+    }
+  }, [childId, childrenCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const packageDetails = {
-    name: "Child's Monthly Package",
-    price: "LKR 5,000.00",
-    duration: "Monthly",
-    features: [
-      "Full Day Care (8 hours)",
-      "Educational Activities",
-      "Medical Care Support",
-      "Parent Progress Reports",
-      "Only Weekdays",
-    ],
+  const fetchPackageDetails = async () => {
+    if (!childId) {
+      setPackageLoading(false);
+      return;
+    }
+
+    try {
+      setPackageLoading(true);
+      console.log("Fetching package details for child ID:", childId);
+
+      const response = await fetch(`${API_BASE_URL}/child/package/${childId}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch package details: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("Package API response:", result);
+
+      if (result.success && result.data) {
+        setPackageData(result.data);
+        console.log("Package details set:", result.data);
+      } else {
+        throw new Error("Invalid response format or no package found");
+      }
+    } catch (error) {
+      console.error("Error fetching package details:", error);
+      Alert.alert(
+        "Error",
+        "Failed to load package details. Using default values."
+      );
+
+      // Set fallback data if API fails
+      setPackageData({
+        package_id: 0,
+        name: "Default Package",
+        description: "Standard daycare package",
+        price: 5000,
+        duration: "Monthly",
+        services: ["Full Day Care", "Educational Activities"],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+    } finally {
+      setPackageLoading(false);
+    }
   };
 
-  // Fetch payment history from backend
+  // Get package details from API data or fallback to defaults
+  const getPackageDetails = () => {
+    if (packageData) {
+      return {
+        name: packageData.name || "Child's Package",
+        price:
+          `LKR ${packageData.price?.toLocaleString()}.00` || "LKR 5,000.00",
+        duration: packageData.duration || "Monthly",
+        services: packageData.services || [
+          "Full Day Care (8 hours)",
+          "Educational Activities",
+          "Medical Care Support",
+          "Parent Progress Reports",
+          "Only Weekdays",
+        ],
+        description: packageData.description || "Complete daycare package",
+      };
+    }
+
+    // Default values when package data is not loaded
+    return {
+      name: "Loading Package...",
+      price: "LKR 0.00",
+      duration: "Monthly",
+      services: ["Loading services..."],
+      description: "Loading package details...",
+    };
+  };
+
+  const packageDetails = getPackageDetails(); // Fetch payment history from backend
   const fetchPaymentHistory = async () => {
+    if (!childId) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
+
       const response = await fetch(
-        `http://192.168.225.156:5001/api/payment/history/${child_id}`,
+        `${API_BASE_URL}/payment/history/${childId}`,
         {
           method: "GET",
           headers: {
@@ -78,10 +175,12 @@ function PaymentInterface() {
     }
   };
 
-  // Load payment history when component mounts
+  // Load payment history when component mounts or when child ID changes
   useEffect(() => {
-    fetchPaymentHistory();
-  }, []);
+    if (childId) {
+      fetchPaymentHistory();
+    }
+  }, [childId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -119,16 +218,50 @@ function PaymentInterface() {
   };
 
   const handlePayment = async () => {
-    // Navigate to payment page with parameters
+    // Navigate to payment page with child ID and package info
+    if (!childId) {
+      showCustomAlert("error", "Error", "No child data available");
+      return;
+    }
+
+    if (!packageData) {
+      showCustomAlert("error", "Error", "Package information not loaded");
+      return;
+    }
+
+    console.log("Processing payment for child ID:", childId);
+    console.log("Package data:", packageData);
+
     router.push({
       pathname: "./payment",
       params: {
         paymentType: "monthly",
-        amount: "5000.00",
-        child_id: child_id.toString()
-      }
+        amount: packageData.price.toString(),
+        child_id: childId.toString(),
+        package_id: packageData.package_id.toString(),
+        package_name: packageData.name,
+      },
     });
   };
+
+  const handleDailyPayment = async () => {
+    // Navigate to payment page with child ID and package info
+    if (!childId) {
+      showCustomAlert("error", "Error", "No child data available");
+      return;
+    }
+
+    router.push({
+      pathname: "./payment",
+      params: {
+        paymentType: "daily",
+        amount: 5000..toString(),
+        child_id: childId.toString(),
+        package_id: 0,
+        package_name: "Daily Payment",
+      },
+    });
+  }
 
   const handleRefresh = () => {
     fetchPaymentHistory();
@@ -264,33 +397,78 @@ function PaymentInterface() {
             <View className="flex-1">
               <Image
                 source={images.payment_child}
-                className="w-20 h-32 rounded-lg"
+                className="w-20 h-32 rounded-lg ml-10"
               />
             </View>
-            <View className="flex-2 ml-4">
-              <Text className="text-white font-bold text-xl">
-                {packageDetails.name}
-              </Text>
-              <Text className="text-green-300 font-bold text-2xl mt-2">
-                {packageDetails.price}
-              </Text>
-              <Text className="text-purple-100 text-sm mt-1">
-                {packageDetails.duration} Subscription
-              </Text>
+            <View className="flex-2 mr-10">
+              {packageLoading ? (
+                <View>
+                  <Text className="text-white font-bold text-xl">
+                    Loading...
+                  </Text>
+                  <Text className="text-purple-100 text-sm mt-1">
+                    Fetching package details
+                  </Text>
+                </View>
+              ) : (
+                <View>
+                  <Text className="text-white font-bold text-xl">
+                    {packageDetails.name}
+                  </Text>
+                  <Text className="text-green-300 font-bold text-2xl mt-2">
+                    {packageDetails.price}
+                  </Text>
+                  <Text className="text-purple-100 text-sm mt-1">
+                    {packageDetails.duration} Subscription
+                  </Text>
+                  {/* {packageData && (
+                    <Text className="text-purple-200 text-xs mt-1">
+                      ID: {packageData.package_id}
+                    </Text>
+                  )} */}
+                </View>
+              )}
             </View>
           </View>
 
-          {/* Package Features */}
+          {/* Package Services */}
           <View className="bg-white rounded-xl p-5 mx-5 mt-5">
             <Text className="text-lg font-bold text-gray-800 mb-3">
               Package Includes:
             </Text>
-            {packageDetails.features.map((feature, index) => (
-              <View key={index} className="flex-row items-center mb-2">
-                <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-                <Text className="text-sm text-gray-700 ml-2">{feature}</Text>
+            {packageLoading ? (
+              <View className="flex-row items-center mb-2">
+                <Ionicons name="time-outline" size={16} color="#6b7280" />
+                <Text className="text-sm text-gray-500 ml-2">
+                  Loading services...
+                </Text>
               </View>
-            ))}
+            ) : (
+              <>
+                {packageDetails.services.map((service, index) => (
+                  <View key={index} className="flex-row items-center mb-2">
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={16}
+                      color="#10b981"
+                    />
+                    <Text className="text-sm text-gray-700 ml-2">
+                      {service}
+                    </Text>
+                  </View>
+                ))}
+                {packageData?.description && (
+                  <View className="mt-3 p-3 bg-gray-50 rounded-lg">
+                    <Text className="text-xs font-medium text-gray-600 mb-1">
+                      Description:
+                    </Text>
+                    <Text className="text-sm text-gray-700">
+                      {packageData.description}
+                    </Text>
+                  </View>
+                )}
+              </>
+            )}
           </View>
 
           {showPaymentForm ? (
@@ -309,28 +487,36 @@ function PaymentInterface() {
               <View className="mx-5 mb-10">
                 <TouchableOpacity
                   onPress={handlePayment}
-                  disabled={isProcessing}
+                  disabled={isProcessing || packageLoading}
                   className={`rounded-xl p-4 items-center ${
-                    isProcessing ? "bg-gray-400" : "bg-purple-600"
+                    isProcessing || packageLoading
+                      ? "bg-gray-400"
+                      : "bg-purple-600"
                   }`}
                 >
                   <Text className="text-white font-bold text-lg">
                     {isProcessing
                       ? "Processing..."
-                      : `Pay Monthly ${packageDetails.price}`}
+                      : packageLoading
+                        ? "Loading..."
+                        : `Pay Monthly ${packageDetails.price}`}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={handlePayment}
-                  disabled={isProcessing}
+                  onPress={handleDailyPayment}
+                  disabled={isProcessing || packageLoading}
                   className={`rounded-xl p-4 items-center mt-3 ${
-                    isProcessing ? "bg-gray-400" : "bg-blue-600"
+                    isProcessing || packageLoading
+                      ? "bg-gray-400"
+                      : "bg-blue-600"
                   }`}
                 >
                   <Text className="text-white font-bold text-lg">
                     {isProcessing
                       ? "Processing..."
-                      : `Pay Daily ${packageDetails.price}`}
+                      : packageLoading
+                        ? "Loading..."
+                        : `Pay Daily LKR 5000.00`}
                   </Text>
                 </TouchableOpacity>
 
