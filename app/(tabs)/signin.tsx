@@ -3,6 +3,7 @@ import CustomAlert from '@/components/CustomAlert';
 import { useUser } from '@/contexts/UserContext';
 import { useCustomAlert } from '@/hooks/useCustomAlert';
 import { API_BASE_URL } from '@/utility';
+import { logApiResponse, logChildren, analyzeObj } from '@/utility/logger';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -223,6 +224,11 @@ export default function CreateAccountWithValidation() {
         
         // Extract user data from response - Handle nested data structure
         const backendUser = data.data?.user || data.user || data;
+        
+        // Extract children data separately (it's at data.data.children level)
+        const childrenData = data.data?.children || backendUser?.children || [];
+        const childrenCount = data.data?.childrenCount || 0;
+        
         const userData = {
           id: backendUser?.id || backendUser?.parentId || '',
           email: backendUser?.email || formData.email,
@@ -230,12 +236,19 @@ export default function CreateAccountWithValidation() {
           phone: backendUser?.phone || '',
           address: backendUser?.address || '',
           profileImage: backendUser?.image || backendUser?.profileImage || '',
-          children: backendUser?.children || [],
+          children: childrenData,
           role: 'parent' as const
         };
         
         console.log('=== USER DATA EXTRACTION DEBUG ===');
-        console.log('Extracted userData:', userData);
+        
+        // Use new logging utilities for better formatting
+        logApiResponse(data, 'Parent Login');
+        analyzeObj(backendUser, 'Backend User Object');
+        logChildren(childrenData);
+        
+        console.log('Children count:', childrenCount);
+        analyzeObj(userData, 'Extracted User Data');
         
         // Extract token from response - We know it's in data.data.token
         const token = data.data?.token || 
