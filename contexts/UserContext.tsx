@@ -14,10 +14,19 @@ interface UserData {
 }
 
 interface ChildData {
-  id: string;
+  child_id: number;
   name: string;
   age: number;
-  class: string;
+  gender: string;
+  dob: string;
+  group_id: number;
+  image?: string;
+  blood_type?: string;
+  status: string;
+  created_at: string;
+  // Legacy fields for backward compatibility
+  id?: string;
+  class?: string;
   profileImage?: string;
   dateOfBirth?: string;
   allergies?: string[];

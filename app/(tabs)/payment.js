@@ -1,6 +1,7 @@
-import { View, Alert } from "react-native";
+import { View, Alert, Image, StyleSheet } from "react-native";
 import { WebView } from "react-native-webview";
 import { useLocalSearchParams } from "expo-router";
+
 
 export default function Payment() {
   // Get parameters from the route with defaults
@@ -23,7 +24,7 @@ export default function Payment() {
                 font-family: Arial, sans-serif; 
                 padding: 20px; 
                 text-align: center;
-                background: #f5f5f5;
+                background: linear-gradient(to bottom, #f3e8ff, #f3e8ff, #F5ECFE, #f3e8ff, #f3e8ff);
                 margin: 0;
                 justify-content: center;
                 display: flex;
@@ -34,23 +35,27 @@ export default function Payment() {
                 background: white;
                 padding: 30px;
                 border-radius: 10px;
+                background: #af0be0ff;
                 box-shadow: 0 2px 10px rgba(0,0,0,0.1);
                 max-width: 500px;
                 margin: 20px auto;
             }
             .pay-button {
-                background: #4CAF50;
+                background: #00ff08ff;192.168.225.156:5001
                 color: white;
                 padding: 15px 30px;
                 border: none;
                 border-radius: 5px;
                 font-size: 18px;
+                font-weight: bold;
                 cursor: pointer;
                 width: 100%;
                 margin-top: 20px;
             }
             .pay-button:hover {
-                background: #45a049;
+                background: #ffffffff;
+                transform: scale(1.05);
+                color: #00ff00ff;
             }
             .pay-button:disabled {
                 background: #cccccc;
@@ -58,7 +63,7 @@ export default function Payment() {
             }
             .amount {
                 font-size: 24px;
-                color: #333;
+                color: #ffffffff;
                 margin: 20px 0;
             }
             .debug {
@@ -74,15 +79,18 @@ export default function Payment() {
             .test-button {
                 background: #2196F3;
                 color: white;
-                padding: 10px 20px;
+                padding: 15px 25px;
                 border: none;
-                border-radius: 3px;
+                border-radius: 10px;
                 margin: 5px;
                 cursor: pointer;
-                font-size: 14px;
+                font-size: 18px;
+                font-weight: bold;
             }
             .test-button:hover {
-                background: #1976D2;
+                background: #ffffffff;
+                transform: scale(1.05);
+                color: #2196F3;
             }
             .status {
                 margin: 10px 0;
@@ -105,22 +113,33 @@ export default function Payment() {
                 color: #004085;
                 border: 1px solid #b3d7ff;
             }
+            .logo-container {
+                text-align: center;
+                margin-bottom: 10px;
+                padding-bottom: 10px;
+                border-bottom: 2px solid #00ff08ff;
+            }
         </style>
     </head>
     <body>
         <div class="payment-container">
-            <h1>🏫 LittleSteps Payment</h1>
-            <div class="amount">Rs. ${cleanAmount}</div>
-            <p>DayCare Fee Payment (${paymentType})</p>
+            <div class="logo-container">
+                <h1 style="color: #00ff08ff; margin: 0; font-size: 35px; font-weight: 1000;">LittleSteps</h1>
+                <p style="margin: 5px 0 10px 0; color: #ffffffff; font-size: 14px;font-weight: 800;">Daycare Management System</p>
+                <p style="margin: 5px 0 -20px 0; font-size: 18px;font-weight: bold">DayCare Fee Payment</p>
+                <p style="font-size: 18px;font-weight: bold;">${paymentType}</p>
+            </div>
+            <div class="amount"><h2>Rs. ${cleanAmount}</h2></div>
+            
             
             <div id="status-area"></div>
             
             <button type="button" id="create-payment" class="test-button">
-                1️⃣ Create Payment Data
+                Create Payment
             </button>
             
             <button type="button" id="payhere-payment" class="pay-button" disabled>
-                2️⃣ Pay with PayHere (Click Step 1 first)
+                Pay with PayHere
             </button>
             
             <div style="display: none;" id="debug-info">
@@ -171,8 +190,8 @@ export default function Payment() {
                     showStatus('🔄 Creating payment...', 'info');
                     
                     console.log('Payment config:', PAYMENT_CONFIG);
-                    
-                    const response = await fetch('http://192.168.225.156:5001/api/payment/create', {
+
+                    const response = await fetch('http://10.215.89.156:5001/api/payment/create', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -195,10 +214,10 @@ export default function Payment() {
                     
                     // Enable PayHere button
                     document.getElementById('payhere-payment').disabled = false;
-                    document.getElementById('payhere-payment').textContent = '2️⃣ Pay with PayHere - READY! 💳';
-                    
-                    showStatus('✅ Payment data created successfully! Now click "Pay with PayHere"', 'success');
-                    
+                    document.getElementById('payhere-payment').textContent = 'Pay with PayHere';
+
+                    showStatus('✅ Payment created successfully!', 'success');
+
                 } catch (error) {
                     console.error("Error creating payment:", error);
                     showStatus('❌ Error creating payment: ' + error.message, 'error');
@@ -222,7 +241,7 @@ export default function Payment() {
 
             payhere.onDismissed = function onDismissed() {
                 console.log("❌ Payment dismissed");
-                showStatus('❌ Payment was cancelled by user', 'error');
+                showStatus('❌ Payment was cancelled', 'error');
                 
                 // Send cancel message to React Native
                 if (window.ReactNativeWebView) {
@@ -314,11 +333,11 @@ export default function Payment() {
             // Check PayHere availability when page loads
             window.onload = function() {
                 console.log('Payment page loaded with config:', PAYMENT_CONFIG);
-                showStatus('🚀 Payment page loaded. Ready to create payment.', 'info');
+                showStatus('🚀 Payment page loaded.', 'info');
                 
                 setTimeout(function() {
                     if (checkPayHere()) {
-                        showStatus('✅ PayHere ready - you can now create payment data', 'success');
+                        showStatus('✅ PayHere ready', 'success');
                     }
                 }, 2000); // Wait 2 seconds for PayHere to load
             };
