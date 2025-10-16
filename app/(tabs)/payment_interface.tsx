@@ -69,7 +69,7 @@ function PaymentInterface() {
       setPackageLoading(true);
       console.log("Fetching package details for child ID:", childId);
 
-      const response = await fetch(`${API_BASE_URL}/child/package/${childId}`, {
+      const response = await fetch(`${API_BASE_URL}/supervisors/child/package/${childId}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

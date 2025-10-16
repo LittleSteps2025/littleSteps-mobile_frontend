@@ -84,7 +84,7 @@ export default function HealthRecords() {
       return;
     }
 
-    const url = `${API_BASE_URL}/parent/public/medical-records/${childId}`;
+    const url = `${API_BASE_URL}/parent/health/public/medical-records/${childId}`;
     try {
       const resp = await fetch(url);
       const contentType = resp.headers.get('content-type') || '';
@@ -225,7 +225,7 @@ export default function HealthRecords() {
 
       setShowAddRecord(false);
       setEditingRecord(null);
-      setNewRecord({ date: '', type: 'checkup', title: '', description: '' });
+      setNewRecord({ date: '', type: 'checkup', title: '', description: '', doctor: '' });
     } catch (err) {
       console.error('Network error', err);
       showCustomAlert('error', 'Network Error', 'Unable to reach the server.');
@@ -299,7 +299,7 @@ export default function HealthRecords() {
 
             <View style={{ paddingHorizontal: 24, marginBottom: 12 }}>
               <Text style={{ fontSize: 28, fontWeight: '700', color: '#1f2937' }}>Health Records</Text>
-              <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>Manage your child's medical information</Text>
+              <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>Manage your child&apos;s medical information</Text>
             </View>
 
             <View style={{ paddingHorizontal: 24, marginTop: 12 }}>

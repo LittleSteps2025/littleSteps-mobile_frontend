@@ -80,23 +80,28 @@ export default function ParentDashboard() {
         if (response.ok) {
           const data = await response.json();
           const childrenList = data.children || data.data || data || [];
-          const transformedChildren = childrenList.map((child: any) => ({
-            id: child.id?.toString() || child.childId?.toString() || "",
-            name: child.name || child.fullName || child.childName || "",
-            age: child.age || calculateAge(child.dateOfBirth) || "",
-            image:
-              child.image ||
-              child.profileImage ||
-              child.profile_picture ||
-              require("@/assets/images/kid1.jpg"),
-            status: child.status || "Active",
-            gender: child.gender || "male",
-            dob: child.dob,
-            blood_type: child.blood_type,
-            class: child.class || child.className || "",
-            allergies: child.allergies || [],
-            emergencyContact: child.emergencyContact || "",
-          }));
+          const transformedChildren = childrenList.map(
+            (child: any, index: number) => ({
+              id:
+                child.id?.toString() ||
+                child.childId?.toString() ||
+                `temp-${index}`,
+              name: child.name || child.fullName || child.childName || "",
+              age: child.age || calculateAge(child.dateOfBirth) || "",
+              image:
+                child.image ||
+                child.profileImage ||
+                child.profile_picture ||
+                require("@/assets/images/kid1.jpg"),
+              status: child.status || "Active",
+              gender: child.gender || "male",
+              dob: child.dob,
+              blood_type: child.blood_type,
+              class: child.class || child.className || "",
+              allergies: child.allergies || [],
+              emergencyContact: child.emergencyContact || "",
+            })
+          );
           setChildrenData(transformedChildren);
           await updateChildren(
             transformedChildren.map((child: any) => ({
@@ -149,8 +154,10 @@ export default function ParentDashboard() {
   useEffect(() => {
     const fetchUnreadCount = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/announcements/parent`);
-        if (!response.ok) throw new Error('Failed to fetch');
+        const response = await fetch(
+          `${API_BASE_URL}/parent/announcements/parent`
+        );
+        if (!response.ok) throw new Error("Failed to fetch");
         const data = await response.json();
         const count = Array.isArray(data)
           ? data.filter((item: any) => !item.isRead).length
@@ -291,7 +298,10 @@ export default function ParentDashboard() {
                 Track your children&apos;s progress
               </Text>
             </View>
-            <TouchableOpacity className="relative p-8" onPress={() => router.push("/announcements")}>
+            <TouchableOpacity
+              className="relative p-8"
+              onPress={() => router.push("/announcements")}
+            >
               <Bell size={24} color="#6B7280" />
               {unreadCount > 0 && (
                 <View
