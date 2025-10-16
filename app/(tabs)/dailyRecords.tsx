@@ -75,7 +75,7 @@ export default function DailyMealTracker() {
   };
 
   try {
-    const response = await fetch(`${API_BASE_URL}/parent/daily-records`, {
+    const response = await fetch(`${API_BASE_URL}/daily-records/parent/daily-records`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dataToSend)
