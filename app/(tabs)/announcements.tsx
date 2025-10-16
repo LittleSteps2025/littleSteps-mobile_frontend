@@ -39,7 +39,7 @@ export default function Announcements() {
       try {
         setLoading(true);
         setError('');
-        const response = await fetch(`${API_BASE_URL}/announcements/parent`);
+        const response = await fetch(`${API_BASE_URL}/parent/announcements/parent`);
         if (!response.ok) throw new Error('Failed to fetch');
         const data = await response.json();
 
