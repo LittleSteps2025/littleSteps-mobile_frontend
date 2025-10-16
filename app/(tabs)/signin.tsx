@@ -20,6 +20,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { registerFCMToken } from "../../fcm";
 
 // Safe JSON parsing function
 const safeJsonParse = async (response: Response) => {
@@ -276,6 +277,20 @@ export default function CreateAccountWithValidation() {
           await login(userData, token);
 
           console.log("✅ Session stored successfully");
+
+          // Register FCM token for push notifications
+          try {
+            const { default: messaging } = await import(
+              "@react-native-firebase/messaging"
+            );
+            const fcmToken = await messaging().getToken();
+            if (fcmToken && userData.id) {
+              await registerFCMToken(userData.id, fcmToken);
+              console.log("✅ FCM token registered for user");
+            }
+          } catch (fcmError) {
+            console.warn("⚠️ Failed to register FCM token:", fcmError);
+          }
 
           showCustomAlert(
             "success",
