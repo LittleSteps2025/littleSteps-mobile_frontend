@@ -5,7 +5,7 @@ import { API_BASE_URL } from "@/utility/index";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useUser } from "@/contexts/UserContext";
 
 interface MealRecord {
   id?: number;
@@ -45,67 +46,74 @@ interface MealRecord {
 export default function DailyMealView() {
   const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
   const router = useRouter();
+  const { user } = useUser();
   const [mealRecords, setMealRecords] = useState<MealRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().slice(0, 10)
   );
-  const [viewMode, setViewMode] = useState<"single" | "all">("single");
-  const [selectedChildId, setSelectedChildId] = useState<number>(1);
+  const [viewMode] = useState<"single" | "all">("single");
+  const selectedChildId = useMemo(
+    () => user?.children?.[0]?.child_id || 1,
+    [user]
+  );
 
   const handleBack = () => {
     router.back();
   };
 
-  const fetchMealRecords = async (showLoader = true, childId?: number) => {
-    if (showLoader) setLoading(true);
-    try {
-      const targetChildId = childId || selectedChildId || 1;
+  const fetchMealRecords = useCallback(
+    async (showLoader = true, childId?: number) => {
+      if (showLoader) setLoading(true);
+      try {
+        const targetChildId = childId || selectedChildId || 1;
 
-      console.log(
-        `Fetching meal records for child ${targetChildId} on ${selectedDate}`
-      );
+        console.log(
+          `Fetching meal records for child ${targetChildId} on ${selectedDate}`
+        );
 
-      // Use the correct endpoint structure
-      const endpoint = `${API_BASE_URL}/parent/reports?child_id=${targetChildId}&date=${selectedDate}`;
+        // Use the correct endpoint structure
+        const endpoint = `${API_BASE_URL}/parent/reports?child_id=${targetChildId}&date=${selectedDate}`;
 
-      console.log(`Using endpoint: ${endpoint}`);
+        console.log(`Using endpoint: ${endpoint}`);
 
-      const response = await fetch(endpoint, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          // Add authorization header if needed
-          // 'Authorization': `Bearer ${authToken}`,
-        },
-      });
+        const response = await fetch(endpoint, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            // Add authorization header if needed
+            // 'Authorization': `Bearer ${authToken}`,
+          },
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Meal records data:", data);
+
+        // Handle different response structures
+        const records =
+          data.data || data.records || data.dailyRecords || data || [];
+        setMealRecords(
+          Array.isArray(records) ? records : [records].filter(Boolean)
+        );
+      } catch (err) {
+        console.error("Fetch meal records error:", err);
+        showCustomAlert(
+          "error",
+          "Error",
+          "Unable to fetch meal records. Please check your connection and try again."
+        );
+        setMealRecords([]);
+      } finally {
+        if (showLoader) setLoading(false);
       }
-
-      const data = await response.json();
-      console.log("Meal records data:", data);
-
-      // Handle different response structures
-      const records =
-        data.data || data.records || data.dailyRecords || data || [];
-      setMealRecords(
-        Array.isArray(records) ? records : [records].filter(Boolean)
-      );
-    } catch (err) {
-      console.error("Fetch meal records error:", err);
-      showCustomAlert(
-        "error",
-        "Error",
-        "Unable to fetch meal records. Please check your connection and try again."
-      );
-      setMealRecords([]);
-    } finally {
-      if (showLoader) setLoading(false);
-    }
-  };
+    },
+    [selectedChildId, selectedDate, showCustomAlert]
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -118,7 +126,7 @@ export default function DailyMealView() {
   };
 
   // Function to fetch meal records for all children
-  const fetchAllChildrenMealRecords = async () => {
+  const fetchAllChildrenMealRecords = useCallback(async () => {
     setLoading(true);
     try {
       console.log(
@@ -161,7 +169,7 @@ export default function DailyMealView() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDate, showCustomAlert]);
 
   // const navigateToTracker = () => {
   //   router.push('/dailyRecords');
@@ -200,7 +208,13 @@ export default function DailyMealView() {
     } else {
       fetchAllChildrenMealRecords();
     }
-  }, [selectedDate, viewMode, selectedChildId]);
+  }, [
+    selectedDate,
+    viewMode,
+    selectedChildId,
+    fetchMealRecords,
+    fetchAllChildrenMealRecords,
+  ]);
 
   const mealSections = [
     {

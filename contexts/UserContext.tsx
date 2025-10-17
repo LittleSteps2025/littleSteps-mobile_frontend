@@ -1,6 +1,7 @@
-import { API_BASE_URL } from '@/utility';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { API_BASE_URL } from "@/utility";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { registerFCMToken, setupFCM } from "../fcm";
 
 interface UserData {
   id: string;
@@ -10,7 +11,7 @@ interface UserData {
   address?: string;
   profileImage?: string;
   children?: ChildData[];
-  role: 'parent' | 'teacher';
+  role: "parent" | "teacher";
 }
 
 interface ChildData {
@@ -46,7 +47,9 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -58,16 +61,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkExistingSession = async () => {
     try {
       const [storedUser, storedToken] = await Promise.all([
-        AsyncStorage.getItem('userData'),
-        AsyncStorage.getItem('authToken')
+        AsyncStorage.getItem("userData"),
+        AsyncStorage.getItem("authToken"),
       ]);
 
       if (storedUser && storedToken) {
         const userData = JSON.parse(storedUser);
-        
+
         // Verify token is still valid with backend
         const isValid = await verifyToken(storedToken);
-        
+
         if (isValid) {
           setUser(userData);
           // Refresh user data from server
@@ -78,7 +81,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     } catch (error) {
-      console.error('Error checking session:', error);
+      console.error("Error checking session:", error);
       await clearStorage();
     } finally {
       setIsLoading(false);
@@ -89,61 +92,91 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await fetch(`${API_BASE_URL}/auth/verify-token`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
       return response.ok;
     } catch (error) {
-      console.error('Token verification failed:', error);
+      console.error("Token verification failed:", error);
       return false;
     }
   };
 
   const login = async (userData: UserData, token: string) => {
     try {
-      console.log('=== UserContext LOGIN ===');
-      console.log('Storing user data:', userData);
-      console.log('Storing token:', token.substring(0, 50) + '...');
-      
+      console.log("=== UserContext LOGIN ===");
+      console.log("Storing user data:", userData);
+      console.log("Storing token:", token.substring(0, 50) + "...");
+
       // Store user data and token
       await Promise.all([
-        AsyncStorage.setItem('userData', JSON.stringify(userData)),
-        AsyncStorage.setItem('authToken', token),
-        AsyncStorage.setItem('loginTime', new Date().toISOString())
+        AsyncStorage.setItem("userData", JSON.stringify(userData)),
+        AsyncStorage.setItem("authToken", token),
+        AsyncStorage.setItem("loginTime", new Date().toISOString()),
       ]);
-      
+
       setUser(userData);
-      console.log('✅ UserContext login completed successfully');
+
+      // Register FCM token for push notifications
+      try {
+        console.log(
+          "FCM: Setting up FCM token registration for user:",
+          userData.id
+        );
+        const fcmToken = await setupFCM();
+        if (fcmToken && userData.id) {
+          const success = await registerFCMToken(
+            parseInt(userData.id),
+            fcmToken
+          );
+          if (success) {
+            console.log(
+              "✅ FCM token registered successfully for user:",
+              userData.id
+            );
+          } else {
+            console.warn(
+              "⚠️ Failed to register FCM token for user:",
+              userData.id
+            );
+          }
+        }
+      } catch (fcmError) {
+        console.warn("⚠️ FCM setup failed during login:", fcmError);
+        // Don't fail login if FCM fails
+      }
+
+      console.log("✅ UserContext login completed successfully");
     } catch (error) {
-      console.error('❌ Error storing session:', error);
+      console.error("❌ Error storing session:", error);
       throw error;
     }
   };
 
   const logout = async () => {
     try {
-      const token = await AsyncStorage.getItem('authToken');
-      
+      const token = await AsyncStorage.getItem("authToken");
+
       // Call logout endpoint to invalidate token on server
       if (token) {
         try {
           await fetch(`${API_BASE_URL}/auth/logout`, {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
           });
         } catch (error) {
-          console.error('Server logout failed:', error);
+          console.error("Server logout failed:", error);
         }
       }
-      
+
       await clearStorage();
       setUser(null);
     } catch (error) {
-      console.error('Error during logout:', error);
+      console.error("Error during logout:", error);
     }
   };
 
@@ -152,10 +185,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       const newUserData = { ...user, ...updatedData };
-      await AsyncStorage.setItem('userData', JSON.stringify(newUserData));
+      await AsyncStorage.setItem("userData", JSON.stringify(newUserData));
       setUser(newUserData);
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.error("Error updating profile:", error);
       throw error;
     }
   };
@@ -164,33 +197,33 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return;
 
     try {
-      console.log('=== UPDATING CHILDREN IN SESSION ===');
-      console.log('Children data to store:', childrenData);
-      console.log('Existing user data:', user);
-     
+      console.log("=== UPDATING CHILDREN IN SESSION ===");
+      console.log("Children data to store:", childrenData);
+      console.log("Existing user data:", user);
+
       // Merge children data with existing user data (keep all user details)
-      const updatedUserData = { 
-        ...user,  // Keep all existing user details (id, email, fullName, phone, etc.)
-        children: childrenData  // Add/update only the children array
+      const updatedUserData = {
+        ...user, // Keep all existing user details (id, email, fullName, phone, etc.)
+        children: childrenData, // Add/update only the children array
       };
-      
-      console.log('Updated user data with children:', updatedUserData);
-      
-      await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
+
+      console.log("Updated user data with children:", updatedUserData);
+
+      await AsyncStorage.setItem("userData", JSON.stringify(updatedUserData));
       setUser(updatedUserData);
-      
-      console.log('✅ Children data added to user session successfully');
+
+      console.log("✅ Children data added to user session successfully");
     } catch (error) {
-      console.error('❌ Error updating children in session:', error);
+      console.error("❌ Error updating children in session:", error);
       throw error;
     }
   };
 
   const getAuthToken = async (): Promise<string | null> => {
     try {
-      return await AsyncStorage.getItem('authToken');
+      return await AsyncStorage.getItem("authToken");
     } catch (error) {
-      console.error('Error getting auth token:', error);
+      console.error("Error getting auth token:", error);
       return null;
     }
   };
@@ -202,9 +235,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const response = await fetch(`${API_BASE_URL}/parent/profile`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
 
       if (response.ok) {
@@ -212,30 +245,32 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await updateProfile(userData);
       }
     } catch (error) {
-      console.error('Error refreshing user data:', error);
+      console.error("Error refreshing user data:", error);
     }
   };
 
   const clearStorage = async () => {
     await Promise.all([
-      AsyncStorage.removeItem('userData'),
-      AsyncStorage.removeItem('authToken'),
-      AsyncStorage.removeItem('loginTime')
+      AsyncStorage.removeItem("userData"),
+      AsyncStorage.removeItem("authToken"),
+      AsyncStorage.removeItem("loginTime"),
     ]);
-    console.log('🗑️ Session data cleared including children data');
+    console.log("🗑️ Session data cleared including children data");
   };
 
   return (
-    <UserContext.Provider value={{
-      user,
-      isLoading,
-      login,
-      logout,
-      updateProfile,
-      updateChildren,
-      getAuthToken,
-      refreshUserData
-    }}>
+    <UserContext.Provider
+      value={{
+        user,
+        isLoading,
+        login,
+        logout,
+        updateProfile,
+        updateChildren,
+        getAuthToken,
+        refreshUserData,
+      }}
+    >
       {children}
     </UserContext.Provider>
   );
@@ -244,7 +279,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useUser = () => {
   const context = useContext(UserContext);
   if (!context) {
-    throw new Error('useUser must be used within UserProvider');
+    throw new Error("useUser must be used within UserProvider");
   }
   return context;
 };

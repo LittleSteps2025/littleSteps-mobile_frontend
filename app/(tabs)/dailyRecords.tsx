@@ -5,7 +5,7 @@ import { API_BASE_URL } from "@/utility/index";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import {
   Modal,
   SafeAreaView,
@@ -16,11 +16,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useUser } from "@/contexts/UserContext";
 
 console.log("API_BASE_URL:", API_BASE_URL);
 export default function DailyMealTracker() {
   const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
   const router = useRouter();
+  const { user } = useUser();
 
   //const getTodayDate = () => new Date().toISOString().slice(0, 10);
 
@@ -48,6 +50,16 @@ export default function DailyMealTracker() {
   };
 
   const handleSubmit = async () => {
+    // Check if user is logged in
+    if (!user) {
+      showCustomAlert(
+        "error",
+        "Authentication Required",
+        "Please log in to submit daily records."
+      );
+      return;
+    }
+
     if (
       !mealData.breakfirst &&
       !mealData.lunch &&
@@ -64,6 +76,17 @@ export default function DailyMealTracker() {
       return;
     }
 
+    // Get child_id from user's first child
+    const childId = user?.children?.[0]?.child_id;
+    if (!childId) {
+      showCustomAlert(
+        "error",
+        "No Child Found",
+        "Unable to find child information. Please contact support."
+      );
+      return;
+    }
+
     const dataToSend = {
       breakfirst: mealData.breakfirst,
       morning_snack: mealData.morning_snack,
@@ -73,7 +96,7 @@ export default function DailyMealTracker() {
       special_note: mealData.special_note,
       date: new Date().toISOString().slice(0, 10),
       create_date: new Date().toISOString(),
-      child_id: 1,
+      child_id: childId,
     };
 
     try {

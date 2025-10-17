@@ -18,7 +18,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children, requiredRole }) 
       router.replace('/signin');
     } else if (!isLoading && user && requiredRole && user.role !== requiredRole) {
       // Redirect to appropriate dashboard if role doesn't match
-      const redirectPath = user.role === 'parent' ? '/ParentDashboard' : '/teacher';
+      const redirectPath = user.role === 'parent' ? '/(tabs)' : '/(tabs)';
       router.replace(redirectPath);
     }
   }, [user, isLoading, requiredRole, router]);

@@ -37,3 +37,6 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+firebaseServiceAccount.json
+config/firebase.ts
+android/app/google-services.json

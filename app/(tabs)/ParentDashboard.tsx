@@ -141,39 +141,49 @@ export default function ParentDashboard() {
     }
   };
 
-  // Helper function to calculate age from date of birth
-  const calculateAge = (dateOfBirth: string) => {
-    if (!dateOfBirth) return "";
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    const age = today.getFullYear() - birthDate.getFullYear();
-    return `${age} years old`;
-  };
-
-  // Fetch unread announcement count and update when focused
+  // Fetch unread count when component mounts or user changes
   useEffect(() => {
     const fetchUnreadCount = async () => {
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/parent/announcements/parent`
-        );
-        if (!response.ok) throw new Error("Failed to fetch");
-        const data = await response.json();
-        const count = Array.isArray(data)
-          ? data.filter((item: any) => !item.isRead).length
-          : 0;
-        setUnreadCount(count);
-      } catch (err) {
-        console.error("Error fetching unread announcements:", err);
-        setUnreadCount(0);
+        if (!user?.children?.length) return;
+
+        const firstChild = user.children[0];
+        const [meetingsResponse, announcementsResponse] = await Promise.all([
+          fetch(
+            `${API_BASE_URL}/parent/announcements/meeting/child/${firstChild.child_id}`
+          ),
+          fetch(`${API_BASE_URL}/parent/announcements/parent`),
+        ]);
+
+        if (meetingsResponse.ok && announcementsResponse.ok) {
+          const meetingsData = await meetingsResponse.json();
+          const announcementsData = await announcementsResponse.json();
+
+          const meetings = (meetingsData.data || []).map((item: any) => ({
+            ...item,
+            type: "meeting" as const,
+          }));
+          const announcements = (announcementsData || []).map((item: any) => ({
+            ...item,
+            type: "announcement" as const,
+          }));
+
+          const unreadMeetings = meetings.filter(
+            (item: any) => !item.response
+          ).length;
+          const unreadAnnouncements = announcements.filter(
+            (item: any) => !item.isRead
+          ).length;
+
+          setUnreadCount(unreadMeetings + unreadAnnouncements);
+        }
+      } catch (error) {
+        console.error("Error fetching unread count:", error);
       }
     };
+
     fetchUnreadCount();
-    // Optionally, add focus listener if needed for your router
-    // Example for Expo Router:
-    // const unsubscribe = router.addListener?.('focus', fetchUnreadCount);
-    // return () => { if (unsubscribe) unsubscribe(); };
-  }, [router]);
+  }, [user?.children]);
 
   const userChildren = childrenData;
 
@@ -300,33 +310,24 @@ export default function ParentDashboard() {
             </View>
             <TouchableOpacity
               className="relative p-8"
-              onPress={() => router.push("/announcements")}
+              onPress={() => {
+                setUnreadCount(0); // Clear the red dot when clicked
+                router.push("/announcements");
+              }}
             >
               <Bell size={24} color="#6B7280" />
               {unreadCount > 0 && (
                 <View
                   style={{
                     position: "absolute",
-                    top: 15,
-                    right: 15,
+                    top: 25,
+                    right: 28,
                     backgroundColor: "#DC2626",
-                    borderRadius: 10,
-                    minWidth: 20,
-                    height: 20,
-                    justifyContent: "center",
-                    alignItems: "center",
+                    borderRadius: 5,
+                    width: 10,
+                    height: 10,
                   }}
-                >
-                  <Text
-                    style={{
-                      color: "#FFFFFF",
-                      fontSize: 12,
-                      fontWeight: "600",
-                    }}
-                  >
-                    {unreadCount}
-                  </Text>
-                </View>
+                />
               )}
             </TouchableOpacity>
           </View>
@@ -434,3 +435,7 @@ export default function ParentDashboard() {
     </AuthGuard>
   );
 }
+function calculateAge(dateOfBirth: any): any {
+  throw new Error("Function not implemented.");
+}
+

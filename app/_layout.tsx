@@ -1,14 +1,23 @@
 import { UserProvider } from "@/contexts/UserContext";
 import "@/global.css";
 import { Stack } from "expo-router";
+import { setupFCM } from "../fcm";
+import { useEffect } from "react";
+import Constants from "expo-constants";
 
 export default function RootLayout() {
-  // return <Stack>
-  //   <Stack.Screen
-  //     name="(tabs)"
-  //     options={{headerShown:false}}
-  //   />
-  // </Stack>
+  useEffect(() => {
+    // Check if we're in Expo Go
+    const isExpoGo = Constants.executionEnvironment === "storeClient";
+
+    if (isExpoGo) {
+      console.log("App: Running in Expo Go - FCM disabled");
+    } else {
+      console.log("App: Running in development build - enabling FCM");
+      // Setup FCM listeners (token registration happens on login)
+      setupFCM();
+    }
+  }, []);
 
   return (
     <UserProvider>

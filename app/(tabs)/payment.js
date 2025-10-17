@@ -1,6 +1,7 @@
-import { View, Alert, Image, StyleSheet } from "react-native";
+import { View, Alert } from "react-native";
 import { WebView } from "react-native-webview";
 import { useLocalSearchParams } from "expo-router";
+import { API_BASE_URL } from "@/utility/index";
 
 
 export default function Payment() {
@@ -155,7 +156,8 @@ export default function Payment() {
             const PAYMENT_CONFIG = {
                 paymentType: '${paymentType}',
                 amount: '${cleanAmount}',
-                child_id: ${child_id}
+                child_id: ${child_id},
+                apiBaseUrl: '${API_BASE_URL}'
             };
 
             function showStatus(message, type = 'info') {
@@ -191,7 +193,7 @@ export default function Payment() {
                     
                     console.log('Payment config:', PAYMENT_CONFIG);
 
-                    const response = await fetch('http://10.215.89.156:5001/api/payment/create', {
+                    const response = await fetch(PAYMENT_CONFIG.apiBaseUrl + '/payment/create', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -266,6 +268,20 @@ export default function Payment() {
                 }
             };
 
+            // Add additional error handling for PayHere initialization
+            payhere.onValidationError = function onValidationError(error) {
+                console.log("❌ PayHere validation error: " + error);
+                showStatus('❌ Validation Error: ' + error, 'error');
+                
+                if (window.ReactNativeWebView) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({
+                        type: 'validation_error',
+                        error: error,
+                        message: 'PayHere validation failed: ' + error
+                    }));
+                }
+            };
+
             // Start PayHere payment
             document.getElementById('payhere-payment').onclick = function() {
                 if (!paymentData) {
@@ -287,6 +303,16 @@ export default function Payment() {
                     
                     if (missingFields.length > 0) {
                         throw new Error('Missing required payment fields: ' + missingFields.join(', '));
+                    }
+
+                    // Validate merchant_id format (should be numeric)
+                    if (!/^\d+$/.test(paymentData.merchant_id)) {
+                        throw new Error('Invalid merchant_id format: ' + paymentData.merchant_id);
+                    }
+
+                    // Validate amount (should be numeric)
+                    if (isNaN(parseFloat(paymentData.amount)) || parseFloat(paymentData.amount) <= 0) {
+                        throw new Error('Invalid amount: ' + paymentData.amount);
                     }
                     
                     var payment = {
@@ -327,6 +353,15 @@ export default function Payment() {
                 } catch (error) {
                     console.error("Error starting PayHere:", error);
                     showStatus('❌ Error starting PayHere: ' + error.message, 'error');
+                    
+                    // Send validation error to React Native
+                    if (window.ReactNativeWebView) {
+                        window.ReactNativeWebView.postMessage(JSON.stringify({
+                            type: 'validation_error',
+                            error: error.message,
+                            message: 'Payment validation failed: ' + error.message
+                        }));
+                    }
                 }
             };
 
@@ -383,6 +418,10 @@ export default function Payment() {
               console.log("❌ Payment Error in Mobile App:", data.error);
               Alert.alert("Payment Error", `Payment failed: ${data.error}`);
               // Handle payment error
+            } else if (data.type === "validation_error") {
+              console.log("❌ Validation Error in Mobile App:", data.error);
+              Alert.alert("Validation Error", `Payment validation failed: ${data.error}`);
+              // Handle validation error
             } else if (data.type === "status_update") {
               console.log("📱 Status Update:", data.message);
               // You can show toast messages or update UI based on status
