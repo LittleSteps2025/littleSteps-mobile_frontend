@@ -180,7 +180,6 @@ export default function CreateAccountWithValidation() {
     setIsLoading(true);
 
     try {
-
       console.log("Attempting login with email:", formData.email);
       console.log("Making request to:", `${API_BASE_URL}/parents/login`);
 
@@ -282,10 +281,11 @@ export default function CreateAccountWithValidation() {
 
           // Register FCM token for push notifications
           try {
-            const { default: messaging } = await import(
+            const { getMessaging, getToken } = await import(
               "@react-native-firebase/messaging"
             );
-            const fcmToken = await messaging().getToken();
+            const messaging = getMessaging();
+            const fcmToken = await getToken(messaging);
             if (fcmToken && userData.id) {
               await registerFCMToken(userData.id, fcmToken);
               console.log("✅ FCM token registered for user");
