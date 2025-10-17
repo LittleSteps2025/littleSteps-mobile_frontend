@@ -258,12 +258,12 @@ export default function ChildDetailsForm() {
 
               {/* Navigation Cards */}
               <View className="space-y-4">
-                {navigationItems.map((item, index) => (
+                {navigationItems.map((item) => (
                   <TouchableOpacity
-                    key={index}
+                    key={item.route} // use stable unique key instead of index
                     onPress={() => router.push(item.route)}
                     activeOpacity={0.8}
-                  >
+               >
                     <LinearGradient
                       colors={[...item.color] as [ColorValue, ColorValue]}
                       start={[0, 0]}

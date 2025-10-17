@@ -17,8 +17,10 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { API_BASE_URL } from '@/utility';
+import { useUser } from '@/contexts/UserContext';
 
-// Mock data for events
+// Mock data for events (you already had this)
 const mockEvents = [
   {
     id: '1',
@@ -64,12 +66,14 @@ const mockEvents = [
 
 export default function ParentMore() {
   const router = useRouter();
-  
+  const { user } = useUser();
+  const token = (user as any)?.token ?? '';
+
   const [isComplaintModalVisible, setIsComplaintModalVisible] = useState(false);
   const [isEventsModalVisible, setIsEventsModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [isEventDetailsModalVisible, setIsEventDetailsModalVisible] = useState(false);
-  
+
   // Custom Alert State
   const [customAlert, setCustomAlert] = useState({
     visible: false,
@@ -101,17 +105,10 @@ export default function ParentMore() {
     setCustomAlert(prev => ({ ...prev, visible: false }));
   };
 
-  // Password reset form state
-  // const [passwordResetForm, setPasswordResetForm] = useState({
-  //   currentPassword: '',
-  //   newPassword: '',
-  //   confirmPassword: ''
-  // });
-
   // Complaint form state
   const [complaintForm, setComplaintForm] = useState({
     subject: '',
-    category: 'general',
+    recipient: 'teacher',
     description: '',
     priority: 'medium'
   });
@@ -120,43 +117,6 @@ export default function ParentMore() {
     router.back();
   };
 
-  // Password Reset Functions
-  // const openPasswordResetModal = () => {
-  //   setIsPasswordResetModalVisible(true);
-  // };
-
-  // const closePasswordResetModal = () => {
-  //   setIsPasswordResetModalVisible(false);
-  //   setPasswordResetForm({
-  //     currentPassword: '',
-  //     newPassword: '',
-  //     confirmPassword: ''
-  //   });
-  // };
-
-  // const handlePasswordReset = () => {
-  //   if (!passwordResetForm.currentPassword || !passwordResetForm.newPassword || !passwordResetForm.confirmPassword) {
-  //     showCustomAlert('error', 'Error', 'Please fill all fields');
-  //     return;
-  //   }
-
-  //   if (passwordResetForm.newPassword !== passwordResetForm.confirmPassword) {
-  //     showCustomAlert('error', 'Error', 'New passwords do not match');
-  //     return;
-  //   }
-
-  //   if (passwordResetForm.newPassword.length < 6) {
-  //     showCustomAlert('error', 'Error', 'Password must be at least 6 characters long');
-  //     return;
-  //   }
-
-  //   // Here you would typically call your backend API
-  //   showCustomAlert('success', 'Success', 'Password reset successfully!', false, () => {
-  //     closePasswordResetModal();
-  //   });
-  // };
-
-  // Complaint Functions
   const openComplaintModal = () => {
     setIsComplaintModalVisible(true);
   };
@@ -165,25 +125,68 @@ export default function ParentMore() {
     setIsComplaintModalVisible(false);
     setComplaintForm({
       subject: '',
-      category: 'general',
+      recipient: 'teacher',
       description: '',
       priority: 'medium'
     });
   };
 
-  const handleComplaintSubmit = () => {
+  const handleComplaintSubmit = async () => {
     if (!complaintForm.subject || !complaintForm.description) {
       showCustomAlert('error', 'Error', 'Please fill all required fields');
       return;
     }
 
-    // Here you would typically call your backend API
-    showCustomAlert('success', 'Success', 'Complaint submitted successfully! We will review it shortly.', false, () => {
-      closeComplaintModal();
-    });
+    const childId = resolveChildId();
+   
+    if (!childId) {
+      showCustomAlert('error', 'Error', 'Unable to resolve child ID');
+      return;
+    }
+
+    const payload = {
+      date: new Date().toISOString().slice(0, 10), // YYYY-MM-DD
+      subject: complaintForm.subject,
+      recipient: (complaintForm as any).recipient ?? 'teacher',
+      description: complaintForm.description,
+      child_id: Number(childId)
+    };
+
+    try {
+      // optional UI feedback: close modal while request runs
+      setIsComplaintModalVisible(false);
+
+      const resp = await fetch(`${API_BASE_URL}/parent/complaint/complaints`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const text = await resp.text();
+      let json: any = {};
+      try { json = text ? JSON.parse(text) : {}; } catch (e) { json = { success: false, message: text || 'Invalid server response' }; }
+
+      if (!resp.ok || !json.success) {
+        console.error('Complaint submit error', resp.status, json);
+        showCustomAlert('error', 'Request failed', json?.message || 'Unable to submit complaint');
+        return;
+      }
+
+
+      // Call backend (omitted) or keep as-is
+      showCustomAlert('success', 'Success', 'Complaint submitted successfully! We will review it shortly.', false, () => {
+        closeComplaintModal();
+      });
+       
+    } catch (err) {
+       console.error('Complaint submit network error', err);
+     showCustomAlert('error', 'Network Error', 'Unable to reach the server.');
+    }
   };
 
-  // Events Functions
   const openEventsModal = () => {
     setIsEventsModalVisible(true);
   };
@@ -237,12 +240,92 @@ export default function ParentMore() {
     setIsMeetingModalVisible(false);
     setMeetingForm({ recipient: 'teacher', date: '', time: '', reason: '' });
   };
-  const handleMeetingRequest = () => {
+
+  // Resolve child id from user context (similar to health.tsx resolve approach)
+  const resolveChildId = (): number | null => {
+    const raw = (user as any)?.selectedChildId ?? null;
+    if (raw && !Number.isNaN(Number(raw))) return Number(raw);
+
+    if (user?.children && Array.isArray(user.children) && user.children.length > 0) {
+      const first = user.children[0] as any;
+      const idFromSession = first?.child_id ?? first?.id ?? first?.childId;
+      if (idFromSession && !Number.isNaN(Number(idFromSession))) return Number(idFromSession);
+    }
+
+    return null;
+  };
+
+  // convert "HH:MM AM/PM" or "HH:MM" to "HH:MM:SS" 24h
+  const to24Hour = (timeStr: string) => {
+    if (!timeStr) return null;
+    const t = timeStr.trim();
+    // already 24h like "13:30" or "13:30:00"
+    if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(t) && !/[AaPp][Mm]$/.test(t)) {
+      const parts = t.split(':');
+      return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}:00`;
+    }
+    const m = t.match(/(\d{1,2}):(\d{2})\s*([AaPp][Mm])/);
+    if (!m) return null;
+    let hh = Number(m[1]);
+    const mm = m[2];
+    const ampm = m[3].toLowerCase();
+    if (ampm === 'pm' && hh !== 12) hh += 12;
+    if (ampm === 'am' && hh === 12) hh = 0;
+    return `${String(hh).padStart(2, '0')}:${mm}:00`;
+  };
+
+  // POST to backend meeting endpoint
+  const handleMeetingRequest = async () => {
     if (!meetingForm.date || !meetingForm.time || !meetingForm.reason) {
       showCustomAlert('error', 'Error', 'Please fill all fields');
       return;
     }
-    showCustomAlert('success', 'Request Sent', `Meeting request sent to ${meetingForm.recipient}.`, false, closeMeetingModal);
+
+    const childId = resolveChildId();
+    if (!childId) {
+      showCustomAlert('error', 'No child selected', 'Please select a child in your profile first.');
+      return;
+    }
+
+    const meeting_time = to24Hour(meetingForm.time);
+    if (!meeting_time) {
+      showCustomAlert('error', 'Invalid time', 'Please enter time like "09:30 AM" or "14:30".');
+      return;
+    }
+
+    const payload = {
+      child_id: Number(childId),
+      recipient: meetingForm.recipient, // 'teacher' or 'supervisor'
+      // optionally include recipient_id if you resolve a specific teacher/supervisor
+      meeting_date: meetingForm.date, // YYYY-MM-DD
+      meeting_time,
+      reason: meetingForm.reason
+    };
+
+    try {
+      const resp = await fetch(`${API_BASE_URL}/parent/meeting/meeting`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(payload)
+      });
+
+      let json;
+      try { json = await resp.json(); } catch (e) { json = { success: false, message: 'Invalid server response' }; }
+
+      if (!resp.ok || !json.success) {
+        console.error('Meeting request error', json);
+        showCustomAlert('error', 'Request failed', json?.message || 'Unable to send meeting request');
+        return;
+      }
+
+      showCustomAlert('success', 'Request Sent', `Meeting request sent to ${meetingForm.recipient}.`, false, closeMeetingModal);
+    } catch (err) {
+      console.error('Meeting request error', err);
+      showCustomAlert('error', 'Network Error', 'Unable to reach the server.');
+    }
   };
 
   const moreOptions = [
@@ -267,13 +350,6 @@ export default function ParentMore() {
       color: ['#10b981', '#06b6d4'],
       onPress: openEventsModal
     },
-    // {
-    //   title: 'Notification Settings',
-    //   description: 'Manage your notifications',
-    //   item: images.notification,
-    //   color: ['#3b82f6', '#60a5fa'],
-    //   onPress: () => showCustomAlert('error', 'Coming Soon', 'This feature will be available soon!')
-    // },
     {
       title: 'Help & Support',
       description: 'Get help or contact support',
@@ -293,68 +369,6 @@ export default function ParentMore() {
   // Modal states for Help & Support and Privacy Policy
   const [isSupportModalVisible, setIsSupportModalVisible] = useState(false);
   const [isPrivacyModalVisible, setIsPrivacyModalVisible] = useState(false);
-        {/* Help & Support Modal */}
-        // eslint-disable-next-line no-unused-expressions
-        <Modal
-          visible={isSupportModalVisible}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setIsSupportModalVisible(false)}
-        >
-          <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-            <TouchableOpacity className="flex-1" onPress={() => setIsSupportModalVisible(false)} activeOpacity={1} />
-            <View className="rounded-t-3xl p-6" style={{ backgroundColor: 'white', maxHeight: '60%' }}>
-              <View className="flex-row items-center justify-between mb-6">
-                <Text className="text-xl font-bold text-gray-800">Help & Support</Text>
-                <TouchableOpacity onPress={() => setIsSupportModalVisible(false)} className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center">
-                  <Ionicons name="close" size={18} color="#6b7280" />
-                </TouchableOpacity>
-              </View>
-              <View className="mb-4">
-                <Text className="text-base text-gray-700 mb-2">Contact Numbers</Text>
-                <View className="mb-2">
-                  <Text className="text-lg font-semibold text-purple-700">011-2345678</Text>
-                  <Text className="text-lg font-semibold text-purple-700">011-8765432</Text>
-                </View>
-                <Text className="text-base text-gray-700 mb-2 mt-4">Email Addresses</Text>
-                <View>
-                  <Text className="text-lg font-semibold text-purple-700">info@littlesteps.com</Text>
-                  <Text className="text-lg font-semibold text-purple-700">support@littlesteps.com</Text>
-                </View>
-              </View>
-              <Text className="text-sm text-gray-500">We are here to help you with any questions or concerns regarding your child&apos;s care and experience at our daycare centre.</Text>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Privacy Policy Modal */}
-        // eslint-disable-next-line no-unused-expressions
-        <Modal
-          visible={isPrivacyModalVisible}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setIsPrivacyModalVisible(false)}
-        >
-          <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-            <TouchableOpacity className="flex-1" onPress={() => setIsPrivacyModalVisible(false)} activeOpacity={1} />
-            <View className="rounded-t-3xl p-6" style={{ backgroundColor: 'white', maxHeight: '70%' }}>
-              <View className="flex-row items-center justify-between mb-6">
-                <Text className="text-xl font-bold text-gray-800">Privacy Policy</Text>
-                <TouchableOpacity onPress={() => setIsPrivacyModalVisible(false)} className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center">
-                  <Ionicons name="close" size={18} color="#6b7280" />
-                </TouchableOpacity>
-              </View>
-              <ScrollView showsVerticalScrollIndicator={true}>
-                <Text className="text-base text-gray-700 mb-4 font-semibold">Rules and Regulations</Text>
-                <Text className="text-sm text-gray-700 mb-2">1. All personal information is kept confidential and is only used for daycare operations.</Text>
-                <Text className="text-sm text-gray-700 mb-2">2. We do not share your data with third parties without your consent.</Text>
-                <Text className="text-sm text-gray-700 mb-2">3. You have the right to access, update, or request deletion of your data at any time.</Text>
-                <Text className="text-sm text-gray-700 mb-2">4. Our staff are trained to handle your information securely and responsibly.</Text>
-                <Text className="text-sm text-gray-700 mb-2">5. For more details, please contact our support team.</Text>
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
 
   return (
     <LinearGradient
@@ -374,7 +388,7 @@ export default function ParentMore() {
             >
               <Ionicons name="chevron-back" size={24} color="#374151" />
             </TouchableOpacity>
-            
+
             <Text className="text-2xl font-bold text-gray-700 mt-8">
               More Options
             </Text>
@@ -384,9 +398,6 @@ export default function ParentMore() {
 
           {/* Page Title */}
           <View className="px-6 mt-4 mb-8">
-            {/* <Text className="text-2xl font-bold text-gray-800 mb-2">
-             More Options
-            </Text> */}
             <Text className="text-gray-600">
               Manage your account and explore additional features
             </Text>
@@ -413,7 +424,6 @@ export default function ParentMore() {
                     shadowRadius: 8,
                     elevation: 6,
                     borderRadius: 13
-
                   }}
                 >
                   <View className="flex-row items-center">
@@ -434,41 +444,7 @@ export default function ParentMore() {
               </TouchableOpacity>
             ))}
           </View>
-
-          {/* Logout Button */}
-          {/* <View className="px-6 mt-4 mb-8 pb-40">
-            <TouchableOpacity
-              onPress={() => {
-                showCustomAlert(
-                  'error',
-                  'Logout',
-                  'Are you sure you want to logout?',
-                  true,
-                  () => router.replace('/signin')
-                );
-              }}
-              className="rounded-2xl py-4 items-center"
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.9)',
-                borderWidth: 2,
-                borderColor: '#7c3aed',
-                shadowColor: '#7c3aed',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-                elevation: 2
-              }}
-            >
-              <View className="flex-row items-center">
-                <Image source={images.bye} style={{ width: 40, height: 40 }} />
-                <Text className="text-purple-500 text-xl font-semibold ml-2">
-                  Logout
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View> */}
         </ScrollView>
-
 
         {/* Meeting Modal */}
         <Modal
@@ -558,6 +534,7 @@ export default function ParentMore() {
             </View>
           </View>
         </Modal>
+
         {/* Complaint Modal */}
         <Modal
           visible={isComplaintModalVisible}
@@ -565,17 +542,17 @@ export default function ParentMore() {
           transparent={true}
           onRequestClose={closeComplaintModal}
         >
-          <View 
+          <View
             className="flex-1 justify-end"
             style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
           >
-            <TouchableOpacity 
+            <TouchableOpacity
               className="flex-1"
               onPress={closeComplaintModal}
               activeOpacity={1}
             />
-            
-            <View 
+
+            <View
               className="rounded-t-3xl p-6"
               style={{
                 backgroundColor: 'white',
@@ -587,12 +564,11 @@ export default function ParentMore() {
                 elevation: 16
               }}
             >
-              {/* Modal Header */}
               <View className="flex-row items-center justify-between mb-6">
                 <Text className="text-xl font-bold text-gray-800">
-                  Submit Complaint
+                  Submit Complaints & Feedbacks
                 </Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={closeComplaintModal}
                   className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center"
                 >
@@ -601,7 +577,6 @@ export default function ParentMore() {
               </View>
 
               <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Subject */}
                 <View className="mb-4">
                   <Text className="text-sm font-medium text-gray-700 mb-2">
                     Subject *
@@ -615,24 +590,23 @@ export default function ParentMore() {
                   />
                 </View>
 
-                {/* Category */}
                 <View className="mb-4">
                   <Text className="text-sm font-medium text-gray-700 mb-2">
-                    Category
+                    Complaint to*
                   </Text>
                   <View className="flex-row flex-wrap">
                     {['teacher', 'supervisor'].map((category) => (
                       <TouchableOpacity
                         key={category}
-                        onPress={() => setComplaintForm(prev => ({ ...prev, category }))}
+                        onPress={() => setComplaintForm(prev => ({ ...prev, recipient: category }))}
                         className={`mr-2 mb-2 px-4 py-2 rounded-full border ${
-                          complaintForm.category === category
+                          complaintForm.recipient === category
                             ? 'bg-purple-600 border-purple-600'
                             : 'bg-gray-100 border-gray-200'
                         }`}
                       >
                         <Text className={`text-sm font-medium ${
-                          complaintForm.category === category ? 'text-white' : 'text-gray-700'
+                          complaintForm.recipient === category ? 'text-white' : 'text-gray-700'
                         }`}>
                           {category.charAt(0).toUpperCase() + category.slice(1)}
                         </Text>
@@ -641,33 +615,6 @@ export default function ParentMore() {
                   </View>
                 </View>
 
-                {/* Priority */}
-                {/* <View className="mb-4">
-                  <Text className="text-sm font-medium text-gray-700 mb-2">
-                    Priority
-                  </Text>
-                  <View className="flex-row">
-                    {['low', 'medium', 'high'].map((priority) => (
-                      <TouchableOpacity
-                        key={priority}
-                        onPress={() => setComplaintForm(prev => ({ ...prev, priority }))}
-                        className={`mr-2 px-4 py-2 rounded-full border ${
-                          complaintForm.priority === priority
-                            ? 'bg-orange-500 border-orange-500'
-                            : 'bg-gray-100 border-gray-200'
-                        }`}
-                      >
-                        <Text className={`text-sm font-medium ${
-                          complaintForm.priority === priority ? 'text-white' : 'text-gray-700'
-                        }`}>
-                          {priority.charAt(0).toUpperCase() + priority.slice(1)}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View> */}
-
-                {/* Description */}
                 <View className="mb-6">
                   <Text className="text-sm font-medium text-gray-700 mb-2">
                     Description *
@@ -687,7 +634,6 @@ export default function ParentMore() {
                   />
                 </View>
 
-                {/* Action Buttons */}
                 <View className="flex-row space-x-3 mb-4">
                   <TouchableOpacity
                     onPress={closeComplaintModal}
@@ -728,17 +674,17 @@ export default function ParentMore() {
           transparent={true}
           onRequestClose={closeEventsModal}
         >
-          <View 
+          <View
             className="flex-1 justify-end"
             style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
           >
-            <TouchableOpacity 
+            <TouchableOpacity
               className="flex-1"
               onPress={closeEventsModal}
               activeOpacity={1}
             />
-            
-            <View 
+
+            <View
               className="rounded-t-3xl p-6"
               style={{
                 backgroundColor: 'white',
@@ -750,12 +696,11 @@ export default function ParentMore() {
                 elevation: 16
               }}
             >
-              {/* Modal Header */}
               <View className="flex-row items-center justify-between mb-6">
                 <Text className="text-xl font-bold text-gray-800">
                   Daycare Events
                 </Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={closeEventsModal}
                   className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center"
                 >
@@ -779,7 +724,7 @@ export default function ParentMore() {
                     }}
                   >
                     <View className="flex-row items-center">
-                      <View 
+                      <View
                         className="w-12 h-12 rounded-full items-center justify-center mr-4"
                         style={{ backgroundColor: `${getEventColor(item.type)}15` }}
                       >
@@ -797,12 +742,8 @@ export default function ParentMore() {
                         </Text>
                       </View>
                       <View className="items-center">
-                        <View className={`px-2 py-1 rounded-full mb-2 ${
-                          item.status === 'upcoming' ? 'bg-purple-100' : 'bg-gray-100'
-                        }`}>
-                          <Text className={`text-xs font-medium ${
-                            item.status === 'upcoming' ? 'text-purple-600' : 'text-gray-600'
-                          }`}>
+                        <View className={`px-2 py-1 rounded-full mb-2 ${item.status === 'upcoming' ? 'bg-purple-100' : 'bg-gray-100'}`}>
+                          <Text className={`text-xs font-medium ${item.status === 'upcoming' ? 'text-purple-600' : 'text-gray-600'}`}>
                             {item.status}
                           </Text>
                         </View>
@@ -824,17 +765,17 @@ export default function ParentMore() {
           transparent={true}
           onRequestClose={closeEventDetailsModal}
         >
-          <View 
+          <View
             className="flex-1 justify-end"
             style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
           >
-            <TouchableOpacity 
+            <TouchableOpacity
               className="flex-1"
               onPress={closeEventDetailsModal}
               activeOpacity={1}
             />
-            
-            <View 
+
+            <View
               className="rounded-t-3xl p-6"
               style={{
                 backgroundColor: 'white',
@@ -846,12 +787,11 @@ export default function ParentMore() {
                 elevation: 16
               }}
             >
-              {/* Modal Header */}
               <View className="flex-row items-center justify-between mb-6">
                 <Text className="text-xl font-bold text-gray-800">
                   Event Details
                 </Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={closeEventDetailsModal}
                   className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center"
                 >
@@ -861,9 +801,8 @@ export default function ParentMore() {
 
               {selectedEvent && (
                 <ScrollView showsVerticalScrollIndicator={false}>
-                  {/* Event Icon and Title */}
                   <View className="items-center mb-6">
-                    <View 
+                    <View
                       className="w-20 h-20 rounded-full items-center justify-center mb-4"
                       style={{ backgroundColor: `${getEventColor(selectedEvent.type)}15` }}
                     >
@@ -874,7 +813,6 @@ export default function ParentMore() {
                     </Text>
                   </View>
 
-                  {/* Event Details */}
                   <View className="space-y-4">
                     <View className="flex-row items-center p-4 bg-gray-50 rounded-xl">
                       <Ionicons name="calendar-outline" size={24} color="#6b7280" />
@@ -904,167 +842,139 @@ export default function ParentMore() {
                       <Ionicons name="checkmark-circle-outline" size={24} color="#6b7280" />
                       <View className="ml-4">
                         <Text className="text-sm font-medium text-gray-500">Status</Text>
-                        <Text className={`text-base font-semibold ${
-                          selectedEvent.status === 'upcoming' ? 'text-green-600' : 'text-gray-600'
-                        }`}>
+                        <Text className={`text-base font-semibold ${selectedEvent.status === 'upcoming' ? 'text-green-600' : 'text-gray-600'}`}>
                           {selectedEvent.status.charAt(0).toUpperCase() + selectedEvent.status.slice(1)}
                         </Text>
                       </View>
                     </View>
 
                     <View className="p-4 bg-gray-50 rounded-xl">
-                      <Text className="text-sm font-medium text-gray-500 mb-2">Description</Text>
+                      <Text className="text-sm font medium text-gray-500 mb-2">Description</Text>
                       <Text className="text-base text-gray-800 leading-6">
                         {selectedEvent.description}
                       </Text>
                     </View>
                   </View>
-
-                  {/* Action Button */}
-                  {/* <View className="mt-6 mb-4">
-                    <TouchableOpacity
-                      onPress={() => {
-                        showCustomAlert('success', 'Event Reminder', 'You will be notified about this event!', false, () => {
-                          closeEventDetailsModal();
-                        });
-                      }}
-                      className="py-3 rounded-xl"
-                      style={{
-                        backgroundColor: getEventColor(selectedEvent.type),
-                        shadowColor: getEventColor(selectedEvent.type),
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 8,
-                        elevation: 4
-                      }}
-                    >
-                      <Text className="text-center text-white font-semibold text-base">
-                        Set Reminder
-                      </Text>
-                    </TouchableOpacity>
-                  </View> */}
                 </ScrollView>
               )}
             </View>
           </View>
         </Modal>
       </SafeAreaView>
-            <View className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md">
-              <View
-                className="flex-row justify-around items-center py-4 px-6"
-                style={{
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: -2 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 8,
-                  elevation: 8,
-                }}
-              >
-                {/* Home */}
-                <Pressable 
-                className="items-center justify-center py-2"
-                onPress={() => router.push('/ParentDashboard')}
-                >
-                  <View className="w-12 h-12 items-center justify-center">
-                    <Ionicons name="home" size={24} color="#9ca3af" />
-                  </View>
-                  <Text className="text-xs text-gray-500 font-medium mt-1">Home</Text>
-                </Pressable>
-      
-                {/* Profile */}
-                <Pressable
-                  className="items-center justify-center py-2"
-                  onPress={() => router.push('/ParentProfile')}
-                >
-                  <View className="w-12 h-12 items-center justify-center">
-                    <Ionicons name="person" size={24} color="#9ca3af" />
-                  </View>
-                  <Text className="text-xs text-gray-500 mt-1">Profile</Text>
-                </Pressable>
-      
-                {/* More */}
-                <Pressable className="items-center justify-center py-2" >
-                  <View className="w-12 h-12 items-center justify-center">
-                    <Ionicons name="ellipsis-horizontal" size={24} color="#7c3aed" />
-                  </View>
-                  <Text className="text-xs text-purple-600 mt-1">More</Text>
-                </Pressable>
-              </View>
-            </View>
 
-        {/* Help & Support Modal */}
-        <Modal
-          visible={isSupportModalVisible}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setIsSupportModalVisible(false)}
+      <View className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md">
+        <View
+          className="flex-row justify-around items-center py-4 px-6"
+          style={{
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            elevation: 8,
+          }}
         >
-          <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-            <TouchableOpacity className="flex-1" onPress={() => setIsSupportModalVisible(false)} activeOpacity={1} />
-            <View className="rounded-t-3xl p-6" style={{ backgroundColor: 'white', maxHeight: '60%' }}>
-              <View className="flex-row items-center justify-between mb-6">
-                <Text className="text-xl font-bold text-gray-800">Help & Support</Text>
-                <TouchableOpacity onPress={() => setIsSupportModalVisible(false)} className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center">
-                  <Ionicons name="close" size={18} color="#6b7280" />
-                </TouchableOpacity>
-              </View>
-              <View className="mb-4">
-                <Text className="text-base text-gray-700 mb-2">Contact Numbers</Text>
-                <View className="mb-2">
-                  <Text className="text-lg font-semibold text-purple-700">011-2345678</Text>
-                  <Text className="text-lg font-semibold text-purple-700">011-8765432</Text>
-                </View>
-                <Text className="text-base text-gray-700 mb-2 mt-4">Email Addresses</Text>
-                <View>
-                  <Text className="text-lg font-semibold text-purple-700">info@littlesteps.com</Text>
-                  <Text className="text-lg font-semibold text-purple-700">support@littlesteps.com</Text>
-                </View>
-              </View>
-              <Text className="text-sm text-gray-500">We are here to help you with any questions or concerns regarding your child&apos;s care and experience at our daycare centre.</Text>
+          <Pressable
+            className="items-center justify-center py-2"
+            onPress={() => router.push('/ParentDashboard')}
+          >
+            <View className="w-12 h-12 items-center justify-center">
+              <Ionicons name="home" size={24} color="#9ca3af" />
             </View>
-          </View>
-        </Modal>
+            <Text className="text-xs text-gray-500 font-medium mt-1">Home</Text>
+          </Pressable>
 
-        {/* Privacy Policy Modal */}
-        <Modal
-          visible={isPrivacyModalVisible}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setIsPrivacyModalVisible(false)}
-        >
-          <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-            <TouchableOpacity className="flex-1" onPress={() => setIsPrivacyModalVisible(false)} activeOpacity={1} />
-            <View className="rounded-t-3xl p-6" style={{ backgroundColor: 'white', maxHeight: '70%' }}>
-              <View className="flex-row items-center justify-between mb-6">
-                <Text className="text-xl font-bold text-gray-800">Privacy Policy</Text>
-                <TouchableOpacity onPress={() => setIsPrivacyModalVisible(false)} className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center">
-                  <Ionicons name="close" size={18} color="#6b7280" />
-                </TouchableOpacity>
-              </View>
-              <ScrollView showsVerticalScrollIndicator={true}>
-                <Text className="text-base text-gray-700 mb-4 font-semibold">Rules and Regulations</Text>
-                <Text className="text-sm text-gray-700 mb-2">1. All personal information is kept confidential and is only used for daycare operations.</Text>
-                <Text className="text-sm text-gray-700 mb-2">2. We do not share your data with third parties without your consent.</Text>
-                <Text className="text-sm text-gray-700 mb-2">3. You have the right to access, update, or request deletion of your data at any time.</Text>
-                <Text className="text-sm text-gray-700 mb-2">4. Our staff are trained to handle your information securely and responsibly.</Text>
-                <Text className="text-sm text-gray-700 mb-2">5. For more details, please contact our support team.</Text>
-              </ScrollView>
+          <Pressable
+            className="items-center justify-center py-2"
+            onPress={() => router.push('/ParentProfile')}
+          >
+            <View className="w-12 h-12 items-center justify-center">
+              <Ionicons name="person" size={24} color="#9ca3af" />
             </View>
-          </View>
-        </Modal>
+            <Text className="text-xs text-gray-500 mt-1">Profile</Text>
+          </Pressable>
 
-        {/* Custom Alert */}
-        <CustomAlert
-          visible={customAlert.visible}
-          type={customAlert.type}
-          title={customAlert.title}
-          message={customAlert.message}
-          onClose={hideCustomAlert}
-          onConfirm={customAlert.onConfirm}
-          showCancelButton={customAlert.showCancelButton}
-          confirmText={customAlert.showCancelButton ? 'Yes' : 'OK'}
-          cancelText="Cancel"
-        />
+          <Pressable className="items-center justify-center py-2" >
+            <View className="w-12 h-12 items-center justify-center">
+              <Ionicons name="ellipsis-horizontal" size={24} color="#7c3aed" />
+            </View>
+            <Text className="text-xs text-purple-600 mt-1">More</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {/* Help & Support Modal */}
+      <Modal
+        visible={isSupportModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsSupportModalVisible(false)}
+      >
+        <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <TouchableOpacity className="flex-1" onPress={() => setIsSupportModalVisible(false)} activeOpacity={1} />
+          <View className="rounded-t-3xl p-6" style={{ backgroundColor: 'white', maxHeight: '60%' }}>
+            <View className="flex-row items-center justify-between mb-6">
+              <Text className="text-xl font-bold text-gray-800">Help & Support</Text>
+              <TouchableOpacity onPress={() => setIsSupportModalVisible(false)} className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center">
+                <Ionicons name="close" size={18} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+            <View className="mb-4">
+              <Text className="text-base text-gray-700 mb-2">Contact Numbers</Text>
+              <View className="mb-2">
+                <Text className="text-lg font-semibold text-purple-700">011-2345678</Text>
+                <Text className="text-lg font-semibold text-purple-700">011-8765432</Text>
+              </View>
+              <Text className="text-base text-gray-700 mb-2 mt-4">Email Addresses</Text>
+              <View>
+                <Text className="text-lg font-semibold text-purple-700">info@littlesteps.com</Text>
+                <Text className="text-lg font-semibold text-purple-700">support@littlesteps.com</Text>
+              </View>
+            </View>
+            <Text className="text-sm text-gray-500">We are here to help you with any questions or concerns regarding your child&apos;s care and experience at our daycare centre.</Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Privacy Policy Modal */}
+      <Modal
+        visible={isPrivacyModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsPrivacyModalVisible(false)}
+      >
+        <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <TouchableOpacity className="flex-1" onPress={() => setIsPrivacyModalVisible(false)} activeOpacity={1} />
+          <View className="rounded-t-3xl p-6" style={{ backgroundColor: 'white', maxHeight: '70%' }}>
+            <View className="flex-row items-center justify-between mb-6">
+              <Text className="text-xl font-bold text-gray-800">Privacy Policy</Text>
+              <TouchableOpacity onPress={() => setIsPrivacyModalVisible(false)} className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center">
+                <Ionicons name="close" size={18} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={true}>
+              <Text className="text-base text-gray-700 mb-4 font-semibold">Rules and Regulations</Text>
+              <Text className="text-sm text-gray-700 mb-2">1. All personal information is kept confidential and is only used for daycare operations.</Text>
+              <Text className="text-sm text-gray-700 mb-2">2. We do not share your data with third parties without your consent.</Text>
+              <Text className="text-sm text-gray-700 mb-2">3. You have the right to access, update, or request deletion of your data at any time.</Text>
+              <Text className="text-sm text-gray-700 mb-2">4. Our staff are trained to handle your information securely and responsibly.</Text>
+              <Text className="text-sm text-gray-700 mb-2">5. For more details, please contact our support team.</Text>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={customAlert.visible}
+        type={customAlert.type}
+        title={customAlert.title}
+        message={customAlert.message}
+        onClose={hideCustomAlert}
+        onConfirm={customAlert.onConfirm}
+        showCancelButton={customAlert.showCancelButton}
+        confirmText={customAlert.showCancelButton ? 'Yes' : 'OK'}
+        cancelText="Cancel"
+      />
     </LinearGradient>
   );
 }
