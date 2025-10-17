@@ -69,12 +69,15 @@ function PaymentInterface() {
       setPackageLoading(true);
       console.log("Fetching package details for child ID:", childId);
 
-      const response = await fetch(`${API_BASE_URL}/supervisors/child/package/${childId}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/supervisors/child/package/${childId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Failed to fetch package details: ${response.status}`);
@@ -255,13 +258,13 @@ function PaymentInterface() {
       pathname: "./payment",
       params: {
         paymentType: "daily",
-        amount: 5000..toString(),
+        amount: (5000).toString(),
         child_id: childId.toString(),
         package_id: 0,
         package_name: "Daily Payment",
       },
     });
-  }
+  };
 
   const handleRefresh = () => {
     fetchPaymentHistory();
@@ -393,8 +396,8 @@ function PaymentInterface() {
           </View>
 
           {/* Package Details */}
-          <View className="flex flex-row items-center justify-center mt-6 bg-purple-500 rounded-xl p-5 mx-5 shadow-lg">
-            <View className="flex-1">
+          <View className="flex-1 flex-row items-center justify-between mt-6 bg-purple-500 rounded-xl p-5 mx-5 shadow-lg">
+            <View className="flex-2">
               <Image
                 source={images.payment_child}
                 className="w-20 h-32 rounded-lg ml-10"
@@ -412,7 +415,7 @@ function PaymentInterface() {
                 </View>
               ) : (
                 <View>
-                  <Text className="text-white font-bold text-xl">
+                  <Text className="text-white font-bold text-6xs">
                     {packageDetails.name}
                   </Text>
                   <Text className="text-green-300 font-bold text-2xl mt-2">
@@ -446,7 +449,7 @@ function PaymentInterface() {
             ) : (
               <>
                 {packageDetails.services.map((service, index) => (
-                  <View key={index} className="flex-row items-center mb-2">
+                  <View key={service} className="flex-row items-center mb-2">
                     <Ionicons
                       name="checkmark-circle"
                       size={16}
