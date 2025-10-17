@@ -1,6 +1,5 @@
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Image, View } from "react-native";
 import React from "react";
-import { Link } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { images } from "@/assets/images/images";
 
@@ -28,5 +27,3 @@ const dashboard = () => {
 };
 
 export default dashboard;
-
-const styles = StyleSheet.create({});

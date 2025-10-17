@@ -1,19 +1,28 @@
-import { API_BASE_URL } from '@/utility/index';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import { ArrowLeft, Bell, Calendar, Clock } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import { API_BASE_URL } from "@/utility/index";
+import { useChildId } from "@/hooks/useChildId";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { Bell, Calendar, Clock } from "lucide-react-native";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   FlatList,
-  Pressable,
   StatusBar,
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
+
+type Meeting = {
+  meeting_id: number;
+  child_id: number;
+  recipient: string;
+  meeting_date: string;
+  meeting_time: string;
+  reason: string;
+  response: string | null;
+  type: "meeting";
+};
 
 type Announcement = {
   ann_id: number;
@@ -23,158 +32,325 @@ type Announcement = {
   date: string;
   time: string;
   isRead: boolean;
+  type: "announcement";
 };
 
-const { width } = Dimensions.get('window');
+type Event = {
+  event_id: number;
+  topic: string;
+  description: string;
+  venue: string;
+  date: string;
+  time: string;
+  type: "event";
+};
+
+type NotificationItem = Meeting | Announcement | Event;
 
 export default function Announcements() {
-  const [selectedTab, setSelectedTab] = useState('all');
-  const [announcementList, setAnnouncementList] = useState<Announcement[]>([]);
+  const [notificationList, setNotificationList] = useState<NotificationItem[]>(
+    []
+  );
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const router = useRouter();
+  const [error, setError] = useState("");
+  const { childId } = useChildId();
 
   useEffect(() => {
-    const fetchAnnouncements = async () => {
+    const fetchNotifications = async () => {
+      if (!childId) return; // Wait for childId to be available
+
       try {
         setLoading(true);
-        setError('');
-        const response = await fetch(`${API_BASE_URL}/parent/announcements/parent`);
-        if (!response.ok) throw new Error('Failed to fetch');
-        const data = await response.json();
+        setError("");
 
-        const formattedData = data.map((item: any) => ({
+        // Fetch both meetings, announcements, and events in parallel
+        const [meetingsResponse, announcementsResponse, eventsResponse] =
+          await Promise.all([
+            fetch(
+              `${API_BASE_URL}/parent/announcements/meeting/child/${childId}`
+            ),
+            fetch(`${API_BASE_URL}/parent/announcements/parent`),
+            fetch(`${API_BASE_URL}/parents/events`), // Add events endpoint
+          ]);
+
+        if (!meetingsResponse.ok) throw new Error("Failed to fetch meetings");
+        if (!announcementsResponse.ok)
+          throw new Error("Failed to fetch announcements");
+        if (!eventsResponse.ok) throw new Error("Failed to fetch events");
+
+        const meetingsData = await meetingsResponse.json();
+        const announcementsData = await announcementsResponse.json();
+        const eventsData = await eventsResponse.json();
+
+        // Add type field and combine
+        const meetings = (meetingsData.data || []).map((item: any) => ({
           ...item,
-          isRead: false, // Local state
+          type: "meeting" as const,
         }));
-
-        setAnnouncementList(
-          [...formattedData].sort((a, b) => Number(a.isRead) - Number(b.isRead))
+        const announcements = (announcementsData || []).map((item: any) => ({
+          ...item,
+          type: "announcement" as const,
+        }));
+        const events = (eventsData.data || eventsData || []).map(
+          (item: any) => ({
+            ...item,
+            type: "event" as const,
+          })
         );
-      } catch (err) {
-        setError('Could not load announcements');
+
+        // Combine and remove duplicates based on type and ID
+        const combined = [...meetings, ...announcements, ...events];
+        const uniqueCombined = combined.filter((item, index, self) => {
+          const key = `${item.type}_${item.type === "meeting" ? item.meeting_id : item.type === "announcement" ? item.ann_id : item.event_id}`;
+          return (
+            self.findIndex(
+              (other) =>
+                `${other.type}_${other.type === "meeting" ? other.meeting_id : other.type === "announcement" ? other.ann_id : other.event_id}` ===
+                key
+            ) === index
+          );
+        });
+
+        // Filter out expired notifications (past dates)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Set to start of today
+        const activeNotifications = uniqueCombined.filter((item) => {
+          const itemDate = new Date(
+            item.type === "meeting" ? item.meeting_date : item.date
+          );
+          itemDate.setHours(0, 0, 0, 0); // Set to start of the notification date
+          return itemDate >= today;
+        });
+
+        // Sort by date (most recent first)
+        const sortedCombined = activeNotifications.sort((a, b) => {
+          const dateA =
+            a.type === "meeting" ? new Date(a.meeting_date) : new Date(a.date);
+          const dateB =
+            b.type === "meeting" ? new Date(b.meeting_date) : new Date(b.date);
+          return dateB.getTime() - dateA.getTime();
+        });
+
+        setNotificationList(sortedCombined);
+      } catch {
+        setError("Could not load notifications");
       } finally {
         setLoading(false);
       }
     };
-    fetchAnnouncements();
-  }, []);
-
-  const unreadCount = announcementList.filter((item: Announcement) => !item.isRead).length;
-
-  const filteredAnnouncements = announcementList.filter((item: Announcement) => {
-    if (selectedTab === 'all') return true;
-    // if (selectedTab === 'unread') return !item.isRead;
-    // if (selectedTab === 'read') return item.isRead;
-  });
-
-  const markAsRead = (id: number) => {
-    setAnnouncementList((prev: Announcement[]) =>
-      prev.map((item: Announcement) =>
-        item.ann_id === id ? { ...item, isRead: true } : item
-      )
-    );
-  };
-
-  const markAllAsRead = () => {
-    setAnnouncementList((prev: Announcement[]) =>
-      prev.map((item: Announcement) => ({ ...item, isRead: true }))
-    );
-  };
+    fetchNotifications();
+  }, [childId]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString();
   };
 
-  const renderAnnouncement = ({ item }: { item: Announcement }) => (
-    <Pressable
-      onPress={() => !item.isRead && markAsRead(item.ann_id)}
-      className="mx-4 mb-4"
-      style={{
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
-      }}
-    >
-      <View
-        className={`rounded-2xl overflow-hidden ${
-          item.isRead ? 'bg-gray-50' : 'bg-white'
-        }`}
-        style={{
-          borderLeftWidth: 4,
-          borderLeftColor: '#8b5cf6',
-        }}
-      >
-        <View className="p-4">
-          <View className="flex-row items-start justify-between mb-3">
-            <View className="flex-1">
-              <View className="flex-row items-center mb-2">
-                <Ionicons name="information-circle" size={18} color="#8b5cf6" />
-                <Text
-                  className={`ml-2 text-base font-bold ${
-                    item.isRead ? 'text-gray-700' : 'text-gray-900'
-                  }`}
-                >
-                  {item.title}
-                </Text>
-              </View>
-{/* 
-              <Text className="text-xs text-gray-500">
-                User ID: {item.user_id}
-              </Text> */}
-            </View>
+  const getStatusColor = (response: string | null) => {
+    if (!response) return "#eab308"; // yellow for pending
+    if (response?.toLowerCase() === "cancel") return "#ef4444"; // red for cancelled
+    return "#10b981"; // green for complete
+  };
 
-            {!item.isRead && (
-              <View className="w-3 h-3 bg-blue-500 rounded-full mb-1" />
-            )}
-          </View>
+  const getStatusText = (response: string | null) => {
+    if (!response) return "Pending";
+    if (response?.toLowerCase() === "cancel") return "Cancelled";
+    return "Complete";
+  };
 
-          <Text
-            className={`text-sm mb-3 leading-5 ${
-              item.isRead ? 'text-gray-600' : 'text-gray-800'
-            }`}
+  const renderNotification = ({ item }: { item: NotificationItem }) => {
+    if (item.type === "meeting") {
+      return (
+        <View
+          className="mx-4 mb-4"
+          style={{
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            elevation: 4,
+            height: 140, // Fixed height for consistent layout
+          }}
+        >
+          <View
+            className="rounded-2xl overflow-hidden bg-white"
+            style={{
+              borderLeftWidth: 4,
+              borderLeftColor: getStatusColor(item.response),
+            }}
           >
-            {item.details}
-          </Text>
+            <View className="p-4">
+              <View className="flex-row items-start justify-between mb-3">
+                <View className="flex-1">
+                  <View className="flex-row items-center mb-2">
+                    <Ionicons name="calendar" size={18} color="#8b5cf6" />
+                    <Text className="ml-2 text-base font-bold text-gray-900">
+                      Meeting Request
+                    </Text>
+                  </View>
+                  <Text className="text-xs text-gray-500 mb-2">
+                    With: {item.recipient}
+                  </Text>
+                </View>
 
-          {!item.isRead && (
-            <TouchableOpacity
-              onPress={() => markAsRead(item.ann_id)}
-              className="self-start mb-2 px-3 py-1 bg-purple-100 rounded-full"
-            >
-              <Text className="text-purple-700 text-xs font-semibold">
-                Mark as Read
-              </Text>
-            </TouchableOpacity>
-          )}
+                <View className="flex-row items-center">
+                  <Text
+                    className="text-xs font-semibold mr-2"
+                    style={{ color: getStatusColor(item.response) }}
+                  >
+                    {getStatusText(item.response)}
+                  </Text>
+                  <View
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: getStatusColor(item.response) }}
+                  />
+                </View>
+              </View>
 
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center">
-              <Calendar size={14} color="#6b7280" />
-              <Text className="text-xs text-gray-500 ml-1">
-                {formatDate(item.date)}
+              <Text className="text-sm mb-3 leading-5 text-gray-800">
+                {item.reason}
               </Text>
-              <View className="w-1 h-1 bg-gray-400 rounded-full mx-2" />
-              <Clock size={14} color="#6b7280" />
-              <Text className="text-xs text-gray-500 ml-1">{item.time}</Text>
+
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center">
+                  <Calendar size={14} color="#6b7280" />
+                  <Text className="text-xs text-gray-500 ml-1">
+                    {formatDate(item.meeting_date)}
+                  </Text>
+                  <View className="w-1 h-1 bg-gray-400 rounded-full mx-2" />
+                  <Clock size={14} color="#6b7280" />
+                  <Text className="text-xs text-gray-500 ml-1">
+                    {item.meeting_time}
+                  </Text>
+                </View>
+              </View>
             </View>
           </View>
         </View>
-      </View>
-    </Pressable>
-  );
+      );
+    } else if (item.type === "event") {
+      return (
+        <View
+          className="mx-4 mb-4"
+          style={{
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            elevation: 4,
+            height: 140, // Fixed height for consistent layout
+          }}
+        >
+          <View
+            className="rounded-2xl overflow-hidden bg-white"
+            style={{
+              borderLeftWidth: 4,
+              borderLeftColor: "#10b981", // Green for events
+            }}
+          >
+            <View className="p-4">
+              <View className="flex-row items-start justify-between mb-3">
+                <View className="flex-1">
+                  <View className="flex-row items-center mb-2">
+                    <Ionicons
+                      name="calendar-outline"
+                      size={18}
+                      color="#10b981"
+                    />
+                    <Text className="ml-2 text-base font-bold text-gray-900">
+                      {item.topic}
+                    </Text>
+                  </View>
+                  <Text className="text-xs text-gray-500 mb-2">
+                    📍 {item.venue}
+                  </Text>
+                </View>
+              </View>
 
-  if (loading) {
-    return (
-      <View className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" color="#8b5cf6" />
-        <Text className="mt-4 text-gray-600">Loading announcements...</Text>
-      </View>
-    );
-  }
+              <Text className="text-sm mb-3 leading-5 text-gray-800">
+                {item.description}
+              </Text>
+
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center">
+                  <Calendar size={14} color="#6b7280" />
+                  <Text className="text-xs text-gray-500 ml-1">
+                    {formatDate(item.date)}
+                  </Text>
+                  <View className="w-1 h-1 bg-gray-400 rounded-full mx-2" />
+                  <Clock size={14} color="#6b7280" />
+                  <Text className="text-xs text-gray-500 ml-1">
+                    {item.time}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+      );
+    } else {
+      // Render announcement
+      return (
+        <View
+          className="mx-4 mb-4"
+          style={{
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            elevation: 4,
+            height: 140, // Fixed height for consistent layout
+          }}
+        >
+          <View
+            className="rounded-2xl overflow-hidden bg-white"
+            style={{
+              borderLeftWidth: 4,
+              borderLeftColor: "#10b981", // Green for events
+            }}
+          >
+            <View className="p-4">
+              <View className="flex-row items-start justify-between mb-3">
+                <View className="flex-1">
+                  <View className="flex-row items-center mb-2">
+                    <Ionicons
+                      name="calendar-outline"
+                      size={18}
+                      color="#10b981"
+                    />
+                    <Text className="ml-2 text-base font-bold text-gray-900">
+                      {item.topic}
+                    </Text>
+                  </View>
+                  <Text className="text-xs text-gray-500 mb-2">
+                    📍 {item.venue}
+                  </Text>
+                </View>
+              </View>
+
+              <Text className="text-sm mb-3 leading-5 text-gray-800">
+                {item.description}
+              </Text>
+
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center">
+                  <Calendar size={14} color="#6b7280" />
+                  <Text className="text-xs text-gray-500 ml-1">
+                    {formatDate(item.date)}
+                  </Text>
+                  <View className="w-1 h-1 bg-gray-400 rounded-full mx-2" />
+                  <Clock size={14} color="#6b7280" />
+                  <Text className="text-xs text-gray-500 ml-1">
+                    {item.time}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+      );
+    }
+  };
 
   if (error) {
     return (
@@ -187,7 +363,14 @@ export default function Announcements() {
 
   return (
     <LinearGradient
-      colors={['#DFC1FD', '#f3e8ff', '#F5ECFE', '#F5ECFE', '#e9d5ff', '#DFC1FD']}
+      colors={[
+        "#DFC1FD",
+        "#f3e8ff",
+        "#F5ECFE",
+        "#F5ECFE",
+        "#e9d5ff",
+        "#DFC1FD",
+      ]}
       start={[0, 0]}
       end={[1, 1]}
       className="flex-1"
@@ -196,77 +379,46 @@ export default function Announcements() {
 
       <View className="pt-12 pb-6 px-6">
         <View className="flex-row items-center justify-between mb-4">
-          <View className="flex-row items-center">
-            <TouchableOpacity
-              onPress={() => router.back()}
-              className="mr-4 p-2 rounded-full bg-white/30"
-            >
-              <ArrowLeft size={20} color="#374151" />
-            </TouchableOpacity>
-            <View>
-              <Text className="text-gray-700 text-2xl font-bold">
-                Announcements
-              </Text>
-              <Text className="text-gray-600 text-sm mt-1">
-                {unreadCount} unread messages
-              </Text>
-            </View>
+          <View>
+            <Text className="text-gray-700 text-2xl font-bold">
+              Notifications
+            </Text>
           </View>
-
-          {unreadCount > 0 && (
-            <TouchableOpacity
-              onPress={markAllAsRead}
-              className="px-4 py-2 bg-white/30 rounded-full"
-            >
-              <Text className="text-purple-700 text-sm font-medium">
-                Mark all read
-              </Text>
-            </TouchableOpacity>
-          )}
         </View>
 
         <View className="flex-row bg-white/30 rounded-2xl p-1">
-          {['all'].map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              onPress={() => setSelectedTab(tab)}
-              className={`flex-1 py-2 px-4 rounded-xl ${
-                selectedTab === tab ? 'bg-white shadow-sm' : ''
-              }`}
-            >
-              <Text
-                className={`text-center text-sm font-medium capitalize ${
-                  selectedTab === tab ? 'text-purple-700' : 'text-gray-600'
-                }`}
-              >
-                {tab}
-                {tab === 'unread' && unreadCount > 0 && (
-                  <Text className="text-purple-600"> ({unreadCount})</Text>
-                )}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          <TouchableOpacity className="flex-1 py-2 px-4 rounded-xl bg-white shadow-sm">
+            <Text className="text-center text-sm font-medium capitalize text-purple-700">
+              All Notifications
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 
       <View className="flex-1 bg-gray-50 rounded-t-[30px] pt-6">
-        {filteredAnnouncements.length === 0 ? (
+        {notificationList.length === 0 ? (
           <View className="flex-1 items-center justify-center px-6">
             <Bell size={48} color="#d1d5db" />
             <Text className="text-lg font-semibold text-gray-600 mt-4 mb-2">
-              No announcements
+              No notifications
             </Text>
             <Text className="text-gray-500 text-center">
-              {selectedTab === 'unread'
-                ? "You're all caught up! No unread announcements."
-                : 'No announcements available at the moment.'}
+              No notifications available at the moment.
             </Text>
           </View>
         ) : (
           <FlatList
-            data={filteredAnnouncements}
-            keyExtractor={(item) => item.ann_id.toString()}
-            renderItem={renderAnnouncement}
+            data={notificationList}
+            keyExtractor={(item, index) => {
+              const baseId =
+                item.type === "meeting"
+                  ? item.meeting_id
+                  : item.type === "announcement"
+                    ? item.ann_id
+                    : item.event_id;
+              return `${item.type}_${baseId}_${index}`;
+            }}
+            renderItem={renderNotification}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 20 }}
           />
