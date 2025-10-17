@@ -305,8 +305,21 @@ export default function Payment() {
                         throw new Error('Missing required payment fields: ' + missingFields.join(', '));
                     }
 
+                    // Debug merchant_id
+                    if (window.ReactNativeWebView) {
+                        window.ReactNativeWebView.postMessage(JSON.stringify({
+                            type: 'debug',
+                            data: {
+                                merchant_id: paymentData.merchant_id,
+                                type: typeof paymentData.merchant_id,
+                                trimmed: String(paymentData.merchant_id).trim(),
+                                test: /^\d+$/.test(String(paymentData.merchant_id).trim())
+                            }
+                        }));
+                    }
+
                     // Validate merchant_id format (should be numeric)
-                    if (!/^\d+$/.test(paymentData.merchant_id)) {
+                    if (isNaN(parseInt(paymentData.merchant_id)) || parseInt(paymentData.merchant_id) <= 0) {
                         throw new Error('Invalid merchant_id format: ' + paymentData.merchant_id);
                     }
 
@@ -425,6 +438,8 @@ export default function Payment() {
             } else if (data.type === "status_update") {
               console.log("📱 Status Update:", data.message);
               // You can show toast messages or update UI based on status
+            } else if (data.type === "debug") {
+              console.log("🔍 Debug Info:", data.data);
             }
           } catch (_error) {
             console.log("WebView message:", event.nativeEvent.data);
