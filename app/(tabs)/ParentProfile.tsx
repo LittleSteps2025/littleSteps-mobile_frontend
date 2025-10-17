@@ -1,11 +1,11 @@
-import CustomAlert from '@/components/CustomAlert';
-import { useUser } from '@/contexts/UserContext';
-import { apiService } from '@/services/apiService';
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import CustomAlert from "@/components/CustomAlert";
+import { useUser } from "@/contexts/UserContext";
+import { apiService } from "@/services/apiService";
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
   Image,
   Modal,
@@ -16,32 +16,33 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
-} from 'react-native';
+  View,
+} from "react-native";
 
 export default function ParentProfile() {
-  const router = useRouter();
   const { user, logout, updateProfile } = useUser();
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
-  const [profileImage, setProfileImage] = useState<string | null>(user?.profileImage || null);
-  
+  const [profileImage, setProfileImage] = useState<string | null>(
+    user?.profileImage || null
+  );
+
   // Edit form state - initialize with user data
   const [editForm, setEditForm] = useState({
-    name: user?.fullName || '',
-    email: user?.email || '',
-    phoneNumber: user?.phone || '',
-    address: user?.address || ''
+    name: user?.fullName || "",
+    email: user?.email || "",
+    phoneNumber: user?.phone || "",
+    address: user?.address || "",
   });
 
   // Update form when user data changes
   useEffect(() => {
     if (user) {
       setEditForm({
-        name: user.fullName || '',
-        email: user.email || '',
-        phoneNumber: user.phone || '',
-        address: user.address || ''
+        name: user.fullName || "",
+        email: user.email || "",
+        phoneNumber: user.phone || "",
+        address: user.address || "",
       });
       setProfileImage(user.profileImage || null);
     }
@@ -49,29 +50,29 @@ export default function ParentProfile() {
 
   // Password form state
   const [passwordForm, setPasswordForm] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
 
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
-    confirm: false
+    confirm: false,
   });
 
   // Custom Alert State
   const [customAlert, setCustomAlert] = useState({
     visible: false,
-    type: 'success' as 'success' | 'error',
-    title: '',
-    message: '',
+    type: "success" as "success" | "error",
+    title: "",
+    message: "",
     showCancelButton: false,
-    onConfirm: undefined as (() => void) | undefined
+    onConfirm: undefined as (() => void) | undefined,
   });
 
   const showCustomAlert = (
-    type: 'success' | 'error',
+    type: "success" | "error",
     title: string,
     message: string,
     showCancelButton: boolean = false,
@@ -83,12 +84,12 @@ export default function ParentProfile() {
       title,
       message,
       showCancelButton,
-      onConfirm
+      onConfirm,
     });
   };
 
   const hideCustomAlert = () => {
-    setCustomAlert(prev => ({ ...prev, visible: false }));
+    setCustomAlert((prev) => ({ ...prev, visible: false }));
   };
 
   const handleBack = () => {
@@ -106,23 +107,23 @@ export default function ParentProfile() {
   const openPasswordModal = () => {
     setIsPasswordModalVisible(true);
     setPasswordForm({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
     });
   };
 
   const closePasswordModal = () => {
     setIsPasswordModalVisible(false);
     setPasswordForm({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
     });
     setShowPasswords({
       current: false,
       new: false,
-      confirm: false
+      confirm: false,
     });
   };
 
@@ -134,85 +135,106 @@ export default function ParentProfile() {
         email: editForm.email,
         phone: editForm.phoneNumber,
         address: editForm.address,
-        ...(profileImage && { profileImage })
+        ...(profileImage && { profileImage }),
       };
-      
+
       await apiService.updateUserProfile(updatedData);
-      
+
       // Update local session data
       await updateProfile(updatedData);
-      
-      showCustomAlert('success', 'Success', 'Profile updated successfully!');
+
+      showCustomAlert("success", "Success", "Profile updated successfully!");
       closeEditModal();
     } catch (error: any) {
-      console.error('Error updating profile:', error);
-      showCustomAlert('error', 'Error', error.message || 'Failed to update profile. Please try again.');
+      console.error("Error updating profile:", error);
+      showCustomAlert(
+        "error",
+        "Error",
+        error.message || "Failed to update profile. Please try again."
+      );
     }
   };
 
   const handlePasswordChange = () => {
     // Basic validation
-    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-      showCustomAlert('error', 'Error', 'Please fill in all password fields.');
+    if (
+      !passwordForm.currentPassword ||
+      !passwordForm.newPassword ||
+      !passwordForm.confirmPassword
+    ) {
+      showCustomAlert("error", "Error", "Please fill in all password fields.");
       return;
     }
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      showCustomAlert('error', 'Error', 'New passwords do not match.');
+      showCustomAlert("error", "Error", "New passwords do not match.");
       return;
     }
 
     if (passwordForm.newPassword.length < 8) {
-      showCustomAlert('error', 'Error', 'New password must be at least 8 characters long.');
+      showCustomAlert(
+        "error",
+        "Error",
+        "New password must be at least 8 characters long."
+      );
       return;
     }
 
     // Here you would typically validate current password and save new password to backend
-    showCustomAlert('success', 'Success', 'Password changed successfully!');
+    showCustomAlert("success", "Success", "Password changed successfully!");
     closePasswordModal();
   };
 
   const handleLogout = async () => {
     try {
       await logout();
-      showCustomAlert('success', 'Success', 'Logged out successfully!', false, () => {
-        router.replace('/signin');
-      });
+      showCustomAlert(
+        "success",
+        "Success",
+        "Logged out successfully!",
+        false,
+        () => {
+          router.replace("/signin");
+        }
+      );
     } catch (error: any) {
-      console.error('Error during logout:', error);
-      showCustomAlert('error', 'Error', 'Failed to logout. Please try again.');
+      console.error("Error during logout:", error);
+      showCustomAlert("error", "Error", "Failed to logout. Please try again.");
     }
   };
 
   const handleInputChange = (field: keyof typeof editForm, value: string) => {
-    setEditForm(prev => ({
+    setEditForm((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
-  const handlePasswordInputChange = (field: keyof typeof passwordForm, value: string) => {
-    setPasswordForm(prev => ({
+  const handlePasswordInputChange = (
+    field: keyof typeof passwordForm,
+    value: string
+  ) => {
+    setPasswordForm((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
   const togglePasswordVisibility = (field: keyof typeof showPasswords) => {
-    setShowPasswords(prev => ({
+    setShowPasswords((prev) => ({
       ...prev,
-      [field]: !prev[field]
+      [field]: !prev[field],
     }));
   };
 
   // Image picker functions
   const requestPermissions = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
+    if (status !== "granted") {
       showCustomAlert(
-        'error',
-        'Permission Required',
-        'Sorry, we need camera roll permissions to change your profile photo.'
+        "error",
+        "Permission Required",
+        "Sorry, we need camera roll permissions to change your profile photo."
       );
       return false;
     }
@@ -224,9 +246,9 @@ export default function ParentProfile() {
     if (!hasPermission) return;
 
     showCustomAlert(
-      'success',
-      'Select Photo',
-      'Choose how you would like to select a photo',
+      "success",
+      "Select Photo",
+      "Choose how you would like to select a photo",
       true,
       openImageLibrary
     );
@@ -234,11 +256,11 @@ export default function ParentProfile() {
 
   const openCamera = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
+    if (status !== "granted") {
       showCustomAlert(
-        'error',
-        'Permission Required',
-        'Sorry, we need camera permissions to take a photo.'
+        "error",
+        "Permission Required",
+        "Sorry, we need camera permissions to take a photo."
       );
       return;
     }
@@ -274,40 +296,42 @@ export default function ParentProfile() {
     email: editForm.email,
     phoneNumber: editForm.phoneNumber,
     address: editForm.address,
-    profileImage: profileImage ? { uri: profileImage } : require('@/assets/images/mother.jpg'), // Use selected image or default
-    joinDate: 'January 2024',
+    profileImage: profileImage
+      ? { uri: profileImage }
+      : require("@/assets/images/mother.jpg"), // Use selected image or default
+    joinDate: "January 2024",
     // children: ['Pramodi Peshila', 'Nimal Perera'] // List of children
   };
 
   const profileSections = [
     {
-      title: 'Personal Information',
+      title: "Personal Information",
       items: [
         {
-          label: 'Full Name',
+          label: "Full Name",
           value: parentData.name,
-          icon: 'person-outline',
-          color: '#7c3aed'
+          icon: "person-outline",
+          color: "#7c3aed",
         },
         {
-          label: 'Email Address',
+          label: "Email Address",
           value: parentData.email,
-          icon: 'mail-outline',
-          color: '#3b82f6'
+          icon: "mail-outline",
+          color: "#3b82f6",
         },
         {
-          label: 'Phone Number',
+          label: "Phone Number",
           value: parentData.phoneNumber,
-          icon: 'call-outline',
-          color: '#10b981'
+          icon: "call-outline",
+          color: "#10b981",
         },
         {
-          label: 'Home Address',
+          label: "Home Address",
           value: parentData.address,
-          icon: 'location-outline',
-          color: '#f59e0b'
-        }
-      ]
+          icon: "location-outline",
+          color: "#f59e0b",
+        },
+      ],
     },
     // {
     //   title: 'Account Information',
@@ -330,7 +354,14 @@ export default function ParentProfile() {
 
   return (
     <LinearGradient
-      colors={['#DFC1FD', '#f3e8ff', '#F5ECFE', '#F5ECFE', '#e9d5ff', '#DFC1FD']}
+      colors={[
+        "#DFC1FD",
+        "#f3e8ff",
+        "#F5ECFE",
+        "#F5ECFE",
+        "#e9d5ff",
+        "#DFC1FD",
+      ]}
       start={[0, 0]}
       end={[1, 1]}
       className="flex-1 pt-5"
@@ -346,8 +377,6 @@ export default function ParentProfile() {
             >
               <Ionicons name="chevron-back" size={24} color="#374151" />
             </TouchableOpacity>
-            
-            
 
             {/* <TouchableOpacity
               onPress={openEditModal}
@@ -358,7 +387,7 @@ export default function ParentProfile() {
           </View>
 
           <View className="px-6 pt-1 pb-2 flex-row items-center justify-center ">
-              <Text className="text-2xl font-bold text-gray-700  ">
+            <Text className="text-2xl font-bold text-gray-700  ">
               Parent Profile
             </Text>
           </View>
@@ -370,7 +399,7 @@ export default function ParentProfile() {
                 <View
                   className="w-32 h-32 rounded-full overflow-hidden"
                   style={{
-                    shadowColor: '#7c3aed',
+                    shadowColor: "#7c3aed",
                     shadowOffset: { width: 0, height: 4 },
                     shadowOpacity: 0.3,
                     shadowRadius: 8,
@@ -380,14 +409,18 @@ export default function ParentProfile() {
                   <Image
                     source={parentData.profileImage}
                     className="w-full h-full"
-                    style={{ borderRadius: 64, borderWidth: 4, borderColor: '#7c3aed' }}
+                    style={{
+                      borderRadius: 64,
+                      borderWidth: 4,
+                      borderColor: "#7c3aed",
+                    }}
                   />
                 </View>
                 {/* Edit Icon */}
-                <View 
+                <View
                   className="absolute -bottom-2 -right-2 w-8 h-8 bg-purple-600 rounded-full items-center justify-center"
                   style={{
-                    shadowColor: '#7c3aed',
+                    shadowColor: "#7c3aed",
                     shadowOffset: { width: 0, height: 2 },
                     shadowOpacity: 0.3,
                     shadowRadius: 4,
@@ -398,7 +431,7 @@ export default function ParentProfile() {
                 </View>
               </View>
             </TouchableOpacity>
-            
+
             <Text className="text-2xl font-bold text-gray-800 mt-4">
               {parentData.name}
             </Text>
@@ -417,12 +450,12 @@ export default function ParentProfile() {
                 <Text className="text-lg font-bold text-gray-700 mb-4">
                   {section.title}
                 </Text>
-                
+
                 <View
                   className="rounded-2xl p-6"
                   style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                    shadowColor: '#7c3aed',
+                    backgroundColor: "rgba(255, 255, 255, 0.9)",
+                    shadowColor: "#7c3aed",
                     shadowOffset: { width: 0, height: 4 },
                     shadowOpacity: 0.1,
                     shadowRadius: 8,
@@ -430,17 +463,23 @@ export default function ParentProfile() {
                   }}
                 >
                   {section.items.map((item, itemIndex) => (
-                    <View 
-                      key={itemIndex} 
+                    <View
+                      key={item.label}
                       className={`flex-row items-center py-4 ${
-                        itemIndex < section.items.length - 1 ? 'border-b border-gray-100' : ''
+                        itemIndex < section.items.length - 1
+                          ? "border-b border-gray-100"
+                          : ""
                       }`}
                     >
-                      <View 
+                      <View
                         className="w-12 h-12 rounded-full items-center justify-center mr-4"
                         style={{ backgroundColor: `${item.color}15` }}
                       >
-                        <Ionicons name={item.icon as any} size={20} color={item.color} />
+                        <Ionicons
+                          name={item.icon as any}
+                          size={20}
+                          color={item.color}
+                        />
                       </View>
                       <View className="flex-1">
                         <Text className="text-sm font-medium text-gray-500 mb-1">
@@ -461,12 +500,12 @@ export default function ParentProfile() {
               <Text className="text-lg font-bold text-gray-700 mb-4">
                 Privacy & Security
               </Text>
-              
+
               <View
                 className="rounded-2xl p-6"
                 style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                  shadowColor: '#7c3aed',
+                  backgroundColor: "rgba(255, 255, 255, 0.9)",
+                  shadowColor: "#7c3aed",
                   shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 0.1,
                   shadowRadius: 8,
@@ -477,11 +516,15 @@ export default function ParentProfile() {
                   onPress={openPasswordModal}
                   className="flex-row items-center py-4 border-b border-gray-100"
                 >
-                  <View 
+                  <View
                     className="w-12 h-12 rounded-full items-center justify-center mr-4"
-                    style={{ backgroundColor: '#dc262615' }}
+                    style={{ backgroundColor: "#dc262615" }}
                   >
-                    <Ionicons name="lock-closed-outline" size={20} color="#dc2626" />
+                    <Ionicons
+                      name="lock-closed-outline"
+                      size={20}
+                      color="#dc2626"
+                    />
                   </View>
                   <View className="flex-1">
                     <Text className="text-sm font-medium text-gray-500 mb-1">
@@ -493,16 +536,20 @@ export default function ParentProfile() {
                   </View>
                   <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
                   onPress={handleLogout}
                   className="flex-row items-center py-4"
                 >
-                  <View 
+                  <View
                     className="w-12 h-12 rounded-full items-center justify-center mr-4"
-                    style={{ backgroundColor: '#ef444415' }}
+                    style={{ backgroundColor: "#ef444415" }}
                   >
-                    <Ionicons name="log-out-outline" size={20} color="#ef4444" />
+                    <Ionicons
+                      name="log-out-outline"
+                      size={20}
+                      color="#ef4444"
+                    />
                   </View>
                   <View className="flex-1">
                     <Text className="text-sm font-medium text-gray-500 mb-1">
@@ -518,12 +565,12 @@ export default function ParentProfile() {
             </View>
           </View>
         </ScrollView>
-        
+
         <View className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md">
           <View
             className="flex-row justify-around items-center py-4 px-6"
             style={{
-              shadowColor: '#000',
+              shadowColor: "#000",
               shadowOffset: { width: 0, height: -2 },
               shadowOpacity: 0.1,
               shadowRadius: 8,
@@ -531,21 +578,20 @@ export default function ParentProfile() {
             }}
           >
             {/* Home */}
-            <Pressable 
+            <Pressable
               className="items-center justify-center py-2"
-              onPress={() => router.push('/ParentDashboard')}
+              onPress={() => router.push("/ParentDashboard")}
             >
               <View className="w-12 h-12 items-center justify-center">
                 <Ionicons name="home" size={24} color="#9ca3af" />
               </View>
-              <Text className="text-xs text-gray-500 font-medium mt-1">Home</Text>
+              <Text className="text-xs text-gray-500 font-medium mt-1">
+                Home
+              </Text>
             </Pressable>
 
             {/* Profile */}
-            <Pressable
-              className="items-center justify-center py-2"
-              
-            >
+            <Pressable className="items-center justify-center py-2">
               <View className="w-12 h-12 items-center justify-center">
                 <Ionicons name="person" size={24} color="#7c3aed" />
               </View>
@@ -553,12 +599,16 @@ export default function ParentProfile() {
             </Pressable>
 
             {/* More */}
-            <Pressable 
+            <Pressable
               className="items-center justify-center py-2"
-              onPress={() => router.push('/ParentMore')}
+              onPress={() => router.push("/ParentMore")}
             >
               <View className="w-12 h-12 items-center justify-center">
-                <Ionicons name="ellipsis-horizontal" size={24} color="#9ca3af" />
+                <Ionicons
+                  name="ellipsis-horizontal"
+                  size={24}
+                  color="#9ca3af"
+                />
               </View>
               <Text className="text-xs text-gray-500 mt-1">More</Text>
             </Pressable>
@@ -572,26 +622,26 @@ export default function ParentProfile() {
           transparent={true}
           onRequestClose={closeEditModal}
         >
-          <View 
+          <View
             className="flex-1 justify-end"
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+            style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
           >
-            <TouchableOpacity 
+            <TouchableOpacity
               className="flex-1"
               onPress={closeEditModal}
               activeOpacity={1}
             />
-            
-            <View 
+
+            <View
               className="rounded-t-3xl p-6"
               style={{
-                backgroundColor: 'white',
-                maxHeight: '85%',
-                shadowColor: '#000',
+                backgroundColor: "white",
+                maxHeight: "85%",
+                shadowColor: "#000",
                 shadowOffset: { width: 0, height: -4 },
                 shadowOpacity: 0.25,
                 shadowRadius: 16,
-                elevation: 16
+                elevation: 16,
               }}
             >
               {/* Modal Header */}
@@ -599,7 +649,7 @@ export default function ParentProfile() {
                 <Text className="text-xl font-bold text-gray-800">
                   Edit Profile
                 </Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={closeEditModal}
                   className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center"
                 >
@@ -613,7 +663,7 @@ export default function ParentProfile() {
                   <View
                     className="w-24 h-24 rounded-full overflow-hidden"
                     style={{
-                      shadowColor: '#7c3aed',
+                      shadowColor: "#7c3aed",
                       shadowOffset: { width: 0, height: 2 },
                       shadowOpacity: 0.2,
                       shadowRadius: 4,
@@ -623,14 +673,18 @@ export default function ParentProfile() {
                     <Image
                       source={parentData.profileImage}
                       className="w-full h-full"
-                      style={{ borderRadius: 48, borderWidth: 3, borderColor: '#7c3aed' }}
+                      style={{
+                        borderRadius: 48,
+                        borderWidth: 3,
+                        borderColor: "#7c3aed",
+                      }}
                     />
                   </View>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={pickImage}
                     className="absolute -bottom-1 -right-1 w-7 h-7 bg-purple-600 rounded-full items-center justify-center"
                     style={{
-                      shadowColor: '#7c3aed',
+                      shadowColor: "#7c3aed",
                       shadowOffset: { width: 0, height: 2 },
                       shadowOpacity: 0.3,
                       shadowRadius: 4,
@@ -640,7 +694,9 @@ export default function ParentProfile() {
                     <Ionicons name="camera" size={14} color="white" />
                   </TouchableOpacity>
                 </View>
-                <Text className="text-sm text-gray-500 mt-2">Tap to change photo</Text>
+                <Text className="text-sm text-gray-500 mt-2">
+                  Tap to change photo
+                </Text>
               </View>
 
               {/* Edit Form */}
@@ -652,15 +708,15 @@ export default function ParentProfile() {
                   </Text>
                   <TextInput
                     value={editForm.name}
-                    onChangeText={(value) => handleInputChange('name', value)}
+                    onChangeText={(value) => handleInputChange("name", value)}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50"
                     style={{
                       fontSize: 16,
-                      shadowColor: '#000',
+                      shadowColor: "#000",
                       shadowOffset: { width: 0, height: 1 },
                       shadowOpacity: 0.05,
                       shadowRadius: 2,
-                      elevation: 1
+                      elevation: 1,
                     }}
                   />
                 </View>
@@ -672,17 +728,17 @@ export default function ParentProfile() {
                   </Text>
                   <TextInput
                     value={editForm.email}
-                    onChangeText={(value) => handleInputChange('email', value)}
+                    onChangeText={(value) => handleInputChange("email", value)}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50"
                     style={{
                       fontSize: 16,
-                      shadowColor: '#000',
+                      shadowColor: "#000",
                       shadowOffset: { width: 0, height: 1 },
                       shadowOpacity: 0.05,
                       shadowRadius: 2,
-                      elevation: 1
+                      elevation: 1,
                     }}
                   />
                 </View>
@@ -694,16 +750,18 @@ export default function ParentProfile() {
                   </Text>
                   <TextInput
                     value={editForm.phoneNumber}
-                    onChangeText={(value) => handleInputChange('phoneNumber', value)}
+                    onChangeText={(value) =>
+                      handleInputChange("phoneNumber", value)
+                    }
                     keyboardType="phone-pad"
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50"
                     style={{
                       fontSize: 16,
-                      shadowColor: '#000',
+                      shadowColor: "#000",
                       shadowOffset: { width: 0, height: 1 },
                       shadowOpacity: 0.05,
                       shadowRadius: 2,
-                      elevation: 1
+                      elevation: 1,
                     }}
                   />
                 </View>
@@ -715,19 +773,21 @@ export default function ParentProfile() {
                   </Text>
                   <TextInput
                     value={editForm.address}
-                    onChangeText={(value) => handleInputChange('address', value)}
+                    onChangeText={(value) =>
+                      handleInputChange("address", value)
+                    }
                     multiline
                     numberOfLines={3}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50"
                     style={{
                       fontSize: 16,
                       height: 80,
-                      textAlignVertical: 'top',
-                      shadowColor: '#000',
+                      textAlignVertical: "top",
+                      shadowColor: "#000",
                       shadowOffset: { width: 0, height: 1 },
                       shadowOpacity: 0.05,
                       shadowRadius: 2,
-                      elevation: 1
+                      elevation: 1,
                     }}
                   />
                 </View>
@@ -738,7 +798,7 @@ export default function ParentProfile() {
                     onPress={closeEditModal}
                     className="flex-1 py-3 rounded-xl border border-gray-300 mr-2"
                     style={{
-                      backgroundColor: '#f9fafb'
+                      backgroundColor: "#f9fafb",
                     }}
                   >
                     <Text className="text-center text-gray-700 font-semibold text-base">
@@ -750,12 +810,12 @@ export default function ParentProfile() {
                     onPress={handleSaveProfile}
                     className="flex-1 py-3 rounded-xl"
                     style={{
-                      backgroundColor: '#7c3aed',
-                      shadowColor: '#7c3aed',
+                      backgroundColor: "#7c3aed",
+                      shadowColor: "#7c3aed",
                       shadowOffset: { width: 0, height: 4 },
                       shadowOpacity: 0.3,
                       shadowRadius: 8,
-                      elevation: 4
+                      elevation: 4,
                     }}
                   >
                     <Text className="text-center text-white font-semibold text-base">
@@ -775,26 +835,26 @@ export default function ParentProfile() {
           transparent={true}
           onRequestClose={closePasswordModal}
         >
-          <View 
+          <View
             className="flex-1 justify-end"
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+            style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
           >
-            <TouchableOpacity 
+            <TouchableOpacity
               className="flex-1"
               onPress={closePasswordModal}
               activeOpacity={1}
             />
-            
-            <View 
+
+            <View
               className="rounded-t-3xl p-6"
               style={{
-                backgroundColor: 'white',
-                maxHeight: '70%',
-                shadowColor: '#000',
+                backgroundColor: "white",
+                maxHeight: "70%",
+                shadowColor: "#000",
                 shadowOffset: { width: 0, height: -4 },
                 shadowOpacity: 0.25,
                 shadowRadius: 16,
-                elevation: 16
+                elevation: 16,
               }}
             >
               {/* Modal Header */}
@@ -802,7 +862,7 @@ export default function ParentProfile() {
                 <Text className="text-xl font-bold text-gray-800">
                   Change Password
                 </Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={closePasswordModal}
                   className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center"
                 >
@@ -820,26 +880,28 @@ export default function ParentProfile() {
                   <View className="relative">
                     <TextInput
                       value={passwordForm.currentPassword}
-                      onChangeText={(value) => handlePasswordInputChange('currentPassword', value)}
+                      onChangeText={(value) =>
+                        handlePasswordInputChange("currentPassword", value)
+                      }
                       secureTextEntry={!showPasswords.current}
                       className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 bg-gray-50"
                       style={{
                         fontSize: 16,
-                        shadowColor: '#000',
+                        shadowColor: "#000",
                         shadowOffset: { width: 0, height: 1 },
                         shadowOpacity: 0.05,
                         shadowRadius: 2,
-                        elevation: 1
+                        elevation: 1,
                       }}
                     />
                     <TouchableOpacity
-                      onPress={() => togglePasswordVisibility('current')}
+                      onPress={() => togglePasswordVisibility("current")}
                       className="absolute right-4 top-3"
                     >
-                      <Ionicons 
-                        name={showPasswords.current ? 'eye-off' : 'eye'} 
-                        size={20} 
-                        color="#9ca3af" 
+                      <Ionicons
+                        name={showPasswords.current ? "eye-off" : "eye"}
+                        size={20}
+                        color="#9ca3af"
                       />
                     </TouchableOpacity>
                   </View>
@@ -853,26 +915,28 @@ export default function ParentProfile() {
                   <View className="relative">
                     <TextInput
                       value={passwordForm.newPassword}
-                      onChangeText={(value) => handlePasswordInputChange('newPassword', value)}
+                      onChangeText={(value) =>
+                        handlePasswordInputChange("newPassword", value)
+                      }
                       secureTextEntry={!showPasswords.new}
                       className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 bg-gray-50"
                       style={{
                         fontSize: 16,
-                        shadowColor: '#000',
+                        shadowColor: "#000",
                         shadowOffset: { width: 0, height: 1 },
                         shadowOpacity: 0.05,
                         shadowRadius: 2,
-                        elevation: 1
+                        elevation: 1,
                       }}
                     />
                     <TouchableOpacity
-                      onPress={() => togglePasswordVisibility('new')}
+                      onPress={() => togglePasswordVisibility("new")}
                       className="absolute right-4 top-3"
                     >
-                      <Ionicons 
-                        name={showPasswords.new ? 'eye-off' : 'eye'} 
-                        size={20} 
-                        color="#9ca3af" 
+                      <Ionicons
+                        name={showPasswords.new ? "eye-off" : "eye"}
+                        size={20}
+                        color="#9ca3af"
                       />
                     </TouchableOpacity>
                   </View>
@@ -889,26 +953,28 @@ export default function ParentProfile() {
                   <View className="relative">
                     <TextInput
                       value={passwordForm.confirmPassword}
-                      onChangeText={(value) => handlePasswordInputChange('confirmPassword', value)}
+                      onChangeText={(value) =>
+                        handlePasswordInputChange("confirmPassword", value)
+                      }
                       secureTextEntry={!showPasswords.confirm}
                       className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 bg-gray-50"
                       style={{
                         fontSize: 16,
-                        shadowColor: '#000',
+                        shadowColor: "#000",
                         shadowOffset: { width: 0, height: 1 },
                         shadowOpacity: 0.05,
                         shadowRadius: 2,
-                        elevation: 1
+                        elevation: 1,
                       }}
                     />
                     <TouchableOpacity
-                      onPress={() => togglePasswordVisibility('confirm')}
+                      onPress={() => togglePasswordVisibility("confirm")}
                       className="absolute right-4 top-3"
                     >
-                      <Ionicons 
-                        name={showPasswords.confirm ? 'eye-off' : 'eye'} 
-                        size={20} 
-                        color="#9ca3af" 
+                      <Ionicons
+                        name={showPasswords.confirm ? "eye-off" : "eye"}
+                        size={20}
+                        color="#9ca3af"
                       />
                     </TouchableOpacity>
                   </View>
@@ -920,7 +986,7 @@ export default function ParentProfile() {
                     onPress={closePasswordModal}
                     className="flex-1 py-3 rounded-xl border border-gray-300 mr-2"
                     style={{
-                      backgroundColor: '#f9fafb'
+                      backgroundColor: "#f9fafb",
                     }}
                   >
                     <Text className="text-center text-gray-700 font-semibold text-base">
@@ -932,12 +998,12 @@ export default function ParentProfile() {
                     onPress={handlePasswordChange}
                     className="flex-1 py-3 rounded-xl"
                     style={{
-                      backgroundColor: '#7c3aed',
-                      shadowColor: '#7c3aed',
+                      backgroundColor: "#7c3aed",
+                      shadowColor: "#7c3aed",
                       shadowOffset: { width: 0, height: 4 },
                       shadowOpacity: 0.3,
                       shadowRadius: 8,
-                      elevation: 4
+                      elevation: 4,
                     }}
                   >
                     <Text className="text-center text-white font-semibold text-base">
@@ -959,7 +1025,7 @@ export default function ParentProfile() {
           onClose={hideCustomAlert}
           onConfirm={customAlert.onConfirm}
           showCancelButton={customAlert.showCancelButton}
-          confirmText={customAlert.showCancelButton ? 'Yes' : 'OK'}
+          confirmText={customAlert.showCancelButton ? "Yes" : "OK"}
           cancelText="Cancel"
         />
       </SafeAreaView>
