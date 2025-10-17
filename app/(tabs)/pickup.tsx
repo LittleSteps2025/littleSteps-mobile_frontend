@@ -59,9 +59,11 @@ export default function PickupDetailsPage() {
 
   const openQrForContact = (contact: EmergencyContact) => {
     // Simple encoded text for the QR. You can change to JSON if needed.
-    const value = `Name: ${contact.name}\nRelationship: ${contact.relationship}`;
+    // const value = `Name: ${contact.name}\nRelationship: ${contact.relationship}`;
+    const value = `${contact.name}`;
     setQrValue(value);
-    setQrTitle(`${contact.name} - ${contact.relationship}`);
+    // setQrTitle(`${contact.name} - ${contact.relationship}`);
+    setQrTitle(`${contact.name}`);
     setQrModalVisible(true);
   };
 
