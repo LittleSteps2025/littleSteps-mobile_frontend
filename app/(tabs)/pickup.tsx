@@ -1,10 +1,14 @@
 // app/pickup-details.tsx
+import { API_BASE_URL } from '@/utility';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as MediaLibrary from 'expo-media-library';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { shareAsync } from 'expo-sharing';
+import React, { useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Image,
   KeyboardAvoidingView,
@@ -18,17 +22,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-
-interface EmergencyContact {
-  id: string;
-  name: string;
-  relationship: string;
-  phoneNumber: string;
-  photo?: string;
-  // isPrimary: boolean;
-  // isAuthorized: boolean;
-  // notes?: string;
-}
+import QRCode from 'react-native-qrcode-svg';
 
 interface ChildInfo {
   name: string;
@@ -37,143 +31,266 @@ interface ChildInfo {
   studentId: string;
 }
 
+interface EmergencyContact {
+  id: string;
+  name: string;
+  relationship: string;
+  phoneNumber: string;
+  photo?: string;
+}
+
+interface GuardianFormData {
+  name: string;
+  nic: string;
+  relationship: string;
+  phone: string;
+  email: string;
+  address: string;
+  parent_id: string;
+}
+
 export default function PickupDetailsPage() {
   const router = useRouter();
-  
+
+  // QR modal state
+  const [qrModalVisible, setQrModalVisible] = useState(false);
+  const [qrValue, setQrValue] = useState('');
+  const [qrTitle, setQrTitle] = useState('Guardian QR');
+
+  const openQrForContact = (contact: EmergencyContact) => {
+    // Simple encoded text for the QR. You can change to JSON if needed.
+    const value = `Name: ${contact.name}\nRelationship: ${contact.relationship}`;
+    setQrValue(value);
+    setQrTitle(`${contact.name} - ${contact.relationship}`);
+    setQrModalVisible(true);
+  };
+
   // Child information
   const [childInfo] = useState<ChildInfo>({
-    name: 'Pramodi Peshila',
-    grade: 'Grade 5', // Fixed: uncommented this line
+    name: 'Pathum Silva',
+    grade: 'Grade 5',
     class: 'A',
     studentId: 'ST12345'
   });
 
-  // Emergency contacts data
-  const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([
-    {
-      id: '1',
-      name: 'Amali Perera',
-      relationship: 'Mother',
-      phoneNumber: '+94 77 123 4567',
-      photo:require('@/assets/images/mother.jpg') ,
-      // isPrimary: true,
-      // isAuthorized: true,
-      // notes: 'Primary contact - Always available during school hours'
-    },
-    {
-      id: '2',
-      name: 'Damien Perera',
-      relationship: 'Father',
-      phoneNumber: '+94 71 987 6543',
-      photo: require('@/assets/images/farther.jpg'),
-      // isPrimary: false,
-      // isAuthorized: true,
-      // notes: 'Usually available after 4 PM'
-    },
-    {
-      id: '3',
-      name: 'Mary Alwis',
-      relationship: 'Grandmother',
-      phoneNumber: '+94 11 234 5678',
-      photo: require('@/assets/images/grandMother.jpg'),
-      // isPrimary: false,
-      // isAuthorized: true,
-      // notes: 'Emergency backup contact'
-    },
-    {
-      id: '4',
-      name: 'Meena Premadasa',
-      relationship: 'Family Friend',
-      phoneNumber: '+94 76 555 1234',
-      photo: require('@/assets/images/friend.jpg'),
-      // isPrimary: false,
-      // isAuthorized: true,
-      // notes: 'Authorized for emergency pickup only'
-    }
-  ]);
+  const qrRef = useRef<any>(null);
 
-  const [showAddContactModal, setShowAddContactModal] = useState(false);
-  const [showContactDetails, setShowContactDetails] = useState<string | null>(null);
-  const [newContact, setNewContact] = useState<Omit<EmergencyContact, 'id'>>({
-    name: '',
-    relationship: '',
-    phoneNumber: '',
-    photo: undefined,
-    // isPrimary: false,
-    // isAuthorized: true,
-    // notes: ''
-  });
-
-  // Image picker handler
-  const handlePickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission required', 'Please grant photo library permissions to upload a photo.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
+  // Helper: convert QR component to base64 PNG using its toDataURL method
+  const getQrDataUrl = () =>
+    new Promise<string>((resolve, reject) => {
+      try {
+        if (qrRef.current && typeof qrRef.current.toDataURL === 'function') {
+          qrRef.current.toDataURL((data: string) => {
+            if (data) resolve(data);
+            else reject(new Error('Failed to generate QR data'));
+          });
+        } else {
+          reject(new Error('QR ref or toDataURL not available'));
+        }
+      } catch (err) {
+        reject(err);
+      }
     });
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      setNewContact(prev => ({ ...prev, photo: result.assets[0].uri }));
+
+  const handleDownloadQr = async () => {
+    try {
+      const base64 = await getQrDataUrl(); // base64 string (PNG)
+
+      // Create a temporary file path
+      const filename = `qr_${Date.now()}.png`;
+      const fileUri = FileSystem.cacheDirectory + filename;
+
+      // Write base64 to file
+      await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+
+      // For native platforms, request permission and save to gallery
+      if (Platform.OS !== 'web') {
+        const { status } = await MediaLibrary.requestPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission required', 'Permission to access media library is required to save the QR image.');
+          return;
+        }
+
+        const asset = await MediaLibrary.createAssetAsync(fileUri);
+        try {
+          // Try to create an album (if already exists this will throw)
+          await MediaLibrary.createAlbumAsync('LittleSteps', asset, false);
+        } catch (e) {
+          // Album might already exist — ignore
+        }
+
+        Alert.alert('Saved', 'QR image saved to your gallery.');
+      } else {
+        // Web fallback: attempt to trigger a download
+        const dataUrl = `data:image/png;base64,${base64}`;
+        try {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          const link = document.createElement('a');
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          link.href = dataUrl;
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          link.download = filename;
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          document.body.appendChild(link);
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          link.click();
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          document.body.removeChild(link);
+          Alert.alert('Downloaded', 'QR image downloaded.');
+        } catch (err) {
+          // As a fallback, open share dialog
+          await shareAsync(fileUri);
+        }
+      }
+    } catch (error) {
+      console.error('Error saving QR:', error);
+      Alert.alert('Error', 'Unable to save QR image.');
     }
   };
 
+
+  const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
+  const [showAddContactModal, setShowAddContactModal] = useState(false);
+  const [showContactDetails, setShowContactDetails] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const PARENT_ID = '3'; // You can change this or make it dynamic
+
+  const [guardianFormData, setGuardianFormData] = useState<GuardianFormData>({
+    name: '',
+    nic: '',
+    relationship: '',
+    phone: '',
+    email: '',
+    address: '',
+    parent_id: PARENT_ID,
+  });
+
   const relationshipOptions = [
-    'Mother', 'Father', 'Guardian', 'Grandmother', 'Grandfather', 
-    'Aunt', 'Uncle', 'Sibling', 'Family Friend',  'Other'
+    'Mother',
+    'Father',
+    'Guardian',
+    'Grandmother',
+    'Grandfather',
+    'Aunt',
+    'Uncle',
+    'Sibling',
+    'Family Friend',
+    'Other'
   ];
 
   const handleBack = () => {
     router.back();
   };
 
-  // const handleCallContact = (phoneNumber: string, name: string) => {
-  //   Alert.alert(
-  //     'Call Contact',
-  //     `Would you like to call ${name}?`,
-  //     [
-  //       { text: 'Cancel', style: 'cancel' },
-  //       { text: 'Call', onPress: () => console.log(`Calling ${phoneNumber}`) }
-  //     ]
-  //   );
-  // };
+  // Fetch guardians on component mount
+  const fetchGuardians = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API_BASE_URL}/parent/guardians/guardians/${PARENT_ID}`);
 
-  const handleAddContact = () => {
-    if (!newContact.name || !newContact.relationship || !newContact.phoneNumber) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      const result = await response.json();
+      
+      if (response.ok && result.success && result.guardians) {
+        const formattedContacts: EmergencyContact[] = result.guardians.map((guardian: any) => ({
+          id: guardian.guardian_id.toString(),
+          name: guardian.name,
+          relationship: guardian.relationship,
+          phoneNumber: guardian.phone,
+          photo: guardian.photo || undefined
+        }));
+        
+        setEmergencyContacts(formattedContacts);
+      } else {
+        console.error('Failed to fetch guardians:', result.message);
+        Alert.alert('Error', result.message || 'Failed to load guardians');
+      }
+    } catch (error) {
+      console.error('Error fetching guardians:', error);
+      Alert.alert('Error', 'Failed to load guardian details. Please check your connection.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load guardians when component mounts
+  React.useEffect(() => {
+    fetchGuardians();
+  }, []);
+
+  const handleGuardianFormChange = (key: keyof GuardianFormData, value: string) => {
+    setGuardianFormData({ ...guardianFormData, [key]: value });
+  };
+
+  const handleAddContact = async () => {
+    // Validation
+    if (!guardianFormData.name.trim()) {
+      Alert.alert('Error', 'Please enter guardian name');
+      return;
+    }
+    if (!guardianFormData.relationship.trim()) {
+      Alert.alert('Error', 'Please select relationship');
+      return;
+    }
+    if (!guardianFormData.phone.trim()) {
+      Alert.alert('Error', 'Please enter phone number');
+      return;
+    }
+    if (!guardianFormData.nic.trim()) {
+      Alert.alert('Error', 'Please enter NIC');
+      return;
+    }
+    if (!guardianFormData.email.trim()) {
+      Alert.alert('Error', 'Please enter email');
+      return;
+    }
+    if (!guardianFormData.address.trim()) {
+      Alert.alert('Error', 'Please enter address');
       return;
     }
 
-    const contact: EmergencyContact = {
-      id: Date.now().toString(),
-      ...newContact
-    };
+    try {
+      const response = await fetch(`${API_BASE_URL}/parent/guardians/guardians`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(guardianFormData),
+      });
 
-    setEmergencyContacts(prev => [...prev, contact]);
-    setNewContact({
-      name: '',
-      relationship: '',
-      phoneNumber: '',
-      photo: '',
-      // isPrimary: false,
-      // isAuthorized: true,
-      // notes: ''
-    });
-    setShowAddContactModal(false);
-    Alert.alert('Success', 'Emergency contact added successfully!');
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        // Reset form
+        setGuardianFormData({
+          name: '',
+          nic: '',
+          relationship: '',
+          phone: '',
+          email: '',
+          address: '',
+          parent_id: PARENT_ID,
+        });
+        
+        setShowAddContactModal(false);
+        Alert.alert('Success', 'Guardian added successfully!');
+        
+        // Refresh the list
+        fetchGuardians();
+      } else {
+        Alert.alert('Error', result.message || 'Failed to add guardian.');
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Network or server issue occurred.');
+    }
   };
 
   const handleRemoveContact = (contactId: string) => {
-    // const contact = emergencyContacts.find(c => c.id === contactId);
-    // if (contact?.isPrimary) {
-    //   Alert.alert('Cannot Remove', 'Primary contact cannot be removed');
-    //   return;
-    // }
-
     Alert.alert(
       'Remove Contact',
       'Are you sure you want to remove this contact?',
@@ -184,33 +301,18 @@ export default function PickupDetailsPage() {
           style: 'destructive',
           onPress: () => {
             setEmergencyContacts(prev => prev.filter(c => c.id !== contactId));
+            // TODO: Add API call to delete from backend
           }
         }
       ]
     );
   };
 
-  // const toggleAuthorization = (contactId: string) => {
-  //   const contact = emergencyContacts.find(c => c.id === contactId);
-  //   if (contact?.isPrimary) {
-  //     Alert.alert('Cannot Change', 'Primary contact authorization cannot be changed');
-  //     return;
-  //   }
-
-  //   setEmergencyContacts(prev =>
-  //     prev.map(contact =>
-  //       contact.id === contactId
-  //         ? { ...contact, isAuthorized: !contact.isAuthorized }
-  //         : contact
-  //     )
-  //   );
-  // };
-
-  const InputField = ({ 
-    label, 
-    value, 
-    onChangeText, 
-    placeholder, 
+  const InputField = ({
+    label,
+    value,
+    onChangeText,
+    placeholder,
     multiline = false,
     numberOfLines = 1,
     keyboardType = 'default'
@@ -263,27 +365,16 @@ export default function PickupDetailsPage() {
       }}
     >
       <View className="flex-row items-center justify-between">
-        <View className="flex-row items-center">
+        <View className="flex-row items-center flex-1">
           {contact.photo ? (
-            typeof contact.photo === 'string' ? (
-              <Image
-                source={{ uri: contact.photo }}
-                className="w-16 h-16 rounded-full"
-                style={{
-                  borderWidth: 3,
-                  borderColor: '#e5e7eb'
-                }}
-              />
-            ) : (
-              <Image
-                source={contact.photo}
-                className="w-16 h-16 rounded-full"
-                style={{
-                  borderWidth: 3,
-                  borderColor: '#e5e7eb'
-                }}
-              />
-            )
+            <Image
+              source={{ uri: contact.photo }}
+              className="w-16 h-16 rounded-full"
+              style={{
+                borderWidth: 3,
+                borderColor: '#e5e7eb'
+              }}
+            />
           ) : (
             <View
               className="w-16 h-16 rounded-full items-center justify-center"
@@ -296,55 +387,63 @@ export default function PickupDetailsPage() {
               <Ionicons name="person" size={32} color="white" />
             </View>
           )}
-          <View className="ml-4">
+          <View className="ml-4 flex-1">
             <Text className="text-xl font-bold text-gray-800 mb-1">
               {contact.name}
             </Text>
             <Text className="text-purple-600 font-semibold mb-2">
               {contact.relationship}
             </Text>
+            <View className="flex-row items-center">
+              <Ionicons name="call-outline" size={14} color="#6b7280" />
+              <Text className="text-gray-600 text-sm ml-1">
+                {contact.phoneNumber}
+              </Text>
+            </View>
           </View>
         </View>
-        <TouchableOpacity
-          onPress={() => setShowContactDetails(contact.id)}
-          className="w-8 h-8 items-center justify-center"
-        >
-          <Ionicons name="ellipsis-vertical" size={20} color="#6b7280" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={() => setShowContactDetails(contact.id)}
+            className="w-8 h-8 items-center justify-center"
+          >
+            <Ionicons name="ellipsis-vertical" size={20} color="#6b7280" />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
 
   return (
     <LinearGradient
-      colors={['#DFC1FD','#f3e8ff', '#F5ECFE','#F5ECFE','#e9d5ff', '#DFC1FD']}
+      colors={['#DFC1FD', '#f3e8ff', '#F5ECFE', '#F5ECFE', '#e9d5ff', '#DFC1FD']}
       start={[0, 0]}
       end={[1, 1]}
       className="flex-1"
     >
       <StatusBar barStyle="dark-content" backgroundColor="#DFC1FD" />
       <SafeAreaView className="flex-1">
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           className="flex-1"
         >
           <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
             {/* Header */}
-            <View className="px-6 pt-4 pb-2 flex-row items-center justify-between">
-              <TouchableOpacity 
+            <View className="px-6 mt-5 pt-4 pb-2 flex-row items-center justify-between">
+              <TouchableOpacity
                 onPress={handleBack}
                 className="w-10 h-10 justify-center items-center"
               >
                 <Ionicons name="chevron-back" size={24} color="#374151" />
               </TouchableOpacity>
-              
-              <Text className="text-2xl font-bold text-gray-700 mt-12">
+
+              <Text className="text-2xl font-bold text-gray-700">
                 Pickup Details
               </Text>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 onPress={() => setShowAddContactModal(true)}
-                className="w-10 h-10 justify-center items-center mt-12"
+                className="w-10 h-10 justify-center items-center"
               >
                 <Ionicons name="person-add" size={24} color="#7c3aed" />
               </TouchableOpacity>
@@ -376,11 +475,11 @@ export default function PickupDetailsPage() {
                       {childInfo.name}
                     </Text>
                     <Text className="text-purple-600 font-semibold">
-                      Class {childInfo.class}
+                      {childInfo.grade} - Class {childInfo.class}
                     </Text>
                   </View>
                 </View>
-                
+
                 <View className="flex-row items-center">
                   <Ionicons name="id-card-outline" size={18} color="#7c3aed" />
                   <Text className="text-gray-600 ml-2">
@@ -395,204 +494,174 @@ export default function PickupDetailsPage() {
                   <Text className="text-xl font-bold text-gray-700">
                     Emergency Contacts ({emergencyContacts.length})
                   </Text>
-                  {/* <Text className="text-sm text-gray-500">
-                    {emergencyContacts.filter(c => c.isAuthorized).length} Authorized
-                  </Text> */}
+                  {isLoading && (
+                    <ActivityIndicator size="small" color="#7c3aed" />
+                  )}
                 </View>
 
-                {emergencyContacts.map((contact) => (
-                  <ContactCard key={contact.id} contact={contact} />
-                ))}
-              </View>
-
-              {/* Quick Actions Section */}
-              <View className="mb-8">
-                {/* <Text className="text-lg font-bold text-gray-700 mb-4">
-                  Quick Actions
-                </Text>
-                
-                <View className="flex-row justify-between">
-                  <TouchableOpacity
-                    className="flex-1 mr-2" */}
-                    {/* // onPress={() => { */}
-                    {/* //   const primaryContact = emergencyContacts.find(c => c.isPrimary);
-                    //   if (primaryContact) { */}
-                    {/* //     handleCallContact(primaryContact.phoneNumber, primaryContact.name);
-                    //   }
-                    // }}
-                  > */}
-                    {/* <LinearGradient
-                      colors={['#10b981', '#059669']}
-                      className="py-4 rounded-2xl items-center"
-                      style={{ borderRadius: 16 }}
+                {isLoading ? (
+                  <View className="items-center py-12">
+                    <ActivityIndicator size="large" color="#7c3aed" />
+                    <Text className="text-gray-500 mt-4">Loading guardians...</Text>
+                  </View>
+                ) : emergencyContacts.length === 0 ? (
+                  <View className="items-center py-12">
+                    <View 
+                      className="w-20 h-20 rounded-full items-center justify-center mb-4"
+                      style={{ backgroundColor: '#f3e8ff' }}
                     >
-                      <View className="flex-row items-center">
-                        <Ionicons name="call" size={20} color="white" />
-                        <Text className="text-white font-semibold ml-2">
-                          Call Primary
-                        </Text>
-                      </View>
-                    </LinearGradient> */}
-                  {/* </TouchableOpacity> */}
-
-                  {/* <TouchableOpacity
-                    className="flex-1 ml-2" */}
-                     {/* onPress={() => Alert.alert('Emergency', 'Emergency alert sent to all contacts')}
-                  > */}
-                    {/* <LinearGradient
-                      colors={['#ef4444', '#dc2626']}
-                      className="py-4 rounded-2xl items-center"
-                      style={{ borderRadius: 16 }}
-                    >
-                      <View className="flex-row items-center">
-                        <Ionicons name="warning" size={20} color="white" />
-                        <Text className="text-white font-semibold ml-2">
-                          Emergency
-                        </Text>
-                      </View>
-                    </LinearGradient> */}
-                    {/* </TouchableOpacity>
-                  </View> */}
+                      <Ionicons name="people-outline" size={48} color="#9ca3af" />
+                    </View>
+                    <Text className="text-gray-700 font-semibold text-lg">No Guardians Added</Text>
+                    <Text className="text-gray-400 text-sm mt-2 text-center px-8">
+                      Tap the + icon above to add emergency contacts for your child
+                    </Text>
+                  </View>
+                ) : (
+                  emergencyContacts.map((contact) => (
+                    <ContactCard key={contact.id} contact={contact} />
+                  ))
+                )}
               </View>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
-        
-        {/* Add Contact Modal */}
+
+        {/* Add Guardian Modal */}
         <Modal
           visible={showAddContactModal}
           transparent={true}
           animationType="slide"
           onRequestClose={() => setShowAddContactModal(false)}
         >
-          <View className="flex-1 justify-end bg-black/50 bg-opacity-50">
-            <View 
+          <View className="flex-1 justify-end bg-black/50">
+            <View
               className="bg-white rounded-t-3xl p-6"
-              style={{ 
+              style={{
                 paddingBottom: Platform.OS === 'ios' ? 34 : 24,
-                maxHeight: '85%'
+                maxHeight: '90%'
               }}
             >
-              <View className="w-12 h-1 bg-gray-300 rounded-full self-center mb-6" />
-              
-              <Text className="text-xl font-bold text-gray-800 mb-6 text-center">
-                Add Emergency Contact
-              </Text>
-              
-              <ScrollView showsVerticalScrollIndicator={false}>
+              <View className="w-12 h-1 bg-gray-300 rounded-full self-center mb-4" />
 
+              <Text className="text-2xl font-bold text-gray-800 mb-6 text-center">
+                Add Guardian Details
+              </Text>
+
+              <ScrollView showsVerticalScrollIndicator={false}>
                 <InputField
                   label="Full Name *"
-                  value={newContact.name}
-                  onChangeText={(value: string) => setNewContact(prev => ({ ...prev, name: value }))}
+                  value={guardianFormData.name}
+                  onChangeText={(value: string) => handleGuardianFormChange('name', value)}
                   placeholder="Enter full name"
+                />
+
+                <InputField
+                  label="NIC *"
+                  value={guardianFormData.nic}
+                  onChangeText={(value: string) => handleGuardianFormChange('nic', value)}
+                  placeholder="Enter NIC number"
                 />
 
                 <View className="mb-4">
                   <Text className="text-sm font-medium text-gray-600 mb-2 ml-1">
                     Relationship *
                   </Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
-                    <View className="flex-row">
-                      {relationshipOptions.map((option) => (
-                        <TouchableOpacity
-                          key={option}
-                          onPress={() => setNewContact(prev => ({ ...prev, relationship: option }))}
-                          className={`mr-2 px-4 py-2 rounded-full ${
-                            newContact.relationship === option
-                              ? 'bg-purple-500'
-                              : 'bg-gray-200'
-                          }`}
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    className="flex-row"
+                  >
+                    {relationshipOptions.map((option) => (
+                      <TouchableOpacity
+                        key={option}
+                        onPress={() => handleGuardianFormChange('relationship', option)}
+                        style={{
+                          backgroundColor:
+                            guardianFormData.relationship === option
+                              ? '#7c3aed'
+                              : 'rgba(255, 255, 255, 0.9)',
+                          paddingHorizontal: 16,
+                          paddingVertical: 10,
+                          borderRadius: 20,
+                          marginRight: 8,
+                          borderWidth: 1,
+                          borderColor:
+                            guardianFormData.relationship === option
+                              ? '#7c3aed'
+                              : '#e5e7eb'
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color:
+                              guardianFormData.relationship === option
+                                ? 'white'
+                                : '#374151',
+                            fontWeight: '600'
+                          }}
                         >
-                          <Text className={`font-medium ${
-                            newContact.relationship === option
-                              ? 'text-white'
-                              : 'text-gray-700'
-                          }`}>
-                            {option}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
+                          {option}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
                   </ScrollView>
                 </View>
 
                 <InputField
                   label="Phone Number *"
-                  value={newContact.phoneNumber}
-                  onChangeText={(value: string) => setNewContact(prev => ({ ...prev, phoneNumber: value }))}
-                  placeholder="+94 77 123 4567"
+                  value={guardianFormData.phone}
+                  onChangeText={(value: string) => handleGuardianFormChange('phone', value)}
+                  placeholder="Enter phone number"
                   keyboardType="phone-pad"
                 />
 
-                {/* Image Picker for Photo */}
-                <View className="mb-4">
-                  <Text className="text-sm font-medium text-gray-600 mb-2 ml-1">
-                    Photo *
-                  </Text>
-                  <TouchableOpacity
-                    onPress={handlePickImage}
-                    className="w-32 h-32 bg-gray-100 rounded-2xl items-center justify-center self-start"
-                    style={{ borderWidth: 1, borderColor: '#e5e7eb' }}
-                  >
-                    {newContact.photo ? (
-                      <Image
-                        source={{ uri: newContact.photo }}
-                        className="w-32 h-32 rounded-2xl"
-                        style={{ resizeMode: 'cover' }}
-                      />
-                    ) : (
-                      <Ionicons name="camera" size={36} color="#a3a3a3" />
-                    )}
-                    <Text className="text-xs text-gray-500 mt-2">Tap to upload</Text>
-                  </TouchableOpacity>
-                </View>
+                <InputField
+                  label="Email *"
+                  value={guardianFormData.email}
+                  onChangeText={(value: string) => handleGuardianFormChange('email', value)}
+                  placeholder="Enter email address"
+                  keyboardType="email-address"
+                />
 
-                {/* Fixed: Removed InputField for notes since it's not in the interface */}
-                {/* <InputField
-                  label="Notes (Optional)"
-                  value={newContact.notes}
-                  onChangeText={(value: string) => setNewContact(prev => ({ ...prev, notes: value }))}
-                  placeholder="Additional information..."
+                <InputField
+                  label="Address *"
+                  value={guardianFormData.address}
+                  onChangeText={(value: string) => handleGuardianFormChange('address', value)}
+                  placeholder="Enter address"
                   multiline={true}
                   numberOfLines={3}
-                /> */}
+                />
 
-                {/* Fixed: Removed authorization toggle since it's not in the interface */}
-                {/* <View className="flex-row items-center justify-between mb-6 p-4 bg-gray-50 rounded-2xl">
-                  <Text className="text-gray-700 font-medium">
-                    Authorize for pickup
-                  </Text>
+                <View className="flex-row justify-between mt-4 mb-2">
                   <TouchableOpacity
-                    onPress={() => setNewContact(prev => ({ ...prev, isAuthorized: !prev.isAuthorized }))}
-                    className={`w-12 h-6 rounded-full ${
-                      newContact.isAuthorized ? 'bg-green-500' : 'bg-gray-300'
-                    } items-center justify-center`}
+                    onPress={() => {
+                      setShowAddContactModal(false);
+                      setGuardianFormData({
+                        name: '',
+                        nic: '',
+                        relationship: '',
+                        phone: '',
+                        email: '',
+                        address: '',
+                        parent_id: PARENT_ID,
+                      });
+                    }}
+                    className="flex-1 mr-2 py-4 rounded-2xl bg-gray-200 items-center"
                   >
-                    <View className={`w-5 h-5 rounded-full bg-white ${
-                      newContact.isAuthorized ? 'ml-auto' : 'mr-auto'
-                    }`} />
+                    <Text className="text-gray-700 font-semibold text-base">Cancel</Text>
                   </TouchableOpacity>
-                </View> */}
 
-                <View className="flex-row justify-between mt-4">
-                  <TouchableOpacity
-                    onPress={() => setShowAddContactModal(false)}
-                    className="flex-1 mr-2 py-3 rounded-2xl bg-gray-200 items-center"
-                  >
-                    <Text className="text-gray-700 font-semibold">Cancel</Text>
-                  </TouchableOpacity>
-                  
                   <TouchableOpacity
                     onPress={handleAddContact}
                     className="flex-1 ml-2"
                   >
                     <LinearGradient
                       colors={['#7c3aed', '#a855f7']}
-                      className="py-3 rounded-2xl items-center"
+                      className="py-4 rounded-2xl items-center"
                       style={{ borderRadius: 16 }}
                     >
-                      <Text className="text-white font-semibold">Add Contact</Text>
+                      <Text className="text-white font-semibold text-base">Add Guardian</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 </View>
@@ -608,9 +677,9 @@ export default function PickupDetailsPage() {
           animationType="fade"
           onRequestClose={() => setShowContactDetails(null)}
         >
-          <View className="flex-1 justify-center items-center bg-black/50 bg-opacity-50 px-6">
+          <View className="flex-1 justify-center items-center bg-black/50 px-6">
             {showContactDetails && (
-              <View 
+              <View
                 className="bg-white rounded-3xl p-6 w-full max-w-sm"
                 style={{
                   shadowColor: '#000',
@@ -621,51 +690,55 @@ export default function PickupDetailsPage() {
                 }}
               >
                 {(() => {
-                  const contact = emergencyContacts.find(c => c.id === showContactDetails);
+                  const contact = emergencyContacts.find(
+                    (c) => c.id === showContactDetails
+                  );
                   if (!contact) return null;
-                  
+
                   return (
                     <>
-                      <Text className="text-lg font-bold text-gray-800 mb-4 text-center">
-                        {contact.name}
-                      </Text>
-                      
-                      {/* Fixed: Commented out authorization toggle since it uses non-existent properties */}
-                      {/* <TouchableOpacity
-                        onPress={() => toggleAuthorization(contact.id)}
-                        className="py-3 mb-3 rounded-2xl items-center"
-                        style={{
-                          backgroundColor: contact.isAuthorized ? '#fef3c7' : '#dcfce7'
-                        }}
-                        disabled={contact.isPrimary}
-                      >
-                        <Text className={`font-semibold ${
-                          contact.isAuthorized ? 'text-amber-700' : 'text-green-700'
-                        }`}>
-                          {contact.isAuthorized ? 'Remove Authorization' : 'Grant Authorization'}
+                      <View className="items-center mb-4">
+                        <View
+                          className="w-20 h-20 rounded-full items-center justify-center mb-3"
+                          style={{
+                            backgroundColor: '#9ca3af'
+                          }}
+                        >
+                          <Ionicons name="person" size={40} color="white" />
+                        </View>
+                        <Text className="text-xl font-bold text-gray-800 mb-1">
+                          {contact.name}
                         </Text>
-                      </TouchableOpacity> */}
-                      
-                      {/* <TouchableOpacity
-                        onPress={() => handleCallContact(contact.phoneNumber, contact.name)}
+                        <Text className="text-purple-600 font-semibold">
+                          {contact.relationship}
+                        </Text>
+                        
+                      </View>
+
+                      <TouchableOpacity
+                        onPress={() => {
+                          setShowContactDetails(null);
+                          openQrForContact(contact);
+                        }}
                         className="py-3 mb-3 rounded-2xl items-center bg-green-100"
                       >
-                        <Text className="text-green-700 font-semibold">Call Contact</Text>
-                      </TouchableOpacity> */}
-                      
-                      {/* Fixed: Commented out isPrimary check since it's not in the interface */}
-                      {/* {!contact.isPrimary && ( */}
-                        <TouchableOpacity
-                          onPress={() => {
-                            setShowContactDetails(null);
-                            handleRemoveContact(contact.id);
-                          }}
-                          className="py-3 mb-3 rounded-2xl items-center bg-red-100"
-                        >
-                          <Text className="text-red-700 font-semibold">Remove Contact</Text>
-                        </TouchableOpacity>
-                      {/* )} */}
-                      
+                        <Text className="text-green-700 font-semibold">
+                          Open QR Code
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => {
+                          setShowContactDetails(null);
+                          handleRemoveContact(contact.id);
+                        }}
+                        className="py-3 mb-3 rounded-2xl items-center bg-red-100"
+                      >
+                        <Text className="text-red-700 font-semibold">
+                          Remove Contact
+                        </Text>
+                      </TouchableOpacity>
+
                       <TouchableOpacity
                         onPress={() => setShowContactDetails(null)}
                         className="py-3 rounded-2xl items-center bg-gray-100"
@@ -677,6 +750,43 @@ export default function PickupDetailsPage() {
                 })()}
               </View>
             )}
+          </View>
+        </Modal>
+
+        {/* QR Modal */}
+        <Modal
+          visible={qrModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setQrModalVisible(false)}
+        >
+          <View className="flex-1 items-center justify-center bg-black/60 px-6">
+            <View className="bg-white rounded-2xl p-6 w-full items-center" style={{ maxWidth: 360 }}>
+              <Text className="text-lg font-bold text-gray-800 mb-4">{qrTitle}</Text>
+              <View style={{ alignItems: 'center', justifyContent: 'center', padding: 8 }}>
+                {/* Primary: render native QR component. Fallback: Google Chart QR image URL if the QR lib can't render on web */}
+                <QRCode getRef={(c: any) => (qrRef.current = c)} value={qrValue || ' '} size={200} />
+
+                {/* Fallback image (remote) in case QR component fails on web; rendered as an alternative if needed */}
+                {/* <Image source={{ uri: `https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=${encodeURIComponent(qrValue)}` }} style={{ width: 200, height: 200, marginTop: 12 }} /> */}
+              </View>
+
+              <View style={{ marginTop: 16, flexDirection: 'row', gap: 12 }}>
+                <TouchableOpacity
+                  onPress={handleDownloadQr}
+                  style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12, alignItems: 'center' }}
+                >
+                  <Text style={{ color: 'white', fontWeight: '700' }}>Download QR</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setQrModalVisible(false)}
+                  style={{ flex: 1, backgroundColor: '#7c3aed', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12, alignItems: 'center' }}
+                >
+                  <Text style={{ color: 'white', fontWeight: '700' }}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         </Modal>
       </SafeAreaView>
