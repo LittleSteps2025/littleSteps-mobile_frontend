@@ -64,21 +64,24 @@ export default function ChildDetailsForm() {
       // If we have an ID and it's not empty, try to find the child
       if (childId && childId !== '' && childId !== 'undefined') {
         const foundChild = user.children.find(child => 
-          child.id?.toString() === childId
+          child.id?.toString() === childId || child.child_id?.toString() === childId
         );
         
         if (foundChild) {
           console.log("✅ Found child by ID:", foundChild.name);
           return {
             firstName: foundChild.name || 'N/A',
-            birthDate: foundChild.dateOfBirth ? 
-              new Date(foundChild.dateOfBirth).toLocaleDateString() : 'N/A',
+            birthDate: foundChild.dob ? 
+              new Date(foundChild.dob).toLocaleDateString() : 
+              (foundChild.dateOfBirth ? new Date(foundChild.dateOfBirth).toLocaleDateString() : 'N/A'),
             phoneNumber: user?.phone || 'N/A',
-            emergencyNumber: foundChild.emergencyContact || 'N/A',
+            emergencyNumber: foundChild.emergencyContact || user?.phone || 'N/A',
             homeAddress: user?.address || 'N/A',
-            profileImage: (foundChild.profileImage && typeof foundChild.profileImage === 'string' && foundChild.profileImage !== 'a' && foundChild.profileImage.startsWith('http')) 
-              ? foundChild.profileImage 
-              : null
+            profileImage: (foundChild.image && typeof foundChild.image === 'string' && foundChild.image !== 'a' && foundChild.image.startsWith('http')) 
+              ? foundChild.image 
+              : (foundChild.profileImage && typeof foundChild.profileImage === 'string' && foundChild.profileImage !== 'a' && foundChild.profileImage.startsWith('http'))
+                ? foundChild.profileImage 
+                : null
           };
         }
         console.log("❌ Child not found with ID:", childId);
@@ -89,14 +92,17 @@ export default function ChildDetailsForm() {
       const firstChild = user.children[0];
       return {
         firstName: firstChild.name || 'N/A',
-        birthDate: firstChild.dateOfBirth ? 
-          new Date(firstChild.dateOfBirth).toLocaleDateString() : 'N/A',
+        birthDate: firstChild.dob ? 
+          new Date(firstChild.dob).toLocaleDateString() : 
+          (firstChild.dateOfBirth ? new Date(firstChild.dateOfBirth).toLocaleDateString() : 'N/A'),
         phoneNumber: user?.phone || 'N/A',
         emergencyNumber: firstChild.emergencyContact || user?.phone || 'N/A',
         homeAddress: user?.address || 'N/A',
-        profileImage: (firstChild.profileImage && typeof firstChild.profileImage === 'string' && firstChild.profileImage !== 'a' && firstChild.profileImage.startsWith('http')) 
-          ? firstChild.profileImage 
-          : null
+        profileImage: (firstChild.image && typeof firstChild.image === 'string' && firstChild.image !== 'a' && firstChild.image.startsWith('http')) 
+          ? firstChild.image 
+          : (firstChild.profileImage && typeof firstChild.profileImage === 'string' && firstChild.profileImage !== 'a' && firstChild.profileImage.startsWith('http'))
+            ? firstChild.profileImage 
+            : null
       };
     }
     
@@ -403,7 +409,7 @@ export default function ChildDetailsForm() {
                 </View>
 
                 {/* Guardian's Phone */}
-                <View className="flex-row items-center py-3 border-b border-gray-100">
+                {/* <View className="flex-row items-center py-3 border-b border-gray-100">
                   <View className="w-10 h-10 rounded-full bg-green-50 items-center justify-center mr-4">
                     <Ionicons name="call-outline" size={18} color="#10b981" />
                   </View>
@@ -415,7 +421,7 @@ export default function ChildDetailsForm() {
                       {childData.phoneNumber}
                     </Text>
                   </View>
-                </View>
+                </View> */}
 
                 {/* Emergency Contact */}
                 <View className="flex-row items-center py-3 border-b border-gray-100">
