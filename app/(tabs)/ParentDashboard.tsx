@@ -51,7 +51,7 @@ export default function ParentDashboard() {
           id: child.id,
           name: child.name,
           age: `${child.age} years old`,
-          image: child.profileImage || require("@/assets/images/kid1.jpg"),
+          image: child.image || require("@/assets/images/kid1.jpg"),
           status: "Active",
           gender: child.gender || "male",
           dob: child.dob,
