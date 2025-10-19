@@ -24,26 +24,59 @@ export default function ParentProfile() {
   const { user, logout, updateProfile } = useUser();
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
-  const [profileImage, setProfileImage] = useState<string | null>(user?.profileImage || null);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   
   // Edit form state - initialize with user data
   const [editForm, setEditForm] = useState({
     name: user?.fullName || '',
     email: user?.email || '',
     phoneNumber: user?.phone || '',
-    address: user?.address || ''
+    address: user?.address || '',
+    image: user?.profileImage || null
   });
 
   // Update form when user data changes
   useEffect(() => {
     if (user) {
+      console.log("=== PARENT PROFILE DEBUG ===");
+      console.log("User object:", user);
+      console.log("User profileImage:", user.profileImage);
+      console.log("Profile image type:", typeof user.profileImage);
+      
       setEditForm({
         name: user.fullName || '',
         email: user.email || '',
         phoneNumber: user.phone || '',
-        address: user.address || ''
+        address: user.address || '',
+        image: user.profileImage || null
       });
-      setProfileImage(user.profileImage || null);
+      
+      // Check if profileImage is a valid URL
+      if (user.profileImage && typeof user.profileImage === 'string' && user.profileImage.trim() !== '') {
+        console.log("Profile image is a string:", user.profileImage);
+        // Check if it's a valid URL (starts with http or https)
+        if (user.profileImage.startsWith('http://') || user.profileImage.startsWith('https://')) {
+          console.log("✅ Setting valid image URL:", user.profileImage);
+          setProfileImage(user.profileImage);
+        } else if (user.profileImage !== 'a' && user.profileImage.length > 10) {
+          // If it's a longer string that's not 'a', might be a valid URL without protocol
+          console.log("⚠️ Profile image might be valid but no protocol:", user.profileImage);
+          // Try adding https:// if it looks like a domain
+          if (user.profileImage.includes('.')) {
+            const urlWithProtocol = `https://${user.profileImage}`;
+            console.log("🔄 Trying with protocol:", urlWithProtocol);
+            setProfileImage(urlWithProtocol);
+          } else {
+            setProfileImage(null);
+          }
+        } else {
+          console.log("⚠️ Profile image is not a valid URL:", user.profileImage);
+          setProfileImage(null);
+        }
+      } else {
+        console.log("❌ No valid profile image found");
+        setProfileImage(null);
+      }
     }
   }, [user]);
 
@@ -268,16 +301,23 @@ export default function ParentProfile() {
     }
   };
 
-  // Static parent data - replace with actual data from your backend/state
+  // Parent data - using data from user context
+  console.log("=== PARENT DATA RENDERING ===");
+  console.log("profileImage state:", profileImage);
+  console.log("Will use default image:", !profileImage);
+  
   const parentData = {
     name: editForm.name,
     email: editForm.email,
     phoneNumber: editForm.phoneNumber,
     address: editForm.address,
-    profileImage: profileImage ? { uri: profileImage } : require('@/assets/images/mother.jpg'), // Use selected image or default
+    // Use profile image from database if available, otherwise use default
+    profileImage: profileImage ? { uri: profileImage } : require('@/assets/images/mother.jpg'),
     joinDate: 'January 2024',
     // children: ['Pramodi Peshila', 'Nimal Perera'] // List of children
   };
+  
+  console.log("parentData.profileImage:", parentData.profileImage);
 
   const profileSections = [
     {
