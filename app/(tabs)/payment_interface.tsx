@@ -393,8 +393,8 @@ function PaymentInterface() {
           </View>
 
           {/* Package Details */}
-          <View className="flex flex-row items-center justify-center mt-6 bg-purple-500 rounded-xl p-5 mx-5 shadow-lg">
-            <View className="flex-1">
+          <View className="flex-1 flex-row items-center justify-between mt-6 bg-purple-500 rounded-xl p-5 mx-3 shadow-lg">
+            <View className="flex-2">
               <Image
                 source={images.payment_child}
                 className="w-20 h-32 rounded-lg ml-10"
@@ -403,7 +403,7 @@ function PaymentInterface() {
             <View className="flex-2 mr-10">
               {packageLoading ? (
                 <View>
-                  <Text className="text-white font-bold text-xl">
+                  <Text className="text-white font-bold text-xs">
                     Loading...
                   </Text>
                   <Text className="text-purple-100 text-sm mt-1">
@@ -412,7 +412,7 @@ function PaymentInterface() {
                 </View>
               ) : (
                 <View>
-                  <Text className="text-white font-bold text-xl">
+                  <Text className="text-white font-bold text-xs">
                     {packageDetails.name}
                   </Text>
                   <Text className="text-green-300 font-bold text-2xl mt-2">
