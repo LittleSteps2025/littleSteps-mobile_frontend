@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as MediaLibrary from 'expo-media-library';
 import { useRouter } from 'expo-router';
 import { shareAsync } from 'expo-sharing';
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback,useMemo,useEffect } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -20,9 +20,10 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
-} from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
+  View,
+} from "react-native";
+import { useUser } from "@/contexts/UserContext";
+import QRCode from "react-native-qrcode-svg";
 
 interface ChildInfo {
   name: string;
@@ -52,11 +53,12 @@ interface GuardianFormData {
 
 export default function PickupDetailsPage() {
   const router = useRouter();
+  const { user } = useUser();
 
   // QR modal state
   const [qrModalVisible, setQrModalVisible] = useState(false);
-  const [qrValue, setQrValue] = useState('');
-  const [qrTitle, setQrTitle] = useState('Guardian QR');
+  const [qrValue, setQrValue] = useState("");
+  const [qrTitle, setQrTitle] = useState("Guardian QR");
 
   // const openQrForContact = (contact: EmergencyContact) => {
   //   const value = `Name: ${contact.name}\nRelationship: ${contact.relationship}`;
@@ -72,25 +74,37 @@ export default function PickupDetailsPage() {
     setQrModalVisible(true);
   };
 
-  // Child information
-  const [childInfo] = useState<ChildInfo>({
-    name: 'Pathum Silva',
-    class: 'SunShine',
-    studentId: 'S026'
-  });
+  // Child information from session data
+  const childInfo = useMemo<ChildInfo>(() => {
+    const child = user?.children?.[0];
+    if (!child) {
+      return {
+        name: "Unknown",
+        grade: "Unknown",
+        class: "Unknown",
+        studentId: "Unknown",
+      };
+    }
+    return {
+      name: child.name,
+      grade: "Grade 5", // TODO: Get grade from child data if available
+      class: child.class || child.group_id?.toString() || "A",
+      studentId: child.child_id.toString(),
+    };
+  }, [user]);
 
   const qrRef = useRef<any>(null);
 
   const getQrDataUrl = () =>
     new Promise<string>((resolve, reject) => {
       try {
-        if (qrRef.current && typeof qrRef.current.toDataURL === 'function') {
+        if (qrRef.current && typeof qrRef.current.toDataURL === "function") {
           qrRef.current.toDataURL((data: string) => {
             if (data) resolve(data);
-            else reject(new Error('Failed to generate QR data'));
+            else reject(new Error("Failed to generate QR data"));
           });
         } else {
-          reject(new Error('QR ref or toDataURL not available'));
+          reject(new Error("QR ref or toDataURL not available"));
         }
       } catch (err) {
         reject(err);
@@ -103,21 +117,32 @@ export default function PickupDetailsPage() {
       const filename = `qr_${Date.now()}.png`;
       const fileUri = FileSystem.cacheDirectory + filename;
 
-      await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+      // Write base64 to file
+      await FileSystem.writeAsStringAsync(fileUri, base64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
 
-      if (Platform.OS !== 'web') {
+      // For native platforms, request permission and save to gallery
+      if (Platform.OS !== "web") {
         const { status } = await MediaLibrary.requestPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Permission required', 'Permission to access media library is required to save the QR image.');
+        if (status !== "granted") {
+          Alert.alert(
+            "Permission required",
+            "Permission to access media library is required to save the QR image."
+          );
           return;
         }
 
         const asset = await MediaLibrary.createAssetAsync(fileUri);
         try {
-          await MediaLibrary.createAlbumAsync('LittleSteps', asset, false);
-        } catch (e) {}
+          // Try to create an album (if already exists this will throw)
+          await MediaLibrary.createAlbumAsync("LittleSteps", asset, false);
+        } catch (e) {
+          // Album might already exist — ignore
+          console.warn("Album creation failed (may already exist):", e);
+        }
 
-        Alert.alert('Saved', 'QR image saved to your gallery.');
+        Alert.alert("Saved", "QR image saved to your gallery.");
       } else {
         const dataUrl = `data:image/png;base64,${base64}`;
         try {
@@ -133,47 +158,82 @@ export default function PickupDetailsPage() {
           link.click();
           // @ts-ignore
           document.body.removeChild(link);
-          Alert.alert('Downloaded', 'QR image downloaded.');
+          Alert.alert("Downloaded", "QR image downloaded.");
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (err) {
           await shareAsync(fileUri);
         }
       }
     } catch (error) {
-      console.error('Error saving QR:', error);
-      Alert.alert('Error', 'Unable to save QR image.');
+      console.error("Error saving QR:", error);
+      Alert.alert("Error", "Unable to save QR image.");
     }
   };
 
   const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
   const [showAddContactModal, setShowAddContactModal] = useState(false);
-  const [showContactDetails, setShowContactDetails] = useState<string | null>(null);
+  const [showContactDetails, setShowContactDetails] = useState<string | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
-  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
+  const [parentId, setParentId] = useState<string | null>(null);
 
-  const PARENT_ID = '3';
+  // Fetch parent ID first, then guardians
+  useEffect(() => {
+    const fetchParentId = async () => {
+      try {
+        console.log("Fetching parent ID for user:", user?.id);
+        // Get parent ID using user ID - corrected endpoint
+        const response = await fetch(
+          `${API_BASE_URL}/parent/guardians/get-parent-id/${user?.id}`
+        );
+        const result = await response.json();
+
+        console.log("Parent ID response:", result);
+
+        if (response.ok && result.success && result.parent_id) {
+          setParentId(result.parent_id.toString());
+        } else {
+          console.error("Failed to fetch parent ID:", result.message);
+          // Fallback to user ID if parent ID not found
+          setParentId(user?.id || "");
+        }
+      } catch (error) {
+        console.error("Error fetching parent ID:", error);
+        // Fallback to user ID
+        setParentId(user?.id || "");
+      }
+    };
+
+    if (user?.id) {
+      fetchParentId();
+    }
+  }, [user?.id]);
+
+  const PARENT_ID = parentId || user?.id?.toString() || "";
+  console.log("Parent ID:", PARENT_ID);
 
   const [guardianFormData, setGuardianFormData] = useState<GuardianFormData>({
-    name: '',
-    nic: '',
-    relationship: '',
-    phone: '',
-    email: '',
-    address: '',
+    name: "",
+    nic: "",
+    relationship: "",
+    phone: "",
+    email: "",
+    address: "",
     parent_id: PARENT_ID,
   });
 
   const relationshipOptions = [
-    'Mother',
-    'Father',
-    'Guardian',
-    'Grandmother',
-    'Grandfather',
-    'Aunt',
-    'Uncle',
-    'Sibling',
-    'Family Friend',
-    'Other'
+    "Mother",
+    "Father",
+    "Guardian",
+    "Grandmother",
+    "Grandfather",
+    "Aunt",
+    "Uncle",
+    "Sibling",
+    "Family Friend",
+    "Other",
   ];
 
   const handleBack = () => {
@@ -245,68 +305,77 @@ export default function PickupDetailsPage() {
   };
 
   // Fetch guardians on component mount
-  const fetchGuardians = async () => {
+  const fetchGuardians = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`${API_BASE_URL}/parent/guardians/guardians/${PARENT_ID}`);
+      const response = await fetch(
+        `${API_BASE_URL}/parent/guardians/guardians/${PARENT_ID}`
+      );
 
       const result = await response.json();
-      
+
       if (response.ok && result.success && result.guardians) {
-        const formattedContacts: EmergencyContact[] = result.guardians.map((guardian: any) => ({
-          id: guardian.guardian_id.toString(),
-          name: guardian.name,
-          relationship: guardian.relationship,
-          phoneNumber: guardian.phone,
-          photo: guardian.image || undefined
-        }));
-        
+        const formattedContacts: EmergencyContact[] = result.guardians.map(
+          (guardian: any) => ({
+            id: guardian.guardian_id.toString(),
+            name: guardian.name,
+            relationship: guardian.relationship,
+            phoneNumber: guardian.phone,
+            photo: guardian.photo || undefined,
+          })
+        );
+
         setEmergencyContacts(formattedContacts);
       } else {
-        console.error('Failed to fetch guardians:', result.message);
-        Alert.alert('Error', result.message || 'Failed to load guardians');
+        console.error("Failed to fetch guardians:", result.message);
+        Alert.alert("Error", result.message || "Failed to load guardians");
       }
     } catch (error) {
-      console.error('Error fetching guardians:', error);
-      Alert.alert('Error', 'Failed to load guardian details. Please check your connection.');
+      console.error("Error fetching guardians:", error);
+      Alert.alert(
+        "Error",
+        "Failed to load guardian details. Please check your connection."
+      );
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [PARENT_ID]);
 
   React.useEffect(() => {
     fetchGuardians();
-  }, []);
+  }, [fetchGuardians]);
 
-  // stable handler to avoid re-creating function on every render
-  const handleGuardianFormChange = useCallback((key: keyof GuardianFormData, value: string) => {
-    setGuardianFormData(prev => ({ ...prev, [key]: value }));
-  }, []);
+  const handleGuardianFormChange = (
+    key: keyof GuardianFormData,
+    value: string
+  ) => {
+    setGuardianFormData({ ...guardianFormData, [key]: value });
+  };
 
   const handleAddContact = async () => {
     // Validation
     if (!guardianFormData.name.trim()) {
-      Alert.alert('Error', 'Please enter guardian name');
+      Alert.alert("Error", "Please enter guardian name");
       return;
     }
     if (!guardianFormData.relationship.trim()) {
-      Alert.alert('Error', 'Please select relationship');
+      Alert.alert("Error", "Please select relationship");
       return;
     }
     if (!guardianFormData.phone.trim()) {
-      Alert.alert('Error', 'Please enter phone number');
+      Alert.alert("Error", "Please enter phone number");
       return;
     }
     if (!guardianFormData.nic.trim()) {
-      Alert.alert('Error', 'Please enter NIC');
+      Alert.alert("Error", "Please enter NIC");
       return;
     }
     if (!guardianFormData.email.trim()) {
-      Alert.alert('Error', 'Please enter email');
+      Alert.alert("Error", "Please enter email");
       return;
     }
     if (!guardianFormData.address.trim()) {
-      Alert.alert('Error', 'Please enter address');
+      Alert.alert("Error", "Please enter address");
       return;
     }
 
@@ -344,27 +413,27 @@ export default function PickupDetailsPage() {
       });
 
       const result = await response.json();
-      
+
       if (response.ok && result.success) {
         // Reset form
         setGuardianFormData({
-          name: '',
-          nic: '',
-          relationship: '',
-          phone: '',
-          email: '',
-          address: '',
+          name: "",
+          nic: "",
+          relationship: "",
+          phone: "",
+          email: "",
+          address: "",
           parent_id: PARENT_ID,
         });
         setSelectedImageUri(null);
         
         setShowAddContactModal(false);
-        Alert.alert('Success', 'Guardian added successfully!');
-        
+        Alert.alert("Success", "Guardian added successfully!");
+
         // Refresh the list
         fetchGuardians();
       } else {
-        Alert.alert('Error', result.message || 'Failed to add guardian.');
+        Alert.alert("Error", result.message || "Failed to add guardian.");
       }
     } catch (error) {
       console.error(error);
@@ -376,10 +445,10 @@ export default function PickupDetailsPage() {
 
   const handleRemoveContact = async (contactId: string) => {
     Alert.alert(
-      'Remove Contact',
-      'Are you sure you want to remove this contact?',
+      "Remove Contact",
+      "Are you sure you want to remove this contact?",
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
           text: 'Remove',
           style: 'destructive',
@@ -416,7 +485,7 @@ export default function PickupDetailsPage() {
     placeholder,
     multiline = false,
     numberOfLines = 1,
-    keyboardType = 'default'
+    keyboardType = "default",
   }: any) => (
     <View className="mb-4">
       <Text className="text-sm font-medium text-gray-600 mb-2 ml-1">
@@ -435,21 +504,21 @@ export default function PickupDetailsPage() {
         autoCorrect={false}
         autoCapitalize="none"
         style={{
-          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          backgroundColor: "rgba(255, 255, 255, 0.9)",
           borderRadius: 16,
           paddingHorizontal: 20,
           paddingVertical: multiline ? 16 : 18,
           fontSize: 16,
-          fontWeight: '500',
-          color: '#374151',
-          shadowColor: '#000',
+          fontWeight: "500",
+          color: "#374151",
+          shadowColor: "#000",
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.1,
           shadowRadius: 4,
           elevation: 2,
           borderWidth: 1,
-          borderColor: '#e5e7eb',
-          textAlignVertical: multiline ? 'top' : 'center'
+          borderColor: "#e5e7eb",
+          textAlignVertical: multiline ? "top" : "center",
         }}
       />
     </View>
@@ -459,14 +528,14 @@ export default function PickupDetailsPage() {
     <View
       className="mb-4 p-5 rounded-2xl"
       style={{
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        shadowColor: '#000',
+        backgroundColor: "rgba(255, 255, 255, 0.95)",
+        shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 8,
         elevation: 3,
         borderWidth: 1,
-        borderColor: '#e5e7eb'
+        borderColor: "#e5e7eb",
       }}
     >
       <View className="flex-row items-center justify-between">
@@ -477,16 +546,16 @@ export default function PickupDetailsPage() {
               className="w-16 h-16 rounded-full"
               style={{
                 borderWidth: 3,
-                borderColor: '#e5e7eb'
+                borderColor: "#e5e7eb",
               }}
             />
           ) : (
             <View
               className="w-16 h-16 rounded-full items-center justify-center"
               style={{
-                backgroundColor: '#9ca3af',
+                backgroundColor: "#9ca3af",
                 borderWidth: 3,
-                borderColor: '#d1d5db'
+                borderColor: "#d1d5db",
               }}
             >
               <Ionicons name="person" size={32} color="white" />
@@ -507,7 +576,7 @@ export default function PickupDetailsPage() {
             </View>
           </View>
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
           <TouchableOpacity
             onPress={() => setShowContactDetails(contact.id)}
             className="w-8 h-8 items-center justify-center"
@@ -521,7 +590,14 @@ export default function PickupDetailsPage() {
 
   return (
     <LinearGradient
-      colors={['#DFC1FD', '#f3e8ff', '#F5ECFE', '#F5ECFE', '#e9d5ff', '#DFC1FD']}
+      colors={[
+        "#DFC1FD",
+        "#f3e8ff",
+        "#F5ECFE",
+        "#F5ECFE",
+        "#e9d5ff",
+        "#DFC1FD",
+      ]}
       start={[0, 0]}
       end={[1, 1]}
       className="flex-1"
@@ -590,14 +666,37 @@ export default function PickupDetailsPage() {
               </View>
             </View>
 
-            {/* Emergency Contacts Section */}
-            <View className="mb-6">
-              <View className="flex-row items-center justify-between mb-4">
-                <Text className="text-xl font-bold text-gray-700">
-                  Emergency Contacts ({emergencyContacts.length})
-                </Text>
-                {isLoading && (
-                  <ActivityIndicator size="small" color="#7c3aed" />
+                {isLoading ? (
+                  <View className="items-center py-12">
+                    <ActivityIndicator size="large" color="#7c3aed" />
+                    <Text className="text-gray-500 mt-4">
+                      Loading guardians...
+                    </Text>
+                  </View>
+                ) : emergencyContacts.length === 0 ? (
+                  <View className="items-center py-12">
+                    <View
+                      className="w-20 h-20 rounded-full items-center justify-center mb-4"
+                      style={{ backgroundColor: "#f3e8ff" }}
+                    >
+                      <Ionicons
+                        name="people-outline"
+                        size={48}
+                        color="#9ca3af"
+                      />
+                    </View>
+                    <Text className="text-gray-700 font-semibold text-lg">
+                      No Guardians Added
+                    </Text>
+                    <Text className="text-gray-400 text-sm mt-2 text-center px-8">
+                      Tap the + icon above to add emergency contacts for your
+                      child
+                    </Text>
+                  </View>
+                ) : (
+                  emergencyContacts.map((contact) => (
+                    <ContactCard key={contact.id} contact={contact} />
+                  ))
                 )}
               </View>
 
@@ -640,8 +739,8 @@ export default function PickupDetailsPage() {
             <View
               className="bg-white rounded-t-3xl p-6"
               style={{
-                paddingBottom: Platform.OS === 'ios' ? 34 : 24,
-                maxHeight: '90%'
+                paddingBottom: Platform.OS === "ios" ? 34 : 24,
+                maxHeight: "90%",
               }}
             >
               <View className="w-12 h-1 bg-gray-300 rounded-full self-center mb-4" />
@@ -702,14 +801,18 @@ export default function PickupDetailsPage() {
                 <InputField
                   label="Full Name *"
                   value={guardianFormData.name}
-                  onChangeText={(value: string) => handleGuardianFormChange('name', value)}
+                  onChangeText={(value: string) =>
+                    handleGuardianFormChange("name", value)
+                  }
                   placeholder="Enter full name"
                 />
 
                 <InputField
                   label="NIC *"
                   value={guardianFormData.nic}
-                  onChangeText={(value: string) => handleGuardianFormChange('nic', value)}
+                  onChangeText={(value: string) =>
+                    handleGuardianFormChange("nic", value)
+                  }
                   placeholder="Enter NIC number"
                 />
 
@@ -726,12 +829,14 @@ export default function PickupDetailsPage() {
                     {relationshipOptions.map((option) => (
                       <TouchableOpacity
                         key={option}
-                        onPress={() => handleGuardianFormChange('relationship', option)}
+                        onPress={() =>
+                          handleGuardianFormChange("relationship", option)
+                        }
                         style={{
                           backgroundColor:
                             guardianFormData.relationship === option
-                              ? '#7c3aed'
-                              : 'rgba(255, 255, 255, 0.9)',
+                              ? "#7c3aed"
+                              : "rgba(255, 255, 255, 0.9)",
                           paddingHorizontal: 16,
                           paddingVertical: 10,
                           borderRadius: 20,
@@ -739,17 +844,17 @@ export default function PickupDetailsPage() {
                           borderWidth: 1,
                           borderColor:
                             guardianFormData.relationship === option
-                              ? '#7c3aed'
-                              : '#e5e7eb'
+                              ? "#7c3aed"
+                              : "#e5e7eb",
                         }}
                       >
                         <Text
                           style={{
                             color:
                               guardianFormData.relationship === option
-                                ? 'white'
-                                : '#374151',
-                            fontWeight: '600'
+                                ? "white"
+                                : "#374151",
+                            fontWeight: "600",
                           }}
                         >
                           {option}
@@ -762,7 +867,9 @@ export default function PickupDetailsPage() {
                 <InputField
                   label="Phone Number *"
                   value={guardianFormData.phone}
-                  onChangeText={(value: string) => handleGuardianFormChange('phone', value)}
+                  onChangeText={(value: string) =>
+                    handleGuardianFormChange("phone", value)
+                  }
                   placeholder="Enter phone number"
                   keyboardType="phone-pad"
                 />
@@ -770,7 +877,9 @@ export default function PickupDetailsPage() {
                 <InputField
                   label="Email *"
                   value={guardianFormData.email}
-                  onChangeText={(value: string) => handleGuardianFormChange('email', value)}
+                  onChangeText={(value: string) =>
+                    handleGuardianFormChange("email", value)
+                  }
                   placeholder="Enter email address"
                   keyboardType="email-address"
                 />
@@ -778,7 +887,9 @@ export default function PickupDetailsPage() {
                 <InputField
                   label="Address *"
                   value={guardianFormData.address}
-                  onChangeText={(value: string) => handleGuardianFormChange('address', value)}
+                  onChangeText={(value: string) =>
+                    handleGuardianFormChange("address", value)
+                  }
                   placeholder="Enter address"
                   multiline={true}
                   numberOfLines={3}
@@ -789,19 +900,21 @@ export default function PickupDetailsPage() {
                     onPress={() => {
                       setShowAddContactModal(false);
                       setGuardianFormData({
-                        name: '',
-                        nic: '',
-                        relationship: '',
-                        phone: '',
-                        email: '',
-                        address: '',
+                        name: "",
+                        nic: "",
+                        relationship: "",
+                        phone: "",
+                        email: "",
+                        address: "",
                         parent_id: PARENT_ID,
                       });
                       setSelectedImageUri(null);
                     }}
                     className="flex-1 mr-2 py-4 rounded-2xl bg-gray-200 items-center"
                   >
-                    <Text className="text-gray-700 font-semibold text-base">Cancel</Text>
+                    <Text className="text-gray-700 font-semibold text-base">
+                      Cancel
+                    </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -839,11 +952,11 @@ export default function PickupDetailsPage() {
               <View
                 className="bg-white rounded-3xl p-6 w-full max-w-sm"
                 style={{
-                  shadowColor: '#000',
+                  shadowColor: "#000",
                   shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 0.3,
                   shadowRadius: 10,
-                  elevation: 10
+                  elevation: 10,
                 }}
               >
                 {(() => {
@@ -910,7 +1023,9 @@ export default function PickupDetailsPage() {
                         onPress={() => setShowContactDetails(null)}
                         className="py-3 rounded-2xl items-center bg-gray-100"
                       >
-                        <Text className="text-gray-700 font-semibold">Close</Text>
+                        <Text className="text-gray-700 font-semibold">
+                          Close
+                        </Text>
                       </TouchableOpacity>
                     </>
                   );
@@ -928,25 +1043,62 @@ export default function PickupDetailsPage() {
           onRequestClose={() => setQrModalVisible(false)}
         >
           <View className="flex-1 items-center justify-center bg-black/60 px-6">
-            <View className="bg-white rounded-2xl p-6 w-full items-center" style={{ maxWidth: 360 }}>
-              <Text className="text-lg font-bold text-gray-800 mb-4">{qrTitle}</Text>
-              <View style={{ alignItems: 'center', justifyContent: 'center', padding: 8 }}>
-                <QRCode getRef={(c: any) => (qrRef.current = c)} value={qrValue || ' '} size={200} />
+            <View
+              className="bg-white rounded-2xl p-6 w-full items-center"
+              style={{ maxWidth: 360 }}
+            >
+              <Text className="text-lg font-bold text-gray-800 mb-4">
+                {qrTitle}
+              </Text>
+              <View
+                style={{
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 8,
+                }}
+              >
+                {/* Primary: render native QR component. Fallback: Google Chart QR image URL if the QR lib can't render on web */}
+                <QRCode
+                  getRef={(c: any) => (qrRef.current = c)}
+                  value={qrValue || " "}
+                  size={200}
+                />
+
+                {/* Fallback image (remote) in case QR component fails on web; rendered as an alternative if needed */}
+                {/* <Image source={{ uri: `https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=${encodeURIComponent(qrValue)}` }} style={{ width: 200, height: 200, marginTop: 12 }} /> */}
               </View>
 
-              <View style={{ marginTop: 16, flexDirection: 'row', gap: 12 }}>
+              <View style={{ marginTop: 16, flexDirection: "row", gap: 12 }}>
                 <TouchableOpacity
                   onPress={handleDownloadQr}
-                  style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12, alignItems: 'center' }}
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#10b981",
+                    paddingVertical: 10,
+                    paddingHorizontal: 20,
+                    borderRadius: 12,
+                    alignItems: "center",
+                  }}
                 >
-                  <Text style={{ color: 'white', fontWeight: '700' }}>Download QR</Text>
+                  <Text style={{ color: "white", fontWeight: "700" }}>
+                    Download QR
+                  </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={() => setQrModalVisible(false)}
-                  style={{ flex: 1, backgroundColor: '#7c3aed', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12, alignItems: 'center' }}
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#7c3aed",
+                    paddingVertical: 10,
+                    paddingHorizontal: 20,
+                    borderRadius: 12,
+                    alignItems: "center",
+                  }}
                 >
-                  <Text style={{ color: 'white', fontWeight: '700' }}>Close</Text>
+                  <Text style={{ color: "white", fontWeight: "700" }}>
+                    Close
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
