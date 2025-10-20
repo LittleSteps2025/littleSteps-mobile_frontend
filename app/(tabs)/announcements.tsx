@@ -70,17 +70,19 @@ export default function Announcements() {
               `${API_BASE_URL}/parent/announcements/meeting/child/${childId}`
             ),
             fetch(`${API_BASE_URL}/parent/announcements/parent`),
-            fetch(`${API_BASE_URL}/parents/events`), // Add events endpoint
+            fetch(`${API_BASE_URL}/parents/events`).catch(() => null), // Make events optional
           ]);
 
         if (!meetingsResponse.ok) throw new Error("Failed to fetch meetings");
         if (!announcementsResponse.ok)
           throw new Error("Failed to fetch announcements");
-        if (!eventsResponse.ok) throw new Error("Failed to fetch events");
 
         const meetingsData = await meetingsResponse.json();
         const announcementsData = await announcementsResponse.json();
-        const eventsData = await eventsResponse.json();
+        const eventsData =
+          eventsResponse && eventsResponse.ok
+            ? await eventsResponse.json()
+            : { data: [] };
 
         // Add type field and combine
         const meetings = (meetingsData.data || []).map((item: any) => ({
@@ -111,10 +113,11 @@ export default function Announcements() {
           );
         });
 
-        // Filter out expired notifications (past dates)
+        // Filter out expired notifications (past dates) for meetings and events only
         const today = new Date();
         today.setHours(0, 0, 0, 0); // Set to start of today
         const activeNotifications = uniqueCombined.filter((item) => {
+          if (item.type === "announcement") return true; // Show all announcements
           const itemDate = new Date(
             item.type === "meeting" ? item.meeting_date : item.date
           );
@@ -306,30 +309,26 @@ export default function Announcements() {
             className="rounded-2xl overflow-hidden bg-white"
             style={{
               borderLeftWidth: 4,
-              borderLeftColor: "#10b981", // Green for events
+              borderLeftColor: "#3b82f6", // Blue for announcements
             }}
           >
             <View className="p-4">
               <View className="flex-row items-start justify-between mb-3">
                 <View className="flex-1">
                   <View className="flex-row items-center mb-2">
-                    <Ionicons
-                      name="calendar-outline"
-                      size={18}
-                      color="#10b981"
-                    />
+                    <Bell size={18} color="#3b82f6" />
                     <Text className="ml-2 text-base font-bold text-gray-900">
-                      {item.topic}
+                      {item.title}
                     </Text>
                   </View>
                   <Text className="text-xs text-gray-500 mb-2">
-                    📍 {item.venue}
+                    Announcement
                   </Text>
                 </View>
               </View>
 
               <Text className="text-sm mb-3 leading-5 text-gray-800">
-                {item.description}
+                {item.details}
               </Text>
 
               <View className="flex-row items-center justify-between">

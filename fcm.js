@@ -92,16 +92,32 @@ export async function registerFCMToken(userId, fcmToken) {
     console.log("FCM: Registering token for user:", userId);
 
     const { API_BASE_URL } = await import("./utility/config");
-    const response = await fetch(`${API_BASE_URL}/api/update-fcm-token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        userId: userId,
-        fcmToken: fcmToken,
-      }),
-    });
+
+    // Get auth token from AsyncStorage
+    const AsyncStorage = await import(
+      "@react-native-async-storage/async-storage"
+    );
+    const token = await AsyncStorage.default.getItem("authToken");
+
+    if (!token) {
+      console.error("FCM: No auth token found");
+      return false;
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/notifications/update-fcm-token`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userId: userId,
+          fcmToken: fcmToken,
+        }),
+      }
+    );
 
     if (response.ok) {
       const result = await response.json();

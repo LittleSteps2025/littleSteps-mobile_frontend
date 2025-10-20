@@ -1,3 +1,11 @@
+import CustomAlert from "@/components/CustomAlert";
+import { useUser } from "@/contexts/UserContext";
+import { useCustomAlert } from "@/hooks/useCustomAlert";
+import { API_BASE_URL } from "@/utility";
+import { Ionicons } from "@expo/vector-icons";
+import { Picker } from "@react-native-picker/picker";
+import { LinearGradient } from "expo-linear-gradient";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -12,16 +20,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import { Picker } from "@react-native-picker/picker";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import CustomAlert from "@/components/CustomAlert";
-import { useCustomAlert } from "@/hooks/useCustomAlert";
-import { useUser } from "@/contexts/UserContext";
-import { API_BASE_URL } from "@/utility";
 
 interface HealthRecord {
+  record_id?: number;
   child_id?: number;
   record_date?: string;
   type?: string;
@@ -178,12 +179,13 @@ export default function HealthRecords() {
 
       setHealthRecords(
         (records || []).map((r: any) => ({
+          // Backend doesn't return record_id in SELECT query
+          // It uses composite key (child_id + record_date)
           child_id: r.child_id,
           record_date: r.record_date,
           type: r.type,
           title: r.title,
           description: r.description,
-          doctor: r.doctor,
         }))
       );
     } catch (err) {
@@ -207,13 +209,74 @@ export default function HealthRecords() {
   const handleBack = () => router.back();
   const handleHealthDataChange = (field: string, value: string) =>
     setHealthData((prev) => ({ ...prev, [field]: value }));
-  const handleSaveHealthData = () => {
-    showCustomAlert(
-      "success",
-      "Success",
-      "Health information updated successfully!"
-    );
-    setIsEditing(false);
+
+  const handleSaveHealthData = async () => {
+    const childId = resolveChildId();
+    if (!childId) {
+      showCustomAlert(
+        "error",
+        "No child selected",
+        "Please select a child before saving medical information."
+      );
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Map frontend field names to backend field names
+      const payload = {
+        child_id: childId, // Include in body as fallback
+        blood_type:
+          healthData.bloodType === "N/A" ? null : healthData.bloodType,
+        allergies: healthData.allergies === "N/A" ? null : healthData.allergies,
+        medical_info:
+          healthData.emergencyMedicalInfo === "N/A"
+            ? null
+            : healthData.emergencyMedicalInfo,
+      };
+
+      console.log("Updating medical info for child:", childId, payload);
+
+      const response = await fetch(
+        `${API_BASE_URL}/parent/health/medical-info/${childId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error("API error:", result);
+        showCustomAlert(
+          "error",
+          "Update Failed",
+          result.message || "Failed to update medical information"
+        );
+        return;
+      }
+
+      showCustomAlert(
+        "success",
+        "Success",
+        "Health information updated successfully!"
+      );
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Network error:", error);
+      showCustomAlert(
+        "error",
+        "Network Error",
+        "Unable to reach the server. Please check your connection."
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   const openAddRecordModal = () => {
@@ -293,7 +356,10 @@ export default function HealthRecords() {
       return;
     }
 
-    const payload = {
+    // Backend uses composite key (child_id + record_date) NOT record_id
+    // The backend INSERT statement doesn't include record_id
+    // Never send record_id - backend identifies records by child_id + record_date
+    const payload: any = {
       child_id: Number(childId),
       record_date: newRecord.date,
       type: newRecord.type,
@@ -301,8 +367,11 @@ export default function HealthRecords() {
       description: newRecord.description ?? "",
     };
 
-    const method = editingRecord ? "PUT" : "POST";
+    // Always use POST - backend's createMedicalRecord handles upsert (create or update)
+    const method = "POST";
     const url = `${API_BASE_URL}/parent/health/medical-records`;
+
+    console.log(`Submitting medical record (${method}):`, url, payload);
 
     setSaving(true);
     try {
@@ -316,16 +385,20 @@ export default function HealthRecords() {
         body: JSON.stringify(payload),
       });
 
+      console.log(`Response status: ${resp.status}`);
+
       // try to parse JSON safely
+      const responseText = await resp.text();
       let json;
       try {
-        json = await resp.json();
+        json = JSON.parse(responseText);
       } catch (parseErr) {
-        console.error("Invalid JSON response", parseErr);
+        console.error("❌ Invalid JSON response", parseErr);
+        console.error("❌ Response was:", responseText.substring(0, 500));
         showCustomAlert(
           "error",
           "Server Error",
-          "Invalid response from server."
+          `Invalid response from server: ${responseText.substring(0, 100)}`
         );
         setSaving(false);
         return;
@@ -345,6 +418,7 @@ export default function HealthRecords() {
       const saved: HealthRecord = json.data;
 
       if (editingRecord) {
+        // Backend uses composite key (child_id + record_date) for identification
         setHealthRecords((prev) =>
           prev.map((r) =>
             r.child_id === saved.child_id && r.record_date === saved.record_date
@@ -866,14 +940,46 @@ export default function HealthRecords() {
                 Edit Medical Information
               </Text>
               <ScrollView showsVerticalScrollIndicator={false}>
-                <InputField
-                  label="Blood Type"
-                  value={healthData.bloodType}
-                  onChangeText={(v: string) =>
-                    handleHealthDataChange("bloodType", v)
-                  }
-                  placeholder="Enter blood type"
-                />
+                {/* Blood Type Picker */}
+                <View style={{ marginBottom: 12 }}>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: "500",
+                      color: "#6b7280",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Blood Type
+                  </Text>
+                  <View
+                    style={{
+                      backgroundColor: "rgba(255,255,255,0.9)",
+                      borderRadius: 16,
+                      borderWidth: 1,
+                      borderColor: "#e5e7eb",
+                    }}
+                  >
+                    <Picker
+                      selectedValue={healthData.bloodType}
+                      onValueChange={(itemValue) =>
+                        handleHealthDataChange("bloodType", itemValue)
+                      }
+                      dropdownIconColor="#7c3aed"
+                    >
+                      <Picker.Item label="Not Specified" value="N/A" />
+                      <Picker.Item label="A+" value="A+" />
+                      <Picker.Item label="A-" value="A-" />
+                      <Picker.Item label="B+" value="B+" />
+                      <Picker.Item label="B-" value="B-" />
+                      <Picker.Item label="AB+" value="AB+" />
+                      <Picker.Item label="AB-" value="AB-" />
+                      <Picker.Item label="O+" value="O+" />
+                      <Picker.Item label="O-" value="O-" />
+                    </Picker>
+                  </View>
+                </View>
+
                 <InputField
                   label="Allergies"
                   value={healthData.allergies}
@@ -919,18 +1025,25 @@ export default function HealthRecords() {
                   <TouchableOpacity
                     onPress={handleSaveHealthData}
                     style={{ flex: 1, marginLeft: 8 }}
+                    disabled={saving}
                   >
                     <LinearGradient
-                      colors={["#7c3aed", "#a855f7"]}
+                      colors={
+                        saving ? ["#9ca3af", "#9ca3af"] : ["#7c3aed", "#a855f7"]
+                      }
                       style={{
                         paddingVertical: 12,
                         borderRadius: 12,
                         alignItems: "center",
                       }}
                     >
-                      <Text style={{ color: "white", fontWeight: "700" }}>
-                        Save Changes
-                      </Text>
+                      {saving ? (
+                        <ActivityIndicator color="white" size="small" />
+                      ) : (
+                        <Text style={{ color: "white", fontWeight: "700" }}>
+                          Save Changes
+                        </Text>
+                      )}
                     </LinearGradient>
                   </TouchableOpacity>
                 </View>
