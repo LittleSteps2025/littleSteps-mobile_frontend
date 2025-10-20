@@ -32,12 +32,14 @@ interface PaymentHistory {
 interface PackageData {
   package_id: number;
   name: string;
-  description: string;
+  details?: string;
+  description?: string;
   price: number;
   duration: string;
+  day_of_week?: string;
   services?: string[];
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 function PaymentInterface() {
@@ -52,10 +54,20 @@ function PaymentInterface() {
 
   // Log child ID for debugging and fetch package details
   useEffect(() => {
+    console.log(
+      "useEffect triggered - childId:",
+      childId,
+      "hasChild:",
+      hasChild,
+      "childrenCount:",
+      childrenCount
+    );
     if (childId) {
       console.log("Child ID from session:", childId);
       console.log("Total children:", childrenCount);
       fetchPackageDetails();
+    } else {
+      console.log("No childId available, skipping package fetch");
     }
   }, [childId, childrenCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -69,15 +81,25 @@ function PaymentInterface() {
       setPackageLoading(true);
       console.log("Fetching package details for child ID:", childId);
 
-      const response = await fetch(`${API_BASE_URL}/supervisors/child/package/${childId}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/supervisor/children/package/${childId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log("API response status:", response.status);
+      console.log("API response ok:", response.ok);
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch package details: ${response.status}`);
+        const errorText = await response.text();
+        console.log("API error response:", errorText);
+        throw new Error(
+          `Failed to fetch package details: ${response.status} - ${errorText}`
+        );
       }
 
       const result = await response.json();
@@ -87,7 +109,17 @@ function PaymentInterface() {
         setPackageData(result.data);
         console.log("Package details set:", result.data);
       } else {
-        throw new Error("Invalid response format or no package found");
+        console.log("No package found for child, using default values");
+        // Set fallback data when no package is found
+        setPackageData({
+          package_id: 0,
+          name: "Default Package",
+          details: "Standard daycare package",
+          price: 5000,
+          duration: "Monthly",
+          day_of_week: "fullweek",
+          services: ["Full Day Care", "Educational Activities"],
+        });
       }
     } catch (error) {
       console.error("Error fetching package details:", error);
@@ -96,16 +128,15 @@ function PaymentInterface() {
         "Failed to load package details. Using default values."
       );
 
-      // Set fallback data if API fails
+      // Set fallback data if API fails completely
       setPackageData({
         package_id: 0,
         name: "Default Package",
-        description: "Standard daycare package",
+        details: "Standard daycare package",
         price: 5000,
         duration: "Monthly",
+        day_of_week: "fullweek",
         services: ["Full Day Care", "Educational Activities"],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
       });
     } finally {
       setPackageLoading(false);
@@ -127,7 +158,10 @@ function PaymentInterface() {
           "Parent Progress Reports",
           "Only Weekdays",
         ],
-        description: packageData.description || "Complete daycare package",
+        description:
+          packageData.description ||
+          packageData.details ||
+          "Complete daycare package",
       };
     }
 
@@ -255,13 +289,13 @@ function PaymentInterface() {
       pathname: "./payment",
       params: {
         paymentType: "daily",
-        amount: 5000..toString(),
+        amount: (5000).toString(),
         child_id: childId.toString(),
         package_id: 0,
         package_name: "Daily Payment",
       },
     });
-  }
+  };
 
   const handleRefresh = () => {
     fetchPaymentHistory();

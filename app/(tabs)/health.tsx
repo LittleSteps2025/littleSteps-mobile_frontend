@@ -363,7 +363,8 @@ export default function HealthRecords() {
       description: newRecord.description ?? "",
     };
 
-    const method = editingRecord ? "PUT" : "POST";
+    // Always use POST - backend's createMedicalRecord handles upsert (create or update)
+    const method = "POST";
     const url = `${API_BASE_URL}/parent/health/medical-records`;
 
     console.log(`Submitting medical record (${method}):`, payload);
@@ -380,16 +381,20 @@ export default function HealthRecords() {
         body: JSON.stringify(payload),
       });
 
+      console.log(`Response status: ${resp.status}`);
+
       // try to parse JSON safely
+      const responseText = await resp.text();
       let json;
       try {
-        json = await resp.json();
+        json = JSON.parse(responseText);
       } catch (parseErr) {
-        console.error("Invalid JSON response", parseErr);
+        console.error("❌ Invalid JSON response", parseErr);
+        console.error("❌ Response was:", responseText.substring(0, 500));
         showCustomAlert(
           "error",
           "Server Error",
-          "Invalid response from server."
+          `Invalid response from server: ${responseText.substring(0, 100)}`
         );
         setSaving(false);
         return;

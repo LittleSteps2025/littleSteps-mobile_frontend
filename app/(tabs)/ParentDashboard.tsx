@@ -66,7 +66,7 @@ export default function ParentDashboard() {
       }
       try {
         const response = await fetch(
-          `${API_BASE_URL}/children/details/${user.id}`,
+          `${API_BASE_URL}/parent/children/details/${user.id}`,
           {
             method: "GET",
             headers: {
@@ -438,4 +438,3 @@ export default function ParentDashboard() {
 function calculateAge(dateOfBirth: any): any {
   throw new Error("Function not implemented.");
 }
-

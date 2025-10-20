@@ -182,10 +182,10 @@ export default function CreateAccountWithValidation() {
     try {
 
       console.log("Attempting login with email:", formData.email);
-      console.log("Making request to:", `${API_BASE_URL}/parents/login`);
+      console.log("Making request to:", `${API_BASE_URL}/parent/login`);
 
       // Call parent login API with safe JSON parsing
-      const response = await fetch(`${API_BASE_URL}/parents/login`, {
+      const response = await fetch(`${API_BASE_URL}/parent/login`, {
         method: "POST",
 
         headers: {
