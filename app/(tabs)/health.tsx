@@ -209,7 +209,7 @@ export default function HealthRecords() {
   const handleBack = () => router.back();
   const handleHealthDataChange = (field: string, value: string) =>
     setHealthData((prev) => ({ ...prev, [field]: value }));
-
+  
   const handleSaveHealthData = async () => {
     const childId = resolveChildId();
     if (!childId) {
@@ -226,13 +226,9 @@ export default function HealthRecords() {
       // Map frontend field names to backend field names
       const payload = {
         child_id: childId, // Include in body as fallback
-        blood_type:
-          healthData.bloodType === "N/A" ? null : healthData.bloodType,
+        blood_type: healthData.bloodType === "N/A" ? null : healthData.bloodType,
         allergies: healthData.allergies === "N/A" ? null : healthData.allergies,
-        medical_info:
-          healthData.emergencyMedicalInfo === "N/A"
-            ? null
-            : healthData.emergencyMedicalInfo,
+        medical_info: healthData.emergencyMedicalInfo === "N/A" ? null : healthData.emergencyMedicalInfo,
       };
 
       console.log("Updating medical info for child:", childId, payload);
@@ -371,7 +367,7 @@ export default function HealthRecords() {
     const method = "POST";
     const url = `${API_BASE_URL}/parent/health/medical-records`;
 
-    console.log(`Submitting medical record (${method}):`, url, payload);
+    console.log(`Submitting medical record (${method}):`, payload);
 
     setSaving(true);
     try {
@@ -1028,9 +1024,7 @@ export default function HealthRecords() {
                     disabled={saving}
                   >
                     <LinearGradient
-                      colors={
-                        saving ? ["#9ca3af", "#9ca3af"] : ["#7c3aed", "#a855f7"]
-                      }
+                      colors={saving ? ["#9ca3af", "#9ca3af"] : ["#7c3aed", "#a855f7"]}
                       style={{
                         paddingVertical: 12,
                         borderRadius: 12,

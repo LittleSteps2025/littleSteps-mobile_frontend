@@ -1,23 +1,17 @@
 // app/pickup-details.tsx
-import { API_BASE_URL } from "@/utility";
-import { Ionicons } from "@expo/vector-icons";
-import * as FileSystem from "expo-file-system";
-import { LinearGradient } from "expo-linear-gradient";
-import * as MediaLibrary from "expo-media-library";
-import { useRouter } from "expo-router";
-import { shareAsync } from "expo-sharing";
-import React, {
-  useRef,
-  useState,
-  useMemo,
-  useCallback,
-  useEffect,
-} from "react";
+import { API_BASE_URL } from '@/utility';
+import { Ionicons } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system';
+import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as MediaLibrary from 'expo-media-library';
+import { useRouter } from 'expo-router';
+import { shareAsync } from 'expo-sharing';
+import React, { useRef, useState, useCallback,useMemo,useEffect } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   SafeAreaView,
@@ -33,7 +27,7 @@ import QRCode from "react-native-qrcode-svg";
 
 interface ChildInfo {
   name: string;
-  grade: string;
+  
   class: string;
   studentId: string;
 }
@@ -54,6 +48,7 @@ interface GuardianFormData {
   email: string;
   address: string;
   parent_id: string;
+  image?: string;
 }
 
 export default function PickupDetailsPage() {
@@ -65,9 +60,15 @@ export default function PickupDetailsPage() {
   const [qrValue, setQrValue] = useState("");
   const [qrTitle, setQrTitle] = useState("Guardian QR");
 
+  // const openQrForContact = (contact: EmergencyContact) => {
+  //   const value = `Name: ${contact.name}\nRelationship: ${contact.relationship}`;
+  //   setQrValue(value);
+  //   setQrTitle(`${contact.name} - ${contact.relationship}`);
+  //   setQrModalVisible(true);
+  // };
+
   const openQrForContact = (contact: EmergencyContact) => {
-    // Simple encoded text for the QR. You can change to JSON if needed.
-    const value = `Name: ${contact.name}\nRelationship: ${contact.relationship}`;
+    const value = `${contact.name}`;
     setQrValue(value);
     setQrTitle(`${contact.name} - ${contact.relationship}`);
     setQrModalVisible(true);
@@ -94,7 +95,6 @@ export default function PickupDetailsPage() {
 
   const qrRef = useRef<any>(null);
 
-  // Helper: convert QR component to base64 PNG using its toDataURL method
   const getQrDataUrl = () =>
     new Promise<string>((resolve, reject) => {
       try {
@@ -113,9 +113,7 @@ export default function PickupDetailsPage() {
 
   const handleDownloadQr = async () => {
     try {
-      const base64 = await getQrDataUrl(); // base64 string (PNG)
-
-      // Create a temporary file path
+      const base64 = await getQrDataUrl();
       const filename = `qr_${Date.now()}.png`;
       const fileUri = FileSystem.cacheDirectory + filename;
 
@@ -146,12 +144,10 @@ export default function PickupDetailsPage() {
 
         Alert.alert("Saved", "QR image saved to your gallery.");
       } else {
-        // Web fallback: attempt to trigger a download
         const dataUrl = `data:image/png;base64,${base64}`;
         try {
-           
           // @ts-ignore
-          const link = document.createElement("a");
+          const link = document.createElement('a');
           // @ts-ignore
           link.href = dataUrl;
           // @ts-ignore
@@ -165,7 +161,6 @@ export default function PickupDetailsPage() {
           Alert.alert("Downloaded", "QR image downloaded.");
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (err) {
-          // As a fallback, open share dialog
           await shareAsync(fileUri);
         }
       }
@@ -175,9 +170,7 @@ export default function PickupDetailsPage() {
     }
   };
 
-  const [emergencyContacts, setEmergencyContacts] = useState<
-    EmergencyContact[]
-  >([]);
+  const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
   const [showAddContactModal, setShowAddContactModal] = useState(false);
   const [showContactDetails, setShowContactDetails] = useState<string | null>(
     null
@@ -247,6 +240,70 @@ export default function PickupDetailsPage() {
     router.back();
   };
 
+  // Pick image from gallery
+  const pickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Camera roll permission is required to select photos.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setSelectedImageUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  // Take photo with camera
+  const takePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Camera permission is required to take photos.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setSelectedImageUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo');
+    }
+  };
+
+  // Show image picker options
+  const showImagePicker = () => {
+    Alert.alert(
+      'Select Photo',
+      'Choose an option',
+      [
+        { text: 'Take Photo', onPress: takePhoto },
+        { text: 'Choose from Gallery', onPress: pickImage },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
   // Fetch guardians on component mount
   const fetchGuardians = useCallback(async () => {
     try {
@@ -284,7 +341,6 @@ export default function PickupDetailsPage() {
     }
   }, [PARENT_ID]);
 
-  // Load guardians when component mounts
   React.useEffect(() => {
     fetchGuardians();
   }, [fetchGuardians]);
@@ -324,14 +380,37 @@ export default function PickupDetailsPage() {
     }
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/parent/guardians/guardians`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(guardianFormData),
+      setIsUploading(true);
+
+      let imageBase64 = null;
+
+      // Convert image to base64 if selected
+      if (selectedImageUri) {
+        try {
+          imageBase64 = await FileSystem.readAsStringAsync(selectedImageUri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          // Add data URI prefix for backend processing
+          imageBase64 = `data:image/jpeg;base64,${imageBase64}`;
+        } catch (error) {
+          console.error('Error reading image:', error);
+          Alert.alert('Error', 'Failed to process image');
+          setIsUploading(false);
+          return;
         }
-      );
+      }
+
+      // Prepare request body with image
+      const requestBody = {
+        ...guardianFormData,
+        image: imageBase64
+      };
+
+      const response = await fetch(`${API_BASE_URL}/parent/guardians/guardians`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
 
       const result = await response.json();
 
@@ -346,7 +425,8 @@ export default function PickupDetailsPage() {
           address: "",
           parent_id: PARENT_ID,
         });
-
+        setSelectedImageUri(null);
+        
         setShowAddContactModal(false);
         Alert.alert("Success", "Guardian added successfully!");
 
@@ -357,31 +437,48 @@ export default function PickupDetailsPage() {
       }
     } catch (error) {
       console.error(error);
-      Alert.alert("Error", "Network or server issue occurred.");
+      Alert.alert('Error', 'Network or server issue occurred.');
+    } finally {
+      setIsUploading(false);
     }
   };
 
-  const handleRemoveContact = (contactId: string) => {
+  const handleRemoveContact = async (contactId: string) => {
     Alert.alert(
       "Remove Contact",
       "Are you sure you want to remove this contact?",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Remove",
-          style: "destructive",
-          onPress: () => {
-            setEmergencyContacts((prev) =>
-              prev.filter((c) => c.id !== contactId)
-            );
-            // TODO: Add API call to delete from backend
-          },
-        },
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await fetch(`${API_BASE_URL}/parent/guardians/guardians/${contactId}`, {
+                method: 'DELETE',
+              });
+
+              const result = await response.json();
+
+              if (response.ok && result.success) {
+                // Remove from local state
+                setEmergencyContacts(prev => prev.filter(c => c.id !== contactId));
+                Alert.alert('Success', 'Guardian removed successfully');
+              } else {
+                Alert.alert('Error', result.message || 'Failed to remove guardian');
+              }
+            } catch (error) {
+              console.error('Error removing guardian:', error);
+              Alert.alert('Error', 'Network error occurred while removing guardian');
+            }
+          }
+        }
       ]
     );
   };
 
-  const InputField = ({
+  // Memoized InputField to reduce re-renders and prevent unmount/mount cycle
+  const InputField = React.memo(({
     label,
     value,
     onChangeText,
@@ -402,6 +499,10 @@ export default function PickupDetailsPage() {
         multiline={multiline}
         numberOfLines={numberOfLines}
         keyboardType={keyboardType}
+        blurOnSubmit={false}
+        returnKeyType="next"
+        autoCorrect={false}
+        autoCapitalize="none"
         style={{
           backgroundColor: "rgba(255, 255, 255, 0.9)",
           borderRadius: 16,
@@ -421,7 +522,7 @@ export default function PickupDetailsPage() {
         }}
       />
     </View>
-  );
+  ));
 
   const ContactCard = ({ contact }: { contact: EmergencyContact }) => (
     <View
@@ -503,81 +604,67 @@ export default function PickupDetailsPage() {
     >
       <StatusBar barStyle="dark-content" backgroundColor="#DFC1FD" />
       <SafeAreaView className="flex-1">
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          className="flex-1"
-        >
-          <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-            {/* Header */}
-            <View className="px-6 mt-5 pt-4 pb-2 flex-row items-center justify-between">
-              <TouchableOpacity
-                onPress={handleBack}
-                className="w-10 h-10 justify-center items-center"
-              >
-                <Ionicons name="chevron-back" size={24} color="#374151" />
-              </TouchableOpacity>
+        {/* MAIN SCROLL - no KeyboardAvoidingView */}
+        <ScrollView className="flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="none">
+          {/* Header */}
+          <View className="px-6 mt-5 pt-4 pb-2 flex-row items-center justify-between">
+            <TouchableOpacity
+              onPress={handleBack}
+              className="w-10 h-10 justify-center items-center"
+            >
+              <Ionicons name="chevron-back" size={24} color="#374151" />
+            </TouchableOpacity>
 
-              <Text className="text-2xl font-bold text-gray-700">
-                Pickup Details
-              </Text>
+            <Text className="text-2xl font-bold text-gray-700">
+              Pickup Details
+            </Text>
 
-              <TouchableOpacity
-                onPress={() => setShowAddContactModal(true)}
-                className="w-10 h-10 justify-center items-center"
-              >
-                <Ionicons name="person-add" size={24} color="#7c3aed" />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              onPress={() => setShowAddContactModal(true)}
+              className="w-10 h-10 justify-center items-center"
+            >
+              <Ionicons name="person-add" size={24} color="#7c3aed" />
+            </TouchableOpacity>
+          </View>
 
-            {/* Child Information Card */}
-            <View className="px-6 mt-4">
-              <View
-                className="mb-6"
-                style={{
-                  backgroundColor: "rgba(255, 255, 255, 0.9)",
-                  borderRadius: 20,
-                  padding: 24,
-                  shadowColor: "#7c3aed",
-                  shadowOffset: { width: 0, height: 6 },
-                  shadowOpacity: 0.15,
-                  shadowRadius: 10,
-                  elevation: 8,
-                  borderWidth: 1,
-                  borderColor: "rgba(124, 58, 237, 0.1)",
-                }}
-              >
-                <View className="flex-row items-center mb-4">
-                  <View className="w-12 h-12 bg-purple-100 rounded-full items-center justify-center mr-4">
-                    <Ionicons name="school" size={24} color="#7c3aed" />
-                  </View>
-                  <View>
-                    <Text className="text-2xl font-bold text-gray-800">
-                      {childInfo.name}
-                    </Text>
-                    {/* <Text className="text-purple-600 font-semibold">
-                      {childInfo.grade} - Class {childInfo.class}
-                    </Text> */}
-                  </View>
+          {/* Child Information Card */}
+          <View className="px-6 mt-4">
+            <View
+              className="mb-6"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                borderRadius: 20,
+                padding: 24,
+                shadowColor: '#7c3aed',
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.15,
+                shadowRadius: 10,
+                elevation: 8,
+                borderWidth: 1,
+                borderColor: 'rgba(124, 58, 237, 0.1)'
+              }}
+            >
+              <View className="flex-row items-center mb-4">
+                <View className="w-12 h-12 bg-purple-100 rounded-full items-center justify-center mr-4">
+                  <Ionicons name="school" size={24} color="#7c3aed" />
                 </View>
-
-                <View className="flex-row items-center">
-                  <Ionicons name="id-card-outline" size={18} color="#7c3aed" />
-                  <Text className="text-gray-600 ml-2">
-                    Student ID: {childInfo.studentId}
+                <View>
+                  <Text className="text-xl font-bold text-gray-800">
+                    {childInfo.name}
+                  </Text>
+                  <Text className="text-purple-600 font-semibold">
+                    Group {childInfo.class}
                   </Text>
                 </View>
               </View>
 
-              {/* Emergency Contacts Section */}
-              <View className="mb-6">
-                <View className="flex-row items-center justify-between mb-4">
-                  <Text className="text-xl font-bold text-gray-700">
-                    Emergency Contacts ({emergencyContacts.length})
-                  </Text>
-                  {isLoading && (
-                    <ActivityIndicator size="small" color="#7c3aed" />
-                  )}
-                </View>
+              <View className="flex-row items-center">
+                <Ionicons name="id-card-outline" size={18} color="#7c3aed" />
+                <Text className="text-gray-600 ml-2">
+                  Student ID: {childInfo.studentId}
+                </Text>
+              </View>
+            </View>
 
                 {isLoading ? (
                   <View className="items-center py-12">
@@ -612,9 +699,33 @@ export default function PickupDetailsPage() {
                   ))
                 )}
               </View>
+
+              {isLoading ? (
+                <View className="items-center py-12">
+                  <ActivityIndicator size="large" color="#7c3aed" />
+                  <Text className="text-gray-500 mt-4">Loading guardians...</Text>
+                </View>
+              ) : emergencyContacts.length === 0 ? (
+                <View className="items-center py-12">
+                  <View 
+                    className="w-20 h-20 rounded-full items-center justify-center mb-4"
+                    style={{ backgroundColor: '#f3e8ff' }}
+                  >
+                    <Ionicons name="people-outline" size={48} color="#9ca3af" />
+                  </View>
+                  <Text className="text-gray-700 font-semibold text-lg">No Guardians Added</Text>
+                  <Text className="text-gray-400 text-sm mt-2 text-center px-8">
+                    Tap the + icon above to add emergency contacts for your child
+                  </Text>
+                </View>
+              ) : (
+                emergencyContacts.map((contact) => (
+                  <ContactCard key={contact.id} contact={contact} />
+                ))
+              )}
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+          </View>
+        </ScrollView>
 
         {/* Add Guardian Modal */}
         <Modal
@@ -623,7 +734,8 @@ export default function PickupDetailsPage() {
           animationType="slide"
           onRequestClose={() => setShowAddContactModal(false)}
         >
-          <View className="flex-1 justify-end bg-black/50">
+          {/* overlay */}
+          <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
             <View
               className="bg-white rounded-t-3xl p-6"
               style={{
@@ -637,7 +749,55 @@ export default function PickupDetailsPage() {
                 Add Guardian Details
               </Text>
 
-              <ScrollView showsVerticalScrollIndicator={false}>
+              <ScrollView 
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="none"
+              >
+                {/* Photo Upload Section */}
+                <View className="mb-6 items-center">
+                  <Text className="text-sm font-medium text-gray-600 mb-3">
+                    Guardian Photo (Optional)
+                  </Text>
+                  <TouchableOpacity
+                    onPress={showImagePicker}
+                    style={{
+                      width: 120,
+                      height: 120,
+                      borderRadius: 60,
+                      backgroundColor: selectedImageUri ? 'transparent' : '#f3e8ff',
+                      borderWidth: 3,
+                      borderColor: '#7c3aed',
+                      borderStyle: 'dashed',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {selectedImageUri ? (
+                      <Image
+                        source={{ uri: selectedImageUri }}
+                        style={{ width: '100%', height: '100%' }}
+                      />
+                    ) : (
+                      <View className="items-center">
+                        <Ionicons name="camera" size={36} color="#7c3aed" />
+                        <Text className="text-purple-600 text-xs mt-2 font-semibold">
+                          Add Photo
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                  {selectedImageUri && (
+                    <TouchableOpacity
+                      onPress={() => setSelectedImageUri(null)}
+                      className="mt-2"
+                    >
+                      <Text className="text-red-600 font-semibold">Remove Photo</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
                 <InputField
                   label="Full Name *"
                   value={guardianFormData.name}
@@ -664,6 +824,7 @@ export default function PickupDetailsPage() {
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     className="flex-row"
+                    keyboardShouldPersistTaps="handled"
                   >
                     {relationshipOptions.map((option) => (
                       <TouchableOpacity
@@ -747,6 +908,7 @@ export default function PickupDetailsPage() {
                         address: "",
                         parent_id: PARENT_ID,
                       });
+                      setSelectedImageUri(null);
                     }}
                     className="flex-1 mr-2 py-4 rounded-2xl bg-gray-200 items-center"
                   >
@@ -758,15 +920,18 @@ export default function PickupDetailsPage() {
                   <TouchableOpacity
                     onPress={handleAddContact}
                     className="flex-1 ml-2"
+                    disabled={isUploading}
                   >
                     <LinearGradient
-                      colors={["#7c3aed", "#a855f7"]}
+                      colors={isUploading ? ['#9ca3af', '#9ca3af'] : ['#7c3aed', '#a855f7']}
                       className="py-4 rounded-2xl items-center"
                       style={{ borderRadius: 16 }}
                     >
-                      <Text className="text-white font-semibold text-base">
-                        Add Guardian
-                      </Text>
+                      {isUploading ? (
+                        <ActivityIndicator color="white" />
+                      ) : (
+                        <Text className="text-white font-semibold text-base">Add Guardian</Text>
+                      )}
                     </LinearGradient>
                   </TouchableOpacity>
                 </View>
@@ -803,14 +968,25 @@ export default function PickupDetailsPage() {
                   return (
                     <>
                       <View className="items-center mb-4">
-                        <View
-                          className="w-20 h-20 rounded-full items-center justify-center mb-3"
-                          style={{
-                            backgroundColor: "#9ca3af",
-                          }}
-                        >
-                          <Ionicons name="person" size={40} color="white" />
-                        </View>
+                        {contact.photo ? (
+                          <Image
+                            source={{ uri: contact.photo }}
+                            className="w-20 h-20 rounded-full mb-3"
+                            style={{
+                              borderWidth: 3,
+                              borderColor: '#e5e7eb'
+                            }}
+                          />
+                        ) : (
+                          <View
+                            className="w-20 h-20 rounded-full items-center justify-center mb-3"
+                            style={{
+                              backgroundColor: '#9ca3af'
+                            }}
+                          >
+                            <Ionicons name="person" size={40} color="white" />
+                          </View>
+                        )}
                         <Text className="text-xl font-bold text-gray-800 mb-1">
                           {contact.name}
                         </Text>
